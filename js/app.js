@@ -11,12 +11,12 @@ const ICONS = {
   'cat-protein':'💪',
   'cat-soft':'🧃',
   'cat-beer-wine':'🍷',
-  'cat-combo':'☕🥐',
+  'cat-combo':'<span class="combo-icon">☕🥐</span>',
   'cat-dessert':'🧁',
   'cat-toast':'🥖',
   'cat-tacos':'🌮',
   'cat-focaccia-pizza':'🍕',
-  'cat-tapas':'<img src="assets/tapas_icon.jpg" alt="Tapas">'
+  'cat-tapas':'<img src="assets/tapas_icon_clean.png" alt="Tapas">'
 };
 const T = {
   hr:{ tap:'Kliknite za sastojke', ingredients:'Sastojci', add:'Add', emptyCart:'Košarica je prazna.', orderSaved:'Narudžba je poslana u Admin Orders.', eligible:'Eligible for Langar Credit', alcoholic:'18+', unavailable:'Trenutno nedostupno', notOrderable:'Nije dostupno za online narudžbu', welcome:'Dobrodošli', join:'Učlani se', noProfile:'Još niste član Langar Cluba.'},
@@ -160,6 +160,7 @@ function renderRewards(){
 }
 function renderReferral(){ const p=profile(); const wrap=$('#referralView'); if(!wrap)return; if(!p){wrap.innerHTML='<div class="empty-state">Register first to receive your referral QR.</div>'; return;} wrap.innerHTML=`<section class="qr-card"><h3>Your invite QR</h3><div class="qrbox"><b>REF-${p.qr}</b><small>Referral code</small></div><p>Reward rule: friend registers through your QR, places the first online order, pays, and the order is completed. Then you receive €0.50 Langar Credit.</p></section>`; }
 function openInboxItem(item){
+  markInboxItemRead(item);
   if(item.type==='card'){
     const card=cards().find(c=>c.id===item.id);
     if(!card) return;
@@ -171,13 +172,34 @@ function openInboxItem(item){
   $('#modalBody').innerHTML=`<h2>${item.title}</h2><p>${item.body}</p><small>${new Date(item.createdAt).toLocaleString()}</small>`;
   $('#modal').classList.remove('hidden');
 }
-function renderInboxBadge(){ const unread=inbox().filter(x=>x.unread).length+cards().filter(c=>c.unread&&c.status==='active').length; $('#inboxBadge').textContent=unread; }
+function updateAppBadge(count){
+  const btn=$('#inboxBadge');
+  if(btn){ btn.textContent=count; btn.classList.toggle('hidden', !count); }
+  try{
+    if('setAppBadge' in navigator){ count ? navigator.setAppBadge(count) : navigator.clearAppBadge(); }
+  }catch(e){}
+}
+function renderInboxBadge(){ const unread=inbox().filter(x=>x.unread).length+cards().filter(c=>c.unread&&c.status==='active').length; updateAppBadge(unread); }
+function markInboxItemRead(item){
+  if(item.type==='card'){
+    const list=cards().map(c=>c.id===item.id?{...c,unread:false}:c); LS.set('langar_cards', list);
+  } else {
+    const list=inbox().map(m=>m.id===item.id?{...m,unread:false}:m); LS.set('langar_inbox', list);
+  }
+  renderInboxBadge();
+}
+function markInboxAllRead(){
+  LS.set('langar_inbox', inbox().map(m=>({...m,unread:false})));
+  LS.set('langar_cards', cards().map(c=>({...c,unread:false})));
+  renderInboxBadge();
+}
+
 function renderInbox(){
   const list=[...cards().filter(c=>c.status==='active').map(c=>({...c,type:'card'})), ...inbox()];
   const box=$('#inboxList');
   if(!list.length){ box.innerHTML='<p class="muted">Inbox is empty.</p>'; return; }
   box.innerHTML='';
-  list.forEach(item=>{ const a=document.createElement('article'); a.className='inbox-item clickable'; a.innerHTML=`<b>${item.title}</b><p>${item.body}</p><small>${new Date(item.createdAt).toLocaleString()}</small><span class="tap-note">${item.type==='card'?'Open card':'Open message'}</span>`; a.onclick=()=>openInboxItem(item); box.appendChild(a); });
+  list.forEach(item=>{ const a=document.createElement('article'); a.className='inbox-item clickable '+(item.unread?'unread':''); a.innerHTML=`<b>${item.title}</b><p>${item.body}</p><small>${new Date(item.createdAt).toLocaleString()}</small><span class="tap-note">${item.type==='card'?'Open card':'Open message'}</span>`; a.onclick=()=>openInboxItem(item); box.appendChild(a); });
 }
 function renderGallery(){ const g=$('#galleryView'); if(!g)return; const imgs=LS.get('langar_gallery',[{src:'assets/tacos_hero.jpeg',title:'Signature tacos',cat:'Tacos'},{src:'assets/prawn_tacos.jpeg',title:'Crunchy prawn tacos',cat:'Tacos'},{src:'assets/quesadilla_real.jpeg',title:'Quesadilla preview',cat:'Food'}]); g.innerHTML=imgs.map(i=>`<article><img src="${i.src}"><b>${i.title}</b><small>${i.cat}</small></article>`).join(''); }
 function renderAll(){ renderCategoryTabs(); renderMenu(); renderOrderCategoryTabs(); renderOrderMenu(); renderCart(); renderDashboard(); renderHomeCats(); renderInboxBadge(); renderReservationCalendar(); }
@@ -188,7 +210,7 @@ function setupEvents(){
   $$('.segmented [data-order-type]').forEach(b=>b.onclick=()=>{$$('.segmented button').forEach(x=>x.classList.remove('active')); b.classList.add('active'); state.orderType=b.dataset.orderType;});
   $('#closeModal').onclick=()=>$('#modal').classList.add('hidden');
   $('#modal').onclick=e=>{if(e.target.id==='modal')$('#modal').classList.add('hidden')};
-  $('#inboxBtn').onclick=()=>{renderInbox();$('#inboxPanel').classList.remove('hidden')};
+  $('#inboxBtn').onclick=()=>{renderInbox(); markInboxAllRead(); renderInbox(); $('#inboxPanel').classList.remove('hidden')};
   $('#closeInbox').onclick=()=>$('#inboxPanel').classList.add('hidden');
   $('#closePopup').onclick=$('#popupLater').onclick=()=>{ $('#welcomePopup').classList.add('hidden'); localStorage.langar_popup_closed='1';};
   $('#clubForm').onsubmit=e=>{
@@ -216,4 +238,4 @@ function setupEvents(){
   if(!localStorage.langar_popup_closed) setTimeout(()=>$('#welcomePopup').classList.remove('hidden'),800);
   updateBackButton();
 }
-ensureWelcomeInbox(); setupEvents(); setLang(state.lang);
+ensureWelcomeInbox(); setupEvents(); setLang(state.lang); if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(()=>{})); }
