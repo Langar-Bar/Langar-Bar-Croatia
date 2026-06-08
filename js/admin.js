@@ -1,7 +1,7 @@
 const $=s=>document.querySelector(s); const $$=s=>Array.from(document.querySelectorAll(s));
 const LS={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}},set(k,v){localStorage.setItem(k,JSON.stringify(v))}};
-const ICONS={'cat-coffee':'☕','cat-tea':'🍵','cat-matcha-smoothies':'🥤','cat-protein':'💪','cat-soft':'🧃','cat-beer-wine':'🍷','cat-combo':'✨','cat-dessert':'🍦','cat-toast':'🥪','cat-tacos':'🌮','cat-focaccia-pizza':'▰','cat-tapas':'🍽️'};
-function getMenu(){let m=LS.get('langar_menu_v3',null); if(m)return m; m=LANGAR_DEFAULT_MENU.map(c=>({...c,icon:ICONS[c.id]||'✦',items:c.items.map(i=>({...i,allergens:i.isAlcoholic?'18+':'ask staff'}))})); LS.set('langar_menu_v3',m); return m;}
+const ICONS={'cat-coffee':'☕','cat-tea':'🍵','cat-matcha-smoothies':'🥤','cat-protein':'💪','cat-soft':'🧃','cat-beer-wine':'🍷','cat-combo':'✨','cat-dessert':'🍦','cat-toast':'🥪','cat-tacos':'🌮','cat-focaccia-pizza':'▰','cat-tapas':'<img src="assets/tapas_icon.jpg" alt="Tapas">'};
+function getMenu(){let m=LS.get('langar_menu_v3',null); if(m){m=m.map(c=>({...c,icon:ICONS[c.id]||c.icon||'✦'})); LS.set('langar_menu_v3',m); return m;} m=LANGAR_DEFAULT_MENU.map(c=>({...c,icon:ICONS[c.id]||'✦',items:c.items.map(i=>({...i,allergens:i.isAlcoholic?'18+':'ask staff'}))})); LS.set('langar_menu_v3',m); return m;}
 function saveMenu(m){LS.set('langar_menu_v3',m)}
 function uid(p){return p+'-'+Math.random().toString(36).slice(2,8)+'-'+Date.now().toString(36).slice(-4)}
 function priceNum(p){const m=String(p).replace(',','.').match(/[0-9]+(\.[0-9]+)?/);return m?parseFloat(m[0]):0}

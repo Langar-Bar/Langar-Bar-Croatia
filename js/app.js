@@ -11,12 +11,12 @@ const ICONS = {
   'cat-protein':'💪',
   'cat-soft':'🧃',
   'cat-beer-wine':'🍷',
-  'cat-combo':'🥐',
+  'cat-combo':'☕🥐',
   'cat-dessert':'🧁',
   'cat-toast':'🥖',
   'cat-tacos':'🌮',
   'cat-focaccia-pizza':'🍕',
-  'cat-tapas':'🫒'
+  'cat-tapas':'<img src="assets/tapas_icon.jpg" alt="Tapas">'
 };
 const T = {
   hr:{ tap:'Kliknite za sastojke', ingredients:'Sastojci', add:'Add', emptyCart:'Košarica je prazna.', orderSaved:'Narudžba je poslana u Admin Orders.', eligible:'Eligible for Langar Credit', alcoholic:'18+', unavailable:'Trenutno nedostupno', notOrderable:'Nije dostupno za online narudžbu', welcome:'Dobrodošli', join:'Učlani se', noProfile:'Još niste član Langar Cluba.'},
