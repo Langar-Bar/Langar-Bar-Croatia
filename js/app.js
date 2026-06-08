@@ -11,7 +11,7 @@ const ICONS = {
   'cat-protein':'💪',
   'cat-soft':'🧃',
   'cat-beer-wine':'🍷',
-  'cat-combo':'☕🥐',
+  'cat-combo':'🥐',
   'cat-dessert':'🧁',
   'cat-toast':'🥖',
   'cat-tacos':'🌮',
