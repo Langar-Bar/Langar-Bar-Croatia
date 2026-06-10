@@ -27,3 +27,13 @@
 .combo-icon{font-size:.82em;line-height:1;display:inline-flex;gap:1px;align-items:center;justify-content:center;transform:scale(.92)}
 .cat-icon img,.big-icon img,.icon-grid span img,.quick-grid span img,.promo-icon img{width:72%;height:72%;object-fit:contain;border-radius:0;display:block;mix-blend-mode:normal;filter:drop-shadow(0 5px 7px rgba(0,0,0,.28));}
 .coffee-knowledge .story-intro{display:grid;grid-template-columns:220px 1fr;gap:18px;align-items:center}.coffee-knowledge .story-intro img{width:100%;border-radius:22px;border:1px solid var(--line)}.coffee-topic-grid{display:grid;gap:12px}.coffee-topic{background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.035));border:1px solid var(--line);border-radius:24px;overflow:hidden;box-shadow:var(--shadow)}.coffee-topic summary{list-style:none;display:flex;align-items:center;gap:14px;padding:14px 16px;cursor:pointer;font-weight:900}.coffee-topic summary::-webkit-details-marker{display:none}.coffee-topic summary img{width:82px;height:54px;object-fit:cover;border-radius:14px;border:1px solid rgba(245,215,139,.22)}.coffee-topic summary span{font-size:1.05rem}.coffee-topic[open] summary{border-bottom:1px solid var(--line);background:rgba(217,180,95,.08)}.topic-body{padding:16px 18px;color:var(--cream)}.topic-body p{line-height:1.75;color:var(--muted);font-size:1rem}.coffee-tips ul{margin:0;padding-left:20px}.coffee-tips li{margin:10px 0;line-height:1.55;color:var(--muted)}@media(max-width:650px){.coffee-knowledge .story-intro{grid-template-columns:1fr}.coffee-topic summary img{width:64px;height:48px}.coffee-topic summary span{font-size:.96rem}}
+
+/* V3.5 menu/referral QR refinements */
+.qr-real{background:#fff9e8;color:#102018;border:2px solid var(--gold);border-radius:22px;padding:14px;text-align:center;box-shadow:inset 0 0 0 6px rgba(217,180,95,.14),0 10px 22px rgba(0,0,0,.25)}
+.qr-real img{display:block;width:220px;max-width:100%;height:auto;margin:0 auto 10px;border-radius:12px;background:white;padding:8px}
+.qr-real b{display:block;color:#102018;word-break:break-word}
+.qr-real small{display:block;color:#465146;word-break:break-all;margin-top:6px}
+.qr-real.compact img{width:150px}
+.app-install-card{display:grid;grid-template-columns:1fr 190px;gap:16px;align-items:center;margin:16px 0;padding:18px;border:1px solid var(--line);border-radius:26px;background:linear-gradient(135deg,rgba(217,180,95,.15),rgba(255,255,255,.04));box-shadow:var(--shadow)}
+.quick-price b small{display:block;color:var(--muted);font-weight:600;margin-top:3px}
+@media(max-width:700px){.app-install-card{grid-template-columns:1fr}.qr-real.compact img{width:180px}}

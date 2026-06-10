@@ -5,6 +5,31 @@ const LS = {
   set(k, v){ localStorage.setItem(k, JSON.stringify(v)); }
 };
 const ICONS = {
+  'classic_coffee':'☕',
+  'signature_coffee':'✨☕',
+  'affogato':'🍨☕',
+  'espresso_bull':'⚡☕',
+  'coffee_cocktails':'🍸☕',
+  'tea':'🍵',
+  'tea_latte':'🫖',
+  'iced_refreshers':'🧊🍹',
+  'lemonade':'🍋',
+  'matcha':'🍵✨',
+  'smoothies':'🥭',
+  'coffee_milkshakes':'🥤☕',
+  'kids_milk':'🧸🥛',
+  'protein':'💪🥤',
+  'soft_drinks':'🧃',
+  'beer':'🍺',
+  'wine':'🍷',
+  'wine_pairing':'🧀🍷',
+  'breakfast_combos':'<span class="combo-icon">☕🥐</span>',
+  'desserts':'🧁',
+  'ice_cream':'🍦',
+  'toast_sandwiches':'🥪',
+  'tacos':'🌮',
+  'focaccia_pizza':'🍕',
+  'tapas':'<img src="assets/tapas_icon_clean.png" alt="Tapas">',
   'cat-coffee':'☕',
   'cat-tea':'🍵',
   'cat-matcha-smoothies':'🥤',
@@ -22,16 +47,36 @@ const T = {
   hr:{ tap:'Kliknite za sastojke', ingredients:'Sastojci', add:'Add', emptyCart:'Košarica je prazna.', orderSaved:'Narudžba je poslana u Admin Orders.', eligible:'Eligible for Langar Credit', alcoholic:'18+', unavailable:'Trenutno nedostupno', notOrderable:'Nije dostupno za online narudžbu', welcome:'Dobrodošli', join:'Učlani se', noProfile:'Još niste član Langar Cluba.'},
   en:{ tap:'Tap for ingredients', ingredients:'Ingredients', add:'Add', emptyCart:'Your cart is empty.', orderSaved:'Order was sent to Admin Orders.', eligible:'Eligible for Langar Credit', alcoholic:'18+', unavailable:'Currently unavailable', notOrderable:'Not available for online ordering', welcome:'Welcome', join:'Join now', noProfile:'You are not a Langar Club member yet.'}
 };
-let state = { lang: localStorage.langar_lang || 'hr', activeCat:'cat-coffee', activeOrderCat:'cat-coffee', cart:[], orderType:'pickup' };
+let state = { lang: localStorage.langar_lang || 'hr', activeCat:'classic_coffee', activeOrderCat:'classic_coffee', cart:[], orderType:'pickup' };
+const MENU_STORAGE_KEY = 'langar_menu_v5';
+function textOf(value, lang=state.lang){
+  if(value && typeof value === 'object') return value[lang] || value.en || value.hr || '';
+  return value || '';
+}
+function catTitle(cat){ return textOf(cat.title); }
+function catDesc(cat){ return textOf(cat.description); }
+function itemName(item, lang=state.lang){ return textOf(item.name, lang); }
+function itemDesc(item, lang=state.lang){ return textOf(item.desc, lang); }
+function itemIngredients(item, lang=state.lang){ return textOf(item.ingredients, lang) || itemDesc(item, lang); }
+function currentAppUrl(refCode=''){
+  const base = window.location.origin + window.location.pathname.replace(/index\.html$/,'');
+  return refCode ? `${base}?ref=${encodeURIComponent(refCode)}` : base;
+}
+function qrUrl(data, size=220){
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(data)}`;
+}
 function getMenu(){
-  const normalize = menu => menu.map(c=>({...c, icon:ICONS[c.id]||c.icon||'✦', items:c.items.map(i=>({...i, allergens:i.allergens || (i.isAlcoholic?'18+':(i.desc.en.toLowerCase().includes('milk')||i.desc.en.toLowerCase().includes('mozzarella')?'milk / gluten possible':'ask staff'))}))}));
-  const stored=LS.get('langar_menu_v3', null);
+  const normalize = menu => menu.map(c=>({...c, icon:ICONS[c.id]||c.icon||'✦', title:c.title||{en:c.id,hr:c.id}, description:c.description||{en:'',hr:''}, items:(c.items||[]).map(i=>{
+    const ing = itemIngredients(i,'en').toLowerCase();
+    return {...i, name:i.name||{en:i.name_en||'',hr:i.name_hr||i.name_en||''}, desc:i.desc||{en:'',hr:''}, ingredients:i.ingredients||i.desc||{en:'',hr:''}, allergens:i.allergens || (i.isAlcoholic?'18+':(ing.includes('milk')||ing.includes('mozzarella')||ing.includes('cheese')?'milk / gluten possible':'ask staff'))};
+  })}));
+  const stored=LS.get(MENU_STORAGE_KEY, null);
   if(stored) return normalize(stored);
   const m=normalize(LANGAR_DEFAULT_MENU);
-  LS.set('langar_menu_v3',m);
+  LS.set(MENU_STORAGE_KEY,m);
   return m;
 }
-function saveMenu(m){ LS.set('langar_menu_v3',m); }
+function saveMenu(m){ LS.set(MENU_STORAGE_KEY,m); }
 function setLang(lang){ state.lang=lang; localStorage.langar_lang=lang; document.documentElement.lang=lang; $('#langBtn').textContent=lang==='hr'?'EN':'HR'; $$('[data-hr]').forEach(el=>{ el.textContent=el.dataset[lang]; }); renderAll(); }
 function priceNum(p){ const match=String(p).replace(',','.').match(/[0-9]+(\.[0-9]+)?/); return match?parseFloat(match[0]):0; }
 function uid(prefix){ return prefix+'-'+Math.random().toString(36).slice(2,8)+'-'+Date.now().toString(36).slice(-4); }
@@ -112,15 +157,15 @@ function attachNav(){
   });
 }
 function activeCategories(){ return getMenu().filter(c=>c.active!==false); }
-function categoryButton(cat, active, cb){ const count=cat.items.filter(i=>i.available!==false).length; const btn=document.createElement('button'); btn.className='cat-tab '+(active?'active':''); btn.innerHTML=`<span class="cat-icon">${cat.icon||'✦'}</span><b>${cat.title[state.lang]}</b><small>${count}</small>`; btn.onclick=cb; return btn; }
+function categoryButton(cat, active, cb){ const count=(cat.items||[]).filter(i=>i.available!==false).length; const btn=document.createElement('button'); btn.className='cat-tab '+(active?'active':''); btn.innerHTML=`<span class="cat-icon">${cat.icon||'✦'}</span><b>${catTitle(cat)}</b><small>${count}</small>`; btn.onclick=cb; return btn; }
 function renderCategoryTabs(){ const tabs=$('#categoryTabs'); if(!tabs) return; tabs.innerHTML=''; const cats=activeCategories(); if(!cats.find(c=>c.id===state.activeCat)&&cats[0]) state.activeCat=cats[0].id; cats.forEach(cat=>tabs.appendChild(categoryButton(cat, cat.id===state.activeCat, ()=>{state.activeCat=cat.id;renderCategoryTabs();renderMenu();}))); }
 function renderOrderCategoryTabs(){ const tabs=$('#orderCategoryTabs'); if(!tabs) return; tabs.innerHTML=''; const cats=activeCategories().filter(c=>c.items.some(i=>i.available!==false&&i.orderable!==false)); if(!cats.find(c=>c.id===state.activeOrderCat)&&cats[0]) state.activeOrderCat=cats[0].id; cats.forEach(cat=>tabs.appendChild(categoryButton(cat, cat.id===state.activeOrderCat, ()=>{state.activeOrderCat=cat.id;renderOrderCategoryTabs();renderOrderMenu();}))); }
-function itemNode(item, orderMode=false){ const node=document.createElement('article'); node.className='menu-item'; const disabled=orderMode&&item.orderable===false; node.innerHTML=`<div class="item-main"><h4>${item.name}</h4><p class="hint">${T[state.lang].tap}</p>${item.isAlcoholic?`<span class="tag">${T[state.lang].alcoholic}</span>`:''}</div><div class="item-side"><div class="price">${item.price}</div>${orderMode&&!disabled?`<button class="secondary addBtn">${T[state.lang].add}</button>`:''}${disabled?`<p class="muted">${T[state.lang].notOrderable}</p>`:''}</div>`; node.onclick=e=>{ if(e.target.classList.contains('addBtn')){e.stopPropagation();addToCart(item);return;} openDetails(item, orderMode); }; return node; }
-function openDetails(item, orderMode){ $('#modalBody').innerHTML=`<div class="detail-row"><div><h2>${item.name}</h2><p class="price">${item.price}</p></div>${orderMode&&item.orderable!==false?`<button class="primary addFromModal">${T[state.lang].add}</button>`:''}</div><div class="ingredients-box"><h4>${T[state.lang].ingredients}</h4><p><b>HR:</b> ${item.desc.hr}</p><p><b>EN:</b> ${item.desc.en}</p></div><p class="muted"><b>Allergens:</b> ${item.allergens||'Ask staff'}</p>${item.rewardEligible!==false?`<p class="tag">${T[state.lang].eligible}</p>`:''}${item.isAlcoholic?`<p class="tag">${state.lang==='hr'?'Samo za osobe 18+. Osoblje može zatražiti osobni dokument.':'18+ only. Staff may request ID.'}</p>`:''}`; const btn=$('#modalBody .addFromModal'); if(btn) btn.onclick=()=>{addToCart(item);$('#modal').classList.add('hidden')}; $('#modal').classList.remove('hidden'); }
-function renderMenu(){ const cats=activeCategories(); const cat=cats.find(c=>c.id===state.activeCat)||cats[0]; const list=$('#menuList'); if(!cat||!list)return; list.innerHTML=`<section class="selected-cat"><div class="big-icon">${cat.icon}</div><div><h3>${cat.title[state.lang]}</h3><p>${cat.description?.[state.lang]||''}</p></div></section><div class="item-list"></div>`; const items=list.querySelector('.item-list'); cat.items.filter(i=>i.available!==false).forEach(i=>items.appendChild(itemNode(i,false))); }
-function renderOrderMenu(){ const cats=activeCategories().filter(c=>c.items.some(i=>i.available!==false&&i.orderable!==false)); const cat=cats.find(c=>c.id===state.activeOrderCat)||cats[0]; const wrap=$('#orderMenu'); if(!cat||!wrap)return; wrap.innerHTML=`<section class="selected-cat"><div class="big-icon">${cat.icon}</div><div><h3>${cat.title[state.lang]}</h3><p>${cat.description?.[state.lang]||''}</p></div></section><div class="item-list"></div>`; const items=wrap.querySelector('.item-list'); cat.items.filter(i=>i.available!==false&&i.orderable!==false).forEach(i=>items.appendChild(itemNode(i,true))); }
+function itemNode(item, orderMode=false){ const node=document.createElement('article'); node.className='menu-item'; const disabled=orderMode&&item.orderable===false; node.innerHTML=`<div class="item-main"><h4>${itemName(item)}</h4><p class="hint">${T[state.lang].tap}</p>${item.isAlcoholic?`<span class="tag">${T[state.lang].alcoholic}</span>`:''}${item.isNew?`<span class="tag">NEW</span>`:''}</div><div class="item-side"><div class="price">${item.price}</div>${orderMode&&!disabled?`<button class="secondary addBtn">${T[state.lang].add}</button>`:''}${disabled?`<p class="muted">${T[state.lang].notOrderable}</p>`:''}</div>`; node.onclick=e=>{ if(e.target.classList.contains('addBtn')){e.stopPropagation();addToCart(item);return;} openDetails(item, orderMode); }; return node; }
+function openDetails(item, orderMode){ const name=itemName(item), desc=itemDesc(item), ingredients=itemIngredients(item); $('#modalBody').innerHTML=`<div class="detail-row"><div><h2>${name}</h2><p class="price">${item.price}</p></div>${orderMode&&item.orderable!==false?`<button class="primary addFromModal">${T[state.lang].add}</button>`:''}</div><div class="ingredients-box"><h4>${T[state.lang].ingredients}</h4><p>${ingredients}</p>${desc&&desc!==ingredients?`<p class="muted">${desc}</p>`:''}</div><p class="muted"><b>Allergens:</b> ${item.allergens||'Ask staff'}</p>${item.rewardEligible!==false?`<p class="tag">${T[state.lang].eligible}</p>`:''}${item.isAlcoholic?`<p class="tag">${state.lang==='hr'?'Samo za osobe 18+. Osoblje može zatražiti osobni dokument.':'18+ only. Staff may request ID.'}</p>`:''}`; const btn=$('#modalBody .addFromModal'); if(btn) btn.onclick=()=>{addToCart(item);$('#modal').classList.add('hidden')}; $('#modal').classList.remove('hidden'); }
+function renderMenu(){ const cats=activeCategories(); const cat=cats.find(c=>c.id===state.activeCat)||cats[0]; const list=$('#menuList'); if(!cat||!list)return; list.innerHTML=`<section class="selected-cat"><div class="big-icon">${cat.icon}</div><div><h3>${catTitle(cat)}</h3><p>${catDesc(cat)||''}</p></div></section><div class="item-list"></div>`; const items=list.querySelector('.item-list'); cat.items.filter(i=>i.available!==false).forEach(i=>items.appendChild(itemNode(i,false))); }
+function renderOrderMenu(){ const cats=activeCategories().filter(c=>c.items.some(i=>i.available!==false&&i.orderable!==false)); const cat=cats.find(c=>c.id===state.activeOrderCat)||cats[0]; const wrap=$('#orderMenu'); if(!cat||!wrap)return; wrap.innerHTML=`<section class="selected-cat"><div class="big-icon">${cat.icon}</div><div><h3>${catTitle(cat)}</h3><p>${catDesc(cat)||''}</p></div></section><div class="item-list"></div>`; const items=wrap.querySelector('.item-list'); cat.items.filter(i=>i.available!==false&&i.orderable!==false).forEach(i=>items.appendChild(itemNode(i,true))); }
 function addToCart(item){ const found=state.cart.find(x=>x.id===item.id); if(found) found.qty++; else state.cart.push({...item, qty:1}); renderCart(); }
-function renderCart(){ const c=$('#cartItems'); if(!c)return; if(!state.cart.length){ c.textContent=T[state.lang].emptyCart; $('#cartTotal').textContent='€0.00'; return;} c.innerHTML=''; let total=0; state.cart.forEach((it,idx)=>{ const lt=priceNum(it.price)*it.qty; total+=lt; const line=document.createElement('div'); line.className='cart-line'; line.innerHTML=`<span>${it.qty} × ${it.name}</span><b>€${lt.toFixed(2)}</b><button>×</button>`; line.querySelector('button').onclick=()=>{state.cart.splice(idx,1);renderCart();}; c.appendChild(line);}); $('#cartTotal').textContent=`€${total.toFixed(2)}`; }
+function renderCart(){ const c=$('#cartItems'); if(!c)return; if(!state.cart.length){ c.textContent=T[state.lang].emptyCart; $('#cartTotal').textContent='€0.00'; return;} c.innerHTML=''; let total=0; state.cart.forEach((it,idx)=>{ const lt=priceNum(it.price)*it.qty; total+=lt; const line=document.createElement('div'); line.className='cart-line'; line.innerHTML=`<span>${it.qty} × ${itemName(it)}</span><b>€${lt.toFixed(2)}</b><button>×</button>`; line.querySelector('button').onclick=()=>{state.cart.splice(idx,1);renderCart();}; c.appendChild(line);}); $('#cartTotal').textContent=`€${total.toFixed(2)}`; }
 function renderDashboard(){
   const p=profile(); const d=$('#homeDashboard'); if(!d)return;
   if(!p){
@@ -131,7 +176,7 @@ function renderDashboard(){
   d.innerHTML=`<div class="dash-card"><p class="muted">${T[state.lang].welcome}, ${p.firstName}</p><h3>${p.credit?.toFixed(2)||'0.00'} € Langar Credit</h3><div class="stats"><span>${level}<small>Level</small></span><span>${p.orders||0}<small>Orders</small></span><span>${p.referrals||0}<small>Friends</small></span></div><div class="dashboard-actions"><button class="secondary" data-go="rewards">Rewards</button><button class="secondary" data-go="club">My QR</button></div><p class="muted">${state.lang==='hr'?'Digitalne kartice i QR kodovi nalaze se u Inboxu i Rewards. Iskorištene kartice automatski nestaju iz aktivnih nagrada.':'Digital cards and QR codes are in Inbox and Rewards. Redeemed cards automatically disappear from active rewards.'}</p></div>`;
   attachNav();
 }
-function renderHomeCats(){ const wrap=$('#homeCategoryPreview'); if(!wrap)return; const cats=activeCategories().slice(0,8); wrap.innerHTML='<h2>Explore Langar</h2><div class="icon-grid"></div>'; const grid=wrap.querySelector('.icon-grid'); cats.forEach(cat=>{ const b=document.createElement('button'); b.innerHTML=`<span>${cat.icon}</span><b>${cat.title[state.lang]}</b>`; b.onclick=()=>{ state.activeCat=cat.id; navigate('menu'); renderCategoryTabs(); renderMenu();}; grid.appendChild(b);}); }
+function renderHomeCats(){ const wrap=$('#homeCategoryPreview'); if(!wrap)return; const cats=activeCategories().filter(c=>c.homeExplore!==false).slice(0,10); wrap.innerHTML='<h2>Explore Langar</h2><div class="icon-grid"></div>'; const grid=wrap.querySelector('.icon-grid'); cats.forEach(cat=>{ const b=document.createElement('button'); b.innerHTML=`<span>${cat.icon}</span><b>${catTitle(cat)}</b>`; b.onclick=()=>{ state.activeCat=cat.id; navigate('menu'); renderCategoryTabs(); renderMenu();}; grid.appendChild(b);}); }
 function renderClubState(){
   const p=profile(); const form=$('#clubForm'), success=$('#clubSuccess'), result=$('#clubResult');
   if(!form||!success) return;
@@ -142,7 +187,7 @@ function renderClubState(){
   attachNav();
   const q=$('#showPersonalQr'); if(q) q.onclick=()=>openPersonalQR();
 }
-function openPersonalQR(){ const p=profile(); if(!p) return; $('#modalBody').innerHTML=`<h2>Langar Club QR</h2><p class="muted">${state.lang==='hr'?'Ovaj QR služi za identifikaciju člana i skupljanje Langar Credit.':'This QR identifies the member and collects Langar Credit.'}</p><div class="qrbox"><b>${p.qr}</b><small>Member ID</small></div>`; $('#modal').classList.remove('hidden'); }
+function openPersonalQR(){ const p=profile(); if(!p) return; const data=currentAppUrl('member-'+p.qr); $('#modalBody').innerHTML=`<h2>Langar Club QR</h2><p class="muted">${state.lang==='hr'?'Ovaj QR služi za identifikaciju člana i skupljanje Langar Credit.':'This QR identifies the member and collects Langar Credit.'}</p><div class="qr-real"><img src="${qrUrl(data,240)}" alt="Langar Club QR"><b>${p.qr}</b><small>${data}</small></div>`; $('#modal').classList.remove('hidden'); }
 function createCard(type, title, body, discount){ return {id:uid('card'),type,title,body,discount,status:'active',unread:true,createdAt:new Date().toISOString(), code:uid('QR').toUpperCase()}; }
 function addInbox(item){ const list=inbox(); list.unshift(item); LS.set('langar_inbox',list); renderInboxBadge(); }
 function redeemCard(id){ const list=cards().map(c=>c.id===id?{...c,status:'redeemed',redeemedAt:new Date().toISOString()}:c); LS.set('langar_cards', list); addInbox({id:uid('msg'),title:'Card redeemed',body:'Digital card was redeemed and is now invalid.',unread:true,createdAt:new Date().toISOString()}); renderRewards(); }
@@ -158,7 +203,7 @@ function renderRewards(){
   used.forEach(c=>usedBox.appendChild(renderCard(c))); if(!used.length) usedBox.innerHTML='<p class="muted">No used cards yet.</p>';
   const mq=$('#rewardMemberQr'); if(mq) mq.onclick=()=>openPersonalQR();
 }
-function renderReferral(){ const p=profile(); const wrap=$('#referralView'); if(!wrap)return; if(!p){wrap.innerHTML='<div class="empty-state">Register first to receive your referral QR.</div>'; return;} wrap.innerHTML=`<section class="qr-card"><h3>Your invite QR</h3><div class="qrbox"><b>REF-${p.qr}</b><small>Referral code</small></div><p>Reward rule: friend registers through your QR, places the first online order, pays, and the order is completed. Then you receive €0.50 Langar Credit.</p></section>`; }
+function renderReferral(){ const p=profile(); const wrap=$('#referralView'); if(!wrap)return; if(!p){wrap.innerHTML='<div class="empty-state">Register first to receive your referral QR.</div>'; return;} if(!p.referralCode){ p.referralCode='REF-'+p.qr.replace('LNG-',''); LS.set('langar_profile',p); } const link=currentAppUrl(p.referralCode); wrap.innerHTML=`<section class="qr-card"><h3>${state.lang==='hr'?'Vaš referral QR':'Your referral QR'}</h3><p>${state.lang==='hr'?'Prijatelj skenira ovaj QR, instalira/otvori aplikaciju i registrira se u Langar Club. Nagrada se aktivira tek nakon njegove prve plaćene online narudžbe.':'Your friend scans this QR, installs/opens the app and registers in Langar Club. The reward activates only after their first paid online order.'}</p><div class="qr-real"><img src="${qrUrl(link,260)}" alt="Referral QR"><b>${p.referralCode}</b><small>${link}</small></div><p><b>Reward rule:</b> friend registers through your QR, places the first online order, pays, and the order is completed. Then you receive €0.50 Langar Credit.</p><button class="secondary" id="copyReferralLink">${state.lang==='hr'?'Kopiraj link':'Copy link'}</button></section>`; const copy=$('#copyReferralLink'); if(copy) copy.onclick=()=>navigator.clipboard?.writeText(link).then(()=>alert('Referral link copied.')); }
 function openInboxItem(item){
   markInboxItemRead(item);
   if(item.type==='card'){
@@ -201,11 +246,12 @@ function renderInbox(){
   box.innerHTML='';
   list.forEach(item=>{ const a=document.createElement('article'); a.className='inbox-item clickable '+(item.unread?'unread':''); a.innerHTML=`<b>${item.title}</b><p>${item.body}</p><small>${new Date(item.createdAt).toLocaleString()}</small><span class="tap-note">${item.type==='card'?'Open card':'Open message'}</span>`; a.onclick=()=>openInboxItem(item); box.appendChild(a); });
 }
+function renderAppQr(){ const box=$('#appInstallQr'); if(!box) return; const link=currentAppUrl(); box.innerHTML=`<img src="${qrUrl(link,180)}" alt="Langar Bar app QR"><b>Langar Bar App</b><small>${link}</small>`; }
 function renderGallery(){ const g=$('#galleryView'); if(!g)return; const imgs=LS.get('langar_gallery',[{src:'assets/tacos_hero.jpeg',title:'Signature tacos',cat:'Tacos'},{src:'assets/prawn_tacos.jpeg',title:'Crunchy prawn tacos',cat:'Tacos'},{src:'assets/quesadilla_real.jpeg',title:'Quesadilla preview',cat:'Food'}]); g.innerHTML=imgs.map(i=>`<article><img src="${i.src}"><b>${i.title}</b><small>${i.cat}</small></article>`).join(''); }
-function renderAll(){ renderCategoryTabs(); renderMenu(); renderOrderCategoryTabs(); renderOrderMenu(); renderCart(); renderDashboard(); renderHomeCats(); renderInboxBadge(); renderReservationCalendar(); }
+function renderAll(){ renderCategoryTabs(); renderMenu(); renderOrderCategoryTabs(); renderOrderMenu(); renderCart(); renderDashboard(); renderHomeCats(); renderAppQr(); renderInboxBadge(); renderReservationCalendar(); }
 function setupEvents(){
   attachNav();
-  const back=$('#backBtn'); if(back) back.onclick=goBack;
+  const back=$('#backBtn'); if(back) back.onclick=goBack; const refInput=document.querySelector('[name="referralCode"]'); if(refInput && localStorage.langar_pending_referral && !refInput.value) refInput.value=localStorage.langar_pending_referral;
   $('#langBtn').onclick=()=>setLang(state.lang==='hr'?'en':'hr');
   $$('.segmented [data-order-type]').forEach(b=>b.onclick=()=>{$$('.segmented button').forEach(x=>x.classList.remove('active')); b.classList.add('active'); state.orderType=b.dataset.orderType;});
   $('#closeModal').onclick=()=>$('#modal').classList.add('hidden');
@@ -216,7 +262,7 @@ function setupEvents(){
   $('#clubForm').onsubmit=e=>{
     e.preventDefault();
     const data=Object.fromEntries(new FormData(e.target).entries());
-    const p={...data, id:uid('CUST'), qr:'LNG-'+Math.floor(100000+Math.random()*900000), credit:0, orders:0, visits:0, referrals:0, createdAt:new Date().toISOString()};
+    const pendingRef=localStorage.langar_pending_referral||data.referralCode||''; const p={...data, referralCodeInput:pendingRef, referredBy:pendingRef, id:uid('CUST'), qr:'LNG-'+Math.floor(100000+Math.random()*900000), referralCode:'REF-'+Math.floor(100000+Math.random()*900000), credit:0, orders:0, visits:0, referrals:0, referralRewardPosted:false, createdAt:new Date().toISOString()};
     LS.set('langar_profile',p);
     if(!cards().some(c=>c.type==='welcome')){
       const free=createCard('welcome','Free Espresso Card','One-time free espresso welcome gift. Show this card and let staff scan it.', 'free');
@@ -234,8 +280,8 @@ function setupEvents(){
   if(partnerForm) partnerForm.onsubmit=e=>{ e.preventDefault(); const data=Object.fromEntries(new FormData(e.target).entries()); const list=LS.get('langar_partner_applications',[]); list.unshift({id:uid('PART'),status:'new',createdAt:new Date().toISOString(),...data}); LS.set('langar_partner_applications',list); e.target.reset(); alert(state.lang==='hr'?'Prijava je primljena. Dodatne informacije šaljemo nakon pregleda.':'Application received. More information will be sent after review.'); };
   const reservationDate=$('#reservationDate'); if(reservationDate) reservationDate.onchange=()=>{ $('#reservationTime').value=''; renderReservationCalendar();};
   $('#reservationForm').onsubmit=e=>{e.preventDefault(); const data=Object.fromEntries(new FormData(e.target).entries()); if(!data.time){ alert(state.lang==='hr'?'Molimo odaberite slobodan zeleni termin.':'Please choose an available green time slot.'); return; } if(isReservationSlotBooked(data.date,data.time)){ alert(state.lang==='hr'?'Ovaj termin je već zauzet. Odaberite drugi zeleni termin.':'This time slot is already booked. Please choose another green slot.'); renderReservationCalendar(); return; } const res=LS.get('langar_reservations',[]); res.unshift({id:uid('RES'),status:'pending',createdAt:new Date().toISOString(),...data}); LS.set('langar_reservations',res); alert(state.lang==='hr'?'Rezervacija je poslana. Termin je sada zauzet dok ga admin ne otkaže.':'Reservation sent. This time slot is now blocked unless admin cancels it.'); e.target.reset(); $('#reservationTime').value=''; renderReservationCalendar();};
-  $('#submitOrder').onclick=()=>{ if(!state.cart.length)return alert(T[state.lang].emptyCart); const total=state.cart.reduce((s,it)=>s+priceNum(it.price)*it.qty,0); const orders=LS.get('langar_orders_v3',[]); orders.unshift({id:uid('ORD'),status:'new',paid:false,type:state.orderType,name:$('#orderName').value,phone:$('#orderPhone').value,address:$('#orderAddress').value,note:$('#orderNote').value,items:state.cart,total:+total.toFixed(2),createdAt:new Date().toISOString()}); LS.set('langar_orders_v3',orders); state.cart=[]; renderCart(); alert(T[state.lang].orderSaved);};
+  $('#submitOrder').onclick=()=>{ if(!state.cart.length)return alert(T[state.lang].emptyCart); const total=state.cart.reduce((s,it)=>s+priceNum(it.price)*it.qty,0); const orders=LS.get('langar_orders_v3',[]); orders.unshift({id:uid('ORD'),status:'new',paid:false,type:state.orderType,name:$('#orderName').value,phone:$('#orderPhone').value,address:$('#orderAddress').value,note:$('#orderNote').value,items:state.cart.map(it=>({...it, nameSnapshot:itemName(it,'en'), nameSnapshotHr:itemName(it,'hr')})),total:+total.toFixed(2),referredBy:profile()?.referredBy||null,createdAt:new Date().toISOString()}); LS.set('langar_orders_v3',orders); state.cart=[]; renderCart(); alert(T[state.lang].orderSaved);};
   if(!localStorage.langar_popup_closed) setTimeout(()=>$('#welcomePopup').classList.remove('hidden'),800);
   updateBackButton();
 }
-ensureWelcomeInbox(); setupEvents(); setLang(state.lang); if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(()=>{})); }
+const urlRef=new URLSearchParams(location.search).get('ref'); if(urlRef) localStorage.langar_pending_referral=urlRef; ensureWelcomeInbox(); setupEvents(); setLang(state.lang); if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(()=>{})); }
