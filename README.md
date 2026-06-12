@@ -1,43 +1,13 @@
-# Langar Bar App V3 Prototype
+# Langar Bar App V4.1 — Cloud Auth Foundation
 
-This is a front-end prototype for Langar Bar.
+This version keeps the V4.0 UI/UX structure and adds the first real cloud foundation:
 
-## Files
-- `index.html` — customer app
-- `admin.html` — admin panel prototype
-- `styles.css` — shared styling
-- `js/menu-data.js` — imported menu data from the provided PDF
-- `js/app.js` — customer app logic
-- `js/admin.js` — admin logic
-- `assets/` — logo, real photos and preview images
+- Supabase public config
+- Phone OTP login card in Langar Club
+- Cloud profile upsert after login
+- Cloud Inbox sync from `inbox_messages`
+- OneSignal SDK base and external user login after Supabase auth
+- Admin Cloud Login verification against `admin_members`
+- Service Worker cache updated to V4.1
 
-## Important prototype note
-This version stores data in browser `localStorage`. It is for UI/UX and logic testing only.
-The production version should use:
-- Supabase database/auth/storage
-- Admin login and role permissions
-- Real QR codes
-- Real one-time reward redemption
-- Push notifications
-- Remaris-ready integration layer
-
-## Included V3 features
-- Langar Bar only in header
-- Opening Soon hero
-- Opening Guest List popup
-- horizontal scroll category tabs for Menu and Order
-- click item to view ingredients
-- graphic category icons
-- customer dashboard
-- Langar Club registration
-- personal QR placeholder
-- Welcome Free Espresso card
-- Birthday card logic in admin
-- rewards wallet and inbox
-- referral logic blueprint and screen
-- order manager
-- reservation system
-- gallery manager
-- quick price update
-- Remaris-ready notes
-- legal notices for alcohol 18+ and fiscalized receipts
+Production note: Orders, full menu manager, feedback, events, sushi pre-orders, coupons and credits will be migrated to Supabase in the next cloud phases. This version focuses on secure auth foundation and cloud inbox/profile connection without breaking the existing prototype UI.
