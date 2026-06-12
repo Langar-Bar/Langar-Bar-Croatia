@@ -47,7 +47,7 @@ const T = {
   hr:{ tap:'Kliknite za sastojke', ingredients:'Sastojci', add:'Add', emptyCart:'Košarica je prazna.', orderSaved:'Narudžba je poslana u Admin Orders.', eligible:'Eligible for Langar Credit', alcoholic:'18+', unavailable:'Trenutno nedostupno', notOrderable:'Nije dostupno za online narudžbu', welcome:'Dobrodošli', join:'Učlani se', noProfile:'Još niste član Langar Cluba.'},
   en:{ tap:'Tap for ingredients', ingredients:'Ingredients', add:'Add', emptyCart:'Your cart is empty.', orderSaved:'Order was sent to Admin Orders.', eligible:'Eligible for Langar Credit', alcoholic:'18+', unavailable:'Currently unavailable', notOrderable:'Not available for online ordering', welcome:'Welcome', join:'Join now', noProfile:'You are not a Langar Club member yet.'}
 };
-let state = { lang: localStorage.langar_lang || 'hr', activeCat:'classic_coffee', activeOrderCat:'classic_coffee', cart:[], orderType:'pickup' };
+let state = { lang: localStorage.langar_lang || 'hr', activeCat:'classic_coffee', activeOrderCat:'classic_coffee', menuMode:'grid', cart:[], orderType:'pickup' };
 const MENU_STORAGE_KEY = 'langar_menu_v5';
 function textOf(value, lang=state.lang){
   if(value && typeof value === 'object') return value[lang] || value.en || value.hr || '';
@@ -127,7 +127,7 @@ function updateBackButton(){
   const btn=$('#backBtn');
   if(!btn) return;
   const current=$('.view.active')?.id || 'home';
-  btn.classList.toggle('hidden', current==='home' || viewStack.length<=1);
+  btn.classList.toggle('hidden', current==='home' || (viewStack.length<=1 && !(current==='menu' && state.menuMode==='detail')));
 }
 function navigate(id, push=true){
   const target=$('#'+CSS.escape(id));
@@ -136,6 +136,7 @@ function navigate(id, push=true){
   if(push && current && current!==id) viewStack.push(id);
   $$('.view').forEach(v=>v.classList.toggle('active', v.id===id));
   $$('.bottom-nav button').forEach(b=>b.classList.toggle('active', b.dataset.go===id));
+  if(id==='menu'){ state.menuMode='grid'; renderMenu(); }
   if(id==='rewards') renderRewards();
   if(id==='referral') renderReferral();
   if(id==='gallery') renderGallery();
@@ -144,6 +145,8 @@ function navigate(id, push=true){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 function goBack(){
+  const current=$('.view.active')?.id;
+  if(current==='menu' && state.menuMode==='detail'){ state.menuMode='grid'; renderMenu(); updateBackButton(); return; }
   if(viewStack.length<=1){ navigate('home', false); return; }
   viewStack.pop();
   const prev=viewStack[viewStack.length-1] || 'home';
@@ -159,14 +162,40 @@ function attachNav(){
 }
 function activeCategories(){ return getMenu().filter(c=>c.active!==false); }
 function categoryButton(cat, active, cb){ const count=(cat.items||[]).filter(i=>i.available!==false).length; const btn=document.createElement('button'); btn.className='cat-tab '+(active?'active':''); btn.innerHTML=`<span class="cat-icon">${cat.icon||'✦'}</span><b>${catTitle(cat)}</b><small>${count}</small>`; btn.onclick=cb; return btn; }
-function renderCategoryTabs(){ const tabs=$('#categoryTabs'); if(!tabs) return; tabs.innerHTML=''; const cats=activeCategories(); if(!cats.find(c=>c.id===state.activeCat)&&cats[0]) state.activeCat=cats[0].id; cats.forEach(cat=>tabs.appendChild(categoryButton(cat, cat.id===state.activeCat, ()=>{state.activeCat=cat.id;renderCategoryTabs();renderMenu();}))); }
+function renderCategoryTabs(){ const tabs=$('#categoryTabs'); if(!tabs) return; tabs.innerHTML=''; tabs.classList.add('hidden'); }
+function menuCategories(){
+  const cats=activeCategories();
+  if(!cats.some(c=>c.id==='sushi_preorder')){
+    cats.push({id:'sushi_preorder', icon:'🍣', title:{hr:'Sushi rezervacija',en:'Sushi Pre-order'}, description:{hr:'Svježi sushi samo uz rezervaciju najmanje 1 dan ranije.',en:'Fresh sushi by pre-order only, at least 1 day in advance.'}, items:[], virtual:true, sort:999});
+  }
+  return cats;
+}
+function openMenuCategory(catId){ state.activeCat=catId; state.menuMode='detail'; renderMenu(); updateBackButton(); window.scrollTo({top:0,behavior:'smooth'}); }
+function moveMenuCategory(step){ const cats=menuCategories(); let idx=cats.findIndex(c=>c.id===state.activeCat); if(idx<0) idx=0; idx=(idx+step+cats.length)%cats.length; openMenuCategory(cats[idx].id); }
+function renderMenuGrid(){ const list=$('#menuList'); if(!list) return; const cats=menuCategories(); list.innerHTML=`<section class="menu-category-landing"><div class="menu-landing-title"><h3>${state.lang==='hr'?'Kategorije menija':'Menu Categories'}</h3><p>${state.lang==='hr'?'Dodirnite kategoriju za otvaranje artikala. Stranice kategorija imaju Back, Previous i Next za uredno pregledavanje.':'Tap a category to open items. Category pages have Back, Previous and Next for organized browsing.'}</p></div><div class="menu-category-grid"></div></section>`; const grid=list.querySelector('.menu-category-grid'); cats.forEach(cat=>{ const count=(cat.items||[]).filter(i=>i.available!==false).length; const card=document.createElement('button'); card.type='button'; card.className='menu-category-card'; card.innerHTML=`<span class="menu-cat-icon">${cat.icon||'✦'}</span><b>${catTitle(cat)}</b><small>${cat.virtual?(state.lang==='hr'?'rezervacija':'pre-order'):`${count} ${state.lang==='hr'?'artikala':'items'}`}</small>`; card.onclick=()=>openMenuCategory(cat.id); grid.appendChild(card); }); }
 function renderOrderCategoryTabs(){ const tabs=$('#orderCategoryTabs'); if(!tabs) return; tabs.innerHTML=''; const cats=activeCategories().filter(c=>c.items.some(i=>i.available!==false&&i.orderable!==false)); if(!cats.find(c=>c.id===state.activeOrderCat)&&cats[0]) state.activeOrderCat=cats[0].id; cats.forEach(cat=>tabs.appendChild(categoryButton(cat, cat.id===state.activeOrderCat, ()=>{state.activeOrderCat=cat.id;renderOrderCategoryTabs();renderOrderMenu();}))); }
 function likesMap(){ return LS.get('langar_item_likes',{}); }
 function isLiked(id){ return !!likesMap()[id]; }
 function toggleLike(item){ const likes=likesMap(); likes[item.id]=!likes[item.id]; LS.set('langar_item_likes',likes); renderMenu(); renderOrderMenu(); renderHomeMarketing(); }
 function itemNode(item, orderMode=false){ const node=document.createElement('article'); node.className='menu-item'; const disabled=orderMode&&item.orderable===false; node.innerHTML=`<div class="item-main"><h4>${itemName(item)}</h4><p class="hint">${T[state.lang].tap}</p>${item.isAlcoholic?`<span class="tag">${T[state.lang].alcoholic}</span>`:''}${item.isNew?`<span class="tag">NEW</span>`:''}</div><div class="item-side"><button class="likeBtn ${isLiked(item.id)?'liked':''}" aria-label="Favorite">${isLiked(item.id)?'♥':'♡'}</button><div class="price">${item.price}</div>${orderMode&&!disabled?`<button class="secondary addBtn">${T[state.lang].add}</button>`:''}${disabled?`<p class="muted">${T[state.lang].notOrderable}</p>`:''}</div>`; node.onclick=e=>{ if(e.target.classList.contains('addBtn')){e.stopPropagation();addToCart(item);return;} if(e.target.classList.contains('likeBtn')){e.stopPropagation();toggleLike(item);return;} openDetails(item, orderMode); }; return node; }
 function openDetails(item, orderMode){ const name=itemName(item), desc=itemDesc(item), ingredients=itemIngredients(item); $('#modalBody').innerHTML=`<div class="detail-row"><div><h2>${name}</h2><p class="price">${item.price}</p></div>${orderMode&&item.orderable!==false?`<button class="primary addFromModal">${T[state.lang].add}</button>`:''}</div>${desc?`<p class="muted detail-desc">${desc}</p>`:''}<div class="ingredients-box"><h4>${T[state.lang].ingredients}</h4><p>${ingredients}</p></div><p class="muted"><b>Allergens:</b> ${item.allergens||'Ask staff'}</p>${item.rewardEligible!==false?`<p class="tag">${T[state.lang].eligible}</p>`:''}${item.isAlcoholic?`<p class="tag">${state.lang==='hr'?'Samo za osobe 18+. Osoblje može zatražiti osobni dokument.':'18+ only. Staff may request ID.'}</p>`:''}`; const btn=$('#modalBody .addFromModal'); if(btn) btn.onclick=()=>{addToCart(item);$('#modal').classList.add('hidden')}; $('#modal').classList.remove('hidden'); }
-function renderMenu(){ const cats=activeCategories(); const cat=cats.find(c=>c.id===state.activeCat)||cats[0]; const list=$('#menuList'); if(!cat||!list)return; list.innerHTML=`<section class="selected-cat"><div class="big-icon">${cat.icon}</div><div><h3>${catTitle(cat)}</h3><p>${catDesc(cat)||''}</p></div></section><div class="item-list"></div>`; const items=list.querySelector('.item-list'); cat.items.filter(i=>i.available!==false).forEach(i=>items.appendChild(itemNode({...i,categoryId:cat.id,categoryTitle:catTitle(cat)},false))); }
+function renderMenu(){
+  const list=$('#menuList'); if(!list) return;
+  if(state.menuMode!=='detail'){ renderMenuGrid(); return; }
+  const cats=menuCategories(); let cat=cats.find(c=>c.id===state.activeCat)||cats[0]; if(!cat){ renderMenuGrid(); return; }
+  const idx=cats.findIndex(c=>c.id===cat.id);
+  if(cat.id==='sushi_preorder'){
+    list.innerHTML=`<section class="menu-detail-toolbar"><button class="secondary menuBackToGrid">‹ ${state.lang==='hr'?'Kategorije':'Categories'}</button><div><button class="secondary prevCat">‹ ${state.lang==='hr'?'Prethodno':'Previous'}</button><button class="secondary nextCat">${state.lang==='hr'?'Sljedeće':'Next'} ›</button></div></section><section class="selected-cat menu-detail-head"><div class="big-icon">${cat.icon}</div><div><h3>${catTitle(cat)}</h3><p>${catDesc(cat)||''}</p><small>${idx+1}/${cats.length}</small></div></section><section class="form-card sushi-menu-bridge"><h3>${state.lang==='hr'?'Rezervirajte sushi':'Reserve sushi'}</h3><p class="muted">${state.lang==='hr'?'Sushi se ne prodaje kao stalni dnevni artikl na početku. Rezervacija najmanje 1 dan ranije pomaže nam sačuvati svježinu i vidjeti potražnju.':'Sushi is not sold as a daily item at the beginning. Reserving at least 1 day ahead helps us keep freshness and measure demand.'}</p><button class="primary full" data-go="sushi">${state.lang==='hr'?'Otvori sushi rezervaciju':'Open sushi pre-order'}</button></section>`;
+    list.querySelector('.menuBackToGrid').onclick=()=>{state.menuMode='grid'; renderMenu(); updateBackButton();};
+    list.querySelector('.prevCat').onclick=()=>moveMenuCategory(-1); list.querySelector('.nextCat').onclick=()=>moveMenuCategory(1); attachNav(); return;
+  }
+  list.innerHTML=`<section class="menu-detail-toolbar"><button class="secondary menuBackToGrid">‹ ${state.lang==='hr'?'Kategorije':'Categories'}</button><div><button class="secondary prevCat">‹ ${state.lang==='hr'?'Prethodno':'Previous'}</button><button class="secondary nextCat">${state.lang==='hr'?'Sljedeće':'Next'} ›</button></div></section><section class="selected-cat menu-detail-head"><div class="big-icon">${cat.icon}</div><div><h3>${catTitle(cat)}</h3><p>${catDesc(cat)||''}</p><small>${idx+1}/${cats.length}</small></div></section><div class="item-list menu-detail-items"></div>`;
+  const items=list.querySelector('.item-list');
+  cat.items.filter(i=>i.available!==false).forEach(i=>items.appendChild(itemNode({...i,categoryId:cat.id,categoryTitle:catTitle(cat)},false)));
+  list.querySelector('.menuBackToGrid').onclick=()=>{state.menuMode='grid'; renderMenu(); updateBackButton();};
+  list.querySelector('.prevCat').onclick=()=>moveMenuCategory(-1);
+  list.querySelector('.nextCat').onclick=()=>moveMenuCategory(1);
+}
 function renderOrderMenu(){ const cats=activeCategories().filter(c=>c.items.some(i=>i.available!==false&&i.orderable!==false)); const cat=cats.find(c=>c.id===state.activeOrderCat)||cats[0]; const wrap=$('#orderMenu'); if(!cat||!wrap)return; wrap.innerHTML=`<section class="selected-cat"><div class="big-icon">${cat.icon}</div><div><h3>${catTitle(cat)}</h3><p>${catDesc(cat)||''}</p></div></section><div class="item-list"></div>`; const items=wrap.querySelector('.item-list'); cat.items.filter(i=>i.available!==false&&i.orderable!==false).forEach(i=>items.appendChild(itemNode({...i,categoryId:cat.id,categoryTitle:catTitle(cat)},true))); }
 function addToCart(item){ const found=state.cart.find(x=>x.id===item.id); if(found) found.qty++; else state.cart.push({...item, qty:1}); renderCart(); renderSmartSuggestion(item); }
 function renderSmartSuggestion(item){ const box=$('#smartSuggestion'); if(!box) return; const id=item.categoryId||''; let msg=state.lang==='hr'?'Dodajte piće ili desert uz narudžbu.':'Add a drink or dessert to your order.'; if(String(id).includes('taco')||String(id).includes('focaccia')||String(id).includes('tapas')) msg=state.lang==='hr'?'Savršeno uz osvježavajuće piće ili espresso nakon jela.':'Perfect with a refreshing drink or an espresso after food.'; if(String(id).includes('coffee')) msg=state.lang==='hr'?'Kava se odlično slaže s desertom ili kroasanom.':'Coffee pairs beautifully with dessert or croissant.'; if(String(id).includes('protein')) msg=state.lang==='hr'?'Probajte proteinski napitak uz lagani sendvič ili snack.':'Try a protein drink with a light sandwich or snack.'; box.innerHTML=`<article class="smart-suggestion"><b>${state.lang==='hr'?'Prijedlog uz narudžbu':'Smart suggestion'}</b><p>${msg}</p></article>`; }

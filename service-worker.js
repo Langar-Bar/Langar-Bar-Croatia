@@ -1,4 +1,4 @@
-const CACHE_NAME = 'langar-bar-v3.8';
+const CACHE_NAME = 'langar-bar-v3.9';
 const CORE_ASSETS = [
   './', './index.html', './styles.css', './js/menu-data.js', './js/app.js', './js/admin.js', './admin.html', './assets/logo.jpeg', './manifest.webmanifest'
 ];
