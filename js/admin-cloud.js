@@ -325,3 +325,246 @@
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',install); else install();
 })();
+
+// =============================
+// V4.2.2 — Cloud Customers & Rewards unified across devices
+// =============================
+(function(){
+  'use strict';
+  const CONFIG = { supabaseUrl:'https://fkanccgigogbxodiljqt.supabase.co', supabaseKey:'sb_publishable_WbWIWgu9R2AKepJiRrygCw_1oWrdwG7' };
+  const client = window.supabase?.createClient ? window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey, { auth:{ persistSession:true, autoRefreshToken:true } }) : null;
+  const $ = s=>document.querySelector(s);
+  const $$ = s=>Array.from(document.querySelectorAll(s));
+  const safe = v=>String(v||'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  const euro = n=>'€'+Number(n||0).toFixed(2);
+  let customersCache=[];
+  let selectedCustomerId=null;
+
+  async function requireAdmin(){
+    if(!client) throw new Error('Supabase SDK not loaded');
+    const {data}=await client.auth.getSession();
+    if(!data.session?.user) throw new Error('Please login as Cloud Admin first.');
+    const {data:admin,error}=await client.from('admin_members').select('role,active').eq('user_id',data.session.user.id).eq('active',true).maybeSingle();
+    if(error) throw error;
+    if(!admin) throw new Error('This user is not an active Cloud Admin.');
+    return {user:data.session.user, role:admin.role};
+  }
+
+  function customerName(c){
+    return [c.first_name,c.last_name].filter(Boolean).join(' ') || c.email || c.phone || 'Unnamed customer';
+  }
+
+  async function loadCustomers(){
+    await requireAdmin();
+    const {data,error}=await client
+      .from('profiles')
+      .select('id,phone,email,first_name,last_name,birthday,app_language,customer_level,langar_credit,referral_code,marketing_opt_in,push_opt_in,last_seen_at,created_at,updated_at')
+      .order('created_at',{ascending:false})
+      .limit(500);
+    if(error) throw error;
+    customersCache=data||[];
+    if(!selectedCustomerId && customersCache.length) selectedCustomerId=customersCache[0].id;
+    return customersCache;
+  }
+
+  async function loadCustomerCards(userId){
+    const {data,error}=await client.from('reward_cards')
+      .select('id,reward_type,title_en,title_hr,description_en,description_hr,qr_code,status,valid_until,created_at')
+      .eq('user_id',userId)
+      .order('created_at',{ascending:false})
+      .limit(100);
+    if(error) return [];
+    return data||[];
+  }
+
+  async function loadCustomerWallet(userId){
+    const {data,error}=await client.from('wallet_transactions')
+      .select('id,amount,transaction_type,reason,created_at')
+      .eq('user_id',userId)
+      .order('created_at',{ascending:false})
+      .limit(30);
+    if(error) return [];
+    return data||[];
+  }
+
+  async function loadCustomerOrders(userId){
+    const {data,error}=await client.from('sushi_preorders')
+      .select('id,preorder_number,status,requested_date,total,created_at')
+      .eq('user_id',userId)
+      .order('created_at',{ascending:false})
+      .limit(10);
+    if(error) return [];
+    return data||[];
+  }
+
+  async function renderCloudCustomerDetail(userId){
+    const detail=$('#cloudCustomerDetail'); if(!detail) return;
+    const c=customersCache.find(x=>x.id===userId);
+    if(!c){ detail.innerHTML='<p class="muted">Select a customer.</p>'; return; }
+    detail.innerHTML='<p class="muted">Loading customer details...</p>';
+    const [cards,wallet,sushi]=await Promise.all([loadCustomerCards(userId),loadCustomerWallet(userId),loadCustomerOrders(userId)]);
+    detail.innerHTML=`
+      <div class="legal-block customer-detail-card">
+        <h3>${safe(customerName(c))}</h3>
+        <p><b>Phone:</b> ${safe(c.phone||'-')}<br>
+        <b>Email:</b> ${safe(c.email||'-')}<br>
+        <b>Birthday:</b> ${safe(c.birthday||'-')}<br>
+        <b>Language:</b> ${safe(c.app_language||'-')}<br>
+        <b>Level:</b> ${safe(c.customer_level||'bronze')}<br>
+        <b>Langar Credit:</b> ${euro(c.langar_credit)}<br>
+        <b>Referral code:</b> ${safe(c.referral_code||'-')}<br>
+        <b>User ID:</b> <small>${safe(c.id)}</small></p>
+        <div class="edit-grid">
+          <label>Add / set credit amount<input id="cloudCreditAmount" type="number" step="0.01" value="${Number(c.langar_credit||0).toFixed(2)}"></label>
+          <label>Reason<input id="cloudCreditReason" value="Admin adjustment"></label>
+        </div>
+        <div class="toolbar">
+          <button class="primary" id="cloudSaveCredit">Save Credit</button>
+          <button class="secondary" id="cloudSendEspresso">Send Free Espresso Card</button>
+          <button class="secondary" id="cloudSendBirthday">Send Birthday Card</button>
+          <button class="secondary" id="cloudSendInboxTest">Send Inbox Note</button>
+        </div>
+        <small id="cloudCustomerActionStatus" class="muted"></small>
+      </div>
+      <div class="quick-grid customer-mini-stats">
+        <button><span>🎁</span><b>${cards.filter(x=>x.status==='active').length}</b><small>Active Cards</small></button>
+        <button><span>💶</span><b>${euro(c.langar_credit)}</b><small>Credit</small></button>
+        <button><span>🍣</span><b>${sushi.length}</b><small>Sushi Orders</small></button>
+        <button><span>✉️</span><b>${c.push_opt_in?'On':'Off'}</b><small>Push</small></button>
+      </div>
+      <h3>Reward Cards</h3>
+      ${cards.length?`<div class="cards-list">${cards.map(card=>`<article class="reward-card ${safe(card.status)}"><b>${safe(card.title_en||card.title_hr||card.reward_type)}</b><p>${safe(card.description_en||card.description_hr||'')}</p><div class="qrbox">${safe(card.qr_code||card.id.slice(0,8))}</div><small>${safe(card.status)} ${card.valid_until?'until '+safe(card.valid_until).slice(0,10):''}</small></article>`).join('')}</div>`:'<p class="muted">No reward cards yet.</p>'}
+      <h3>Wallet History</h3>
+      ${wallet.length?`<table class="table"><tbody>${wallet.map(w=>`<tr><td>${euro(w.amount)}</td><td>${safe(w.transaction_type)}<br><small>${safe(w.reason||'')}</small></td><td>${new Date(w.created_at).toLocaleString()}</td></tr>`).join('')}</tbody></table>`:'<p class="muted">No wallet transactions yet.</p>'}
+      <h3>Recent Sushi Pre-orders</h3>
+      ${sushi.length?`<table class="table"><tbody>${sushi.map(o=>`<tr><td>${safe(o.preorder_number||o.id.slice(0,8))}</td><td>${safe(o.status)}</td><td>${safe(o.requested_date||'')}</td><td>${euro(o.total)}</td></tr>`).join('')}</tbody></table>`:'<p class="muted">No sushi pre-orders yet.</p>'}
+    `;
+    $('#cloudSaveCredit')?.addEventListener('click',()=>saveCloudCredit(c));
+    $('#cloudSendEspresso')?.addEventListener('click',()=>sendCloudCard(c,'welcome_espresso'));
+    $('#cloudSendBirthday')?.addEventListener('click',()=>sendCloudCard(c,'birthday'));
+    $('#cloudSendInboxTest')?.addEventListener('click',()=>sendCloudInbox(c));
+  }
+
+  async function saveCloudCredit(c){
+    const status=$('#cloudCustomerActionStatus');
+    try{
+      const {user}=await requireAdmin();
+      const amount=Number($('#cloudCreditAmount')?.value||0);
+      const reason=$('#cloudCreditReason')?.value||'Admin adjustment';
+      if(amount < 0) throw new Error('Credit cannot be negative.');
+      const old=Number(c.langar_credit||0);
+      const diff=Number((amount-old).toFixed(2));
+      const {error:e1}=await client.from('profiles').update({langar_credit:amount,updated_at:new Date().toISOString()}).eq('id',c.id);
+      if(e1) throw e1;
+      if(diff!==0){
+        await client.from('wallet_transactions').insert({user_id:c.id,amount:diff,transaction_type:'adjustment',reason,created_by:user.id});
+      }
+      await client.from('inbox_messages').insert({user_id:c.id,type:'wallet',title_en:'Langar Credit updated',body_en:`Your Langar Credit is now ${euro(amount)}.`,title_hr:'Langar Credit ažuriran',body_hr:`Vaš Langar Credit sada je ${euro(amount)}.`,data:{campaign_key:'credit_update_'+Date.now(),amount}});
+      if(status) status.textContent='Credit saved and customer Inbox updated.';
+      c.langar_credit=amount;
+      renderCloudCustomers();
+    }catch(err){ if(status) status.textContent='Error: '+(err.message||err); alert('Credit error: '+(err.message||err)); }
+  }
+
+  async function sendCloudCard(c,type){
+    const status=$('#cloudCustomerActionStatus');
+    try{
+      await requireAdmin();
+      const isBirthday=type==='birthday';
+      const qr=(isBirthday?'BDAY':'FREE')+'-'+Math.floor(100000+Math.random()*900000);
+      const payload={
+        user_id:c.id,
+        reward_type:type,
+        title_en:isBirthday?'Birthday Reward':'Free Espresso Card',
+        title_hr:isBirthday?'Rođendanska nagrada':'Besplatni espresso',
+        description_en:isBirthday?'40% for birthday guest + 20% for up to 3 friends. One-time card.':'One-time free espresso welcome/gift card.',
+        description_hr:isBirthday?'40% za slavljenika + 20% za do 3 prijatelja. Jednokratna kartica.':'Jednokratna kartica za besplatan espresso.',
+        qr_code:qr,
+        status:'active'
+      };
+      const {error}=await client.from('reward_cards').insert(payload);
+      if(error) throw error;
+      await client.from('inbox_messages').insert({user_id:c.id,type:'reward',title_en:payload.title_en,body_en:payload.description_en,title_hr:payload.title_hr,body_hr:payload.description_hr,data:{campaign_key:'reward_'+qr,qr_code:qr,reward_type:type}});
+      if(status) status.textContent='Reward card sent to customer Inbox/Rewards.';
+      renderCloudCustomerDetail(c.id);
+    }catch(err){ if(status) status.textContent='Error: '+(err.message||err); alert('Reward error: '+(err.message||err)); }
+  }
+
+  async function sendCloudInbox(c){
+    const status=$('#cloudCustomerActionStatus');
+    try{
+      await requireAdmin();
+      const {error}=await client.from('inbox_messages').insert({user_id:c.id,type:'admin',title_en:'Message from Langar Bar',body_en:'Thank you for being part of Langar Club.',title_hr:'Poruka iz Langar Bara',body_hr:'Hvala što ste dio Langar Cluba.',data:{campaign_key:'admin_note_'+Date.now()}});
+      if(error) throw error;
+      if(status) status.textContent='Inbox note sent.';
+    }catch(err){ if(status) status.textContent='Error: '+(err.message||err); }
+  }
+
+  async function renderCloudCustomers(){
+    const box=$('#customersAdmin'); if(!box || !client) return;
+    box.innerHTML='<p class="muted">Loading Cloud customers...</p>';
+    try{
+      const list=await loadCustomers();
+      const active=list.filter(c=>c.phone || c.email).length;
+      box.innerHTML=`
+        <div class="admin-mobile-note"><b>Cloud synced customers.</b> Laptop and phone admin now read the same Supabase profiles table. Same phone number signs into the same existing customer profile.</div>
+        <div class="quick-grid customer-cloud-stats">
+          <button><span>👥</span><b>${list.length}</b><small>Total profiles</small></button>
+          <button><span>📱</span><b>${list.filter(c=>c.phone).length}</b><small>Phone users</small></button>
+          <button><span>🎂</span><b>${list.filter(c=>c.birthday).length}</b><small>Birthdays saved</small></button>
+          <button><span>💶</span><b>${euro(list.reduce((a,c)=>a+Number(c.langar_credit||0),0))}</b><small>Total credit</small></button>
+        </div>
+        <div class="cloud-customer-layout">
+          <div class="cloud-customer-list">
+            <div class="toolbar"><button class="secondary" id="refreshCloudCustomers">Refresh Customers</button></div>
+            ${list.length?list.map(c=>`<button class="customer-list-btn ${c.id===selectedCustomerId?'active':''}" data-cloud-customer="${safe(c.id)}"><b>${safe(customerName(c))}</b><small>${safe(c.phone||c.email||'No contact')} · ${safe(c.customer_level||'bronze')} · ${euro(c.langar_credit)}</small></button>`).join(''):'<p class="muted">No Cloud customers yet.</p>'}
+          </div>
+          <div id="cloudCustomerDetail" class="cloud-customer-detail"></div>
+        </div>
+      `;
+      $('#refreshCloudCustomers')?.addEventListener('click',()=>{ selectedCustomerId=null; renderCloudCustomers(); });
+      $$('[data-cloud-customer]').forEach(btn=>btn.addEventListener('click',()=>{ selectedCustomerId=btn.dataset.cloudCustomer; renderCloudCustomers(); }));
+      if(selectedCustomerId) renderCloudCustomerDetail(selectedCustomerId);
+    }catch(err){
+      box.innerHTML=`<p style="color:#ffb1a8">Cloud customers error: ${safe(err.message||err)}</p><p class="muted">Login as active Cloud Admin. If this still shows only one local profile, upload/test with Phone OTP so profiles are saved in Supabase.</p>`;
+    }
+  }
+
+  async function renderCloudDashboardStats(){
+    const d=$('#adminDashboard'); if(!d || !client) return;
+    try{
+      await requireAdmin();
+      const [profiles, inbox, sushi, cards] = await Promise.all([
+        client.from('profiles').select('id',{count:'exact',head:true}),
+        client.from('inbox_messages').select('id',{count:'exact',head:true}),
+        client.from('sushi_preorders').select('id',{count:'exact',head:true}),
+        client.from('reward_cards').select('id',{count:'exact',head:true})
+      ]);
+      const counts={customers:profiles.count||0,inbox:inbox.count||0,sushi:sushi.count||0,cards:cards.count||0};
+      d.innerHTML=`<button><span>👥</span><b>${counts.customers}</b><small>Cloud Customers</small></button><button><span>✉️</span><b>${counts.inbox}</b><small>Cloud Inbox</small></button><button><span>🍣</span><b>${counts.sushi}</b><small>Sushi Pre-orders</small></button><button><span>🎁</span><b>${counts.cards}</b><small>Reward Cards</small></button><button><span>🔐</span><b>ON</b><small>Secure Admin</small></button><button><span>☁️</span><b>SYNC</b><small>Supabase</small></button>`;
+    }catch(e){ /* admin may not be logged in yet */ }
+  }
+
+  function injectCustomerStyles(){
+    if($('#cloudCustomerStyles')) return;
+    const st=document.createElement('style'); st.id='cloudCustomerStyles'; st.textContent=`
+      .cloud-customer-layout{display:grid;grid-template-columns:280px 1fr;gap:16px;margin-top:14px}.cloud-customer-list{display:flex;flex-direction:column;gap:8px}.customer-list-btn{text-align:left;border:1px solid rgba(238,211,139,.24);background:rgba(255,255,255,.04);color:var(--cream);border-radius:18px;padding:12px;cursor:pointer}.customer-list-btn.active{border-color:var(--gold);background:rgba(238,211,139,.14);box-shadow:0 12px 28px rgba(0,0,0,.22)}.customer-list-btn small{display:block;color:var(--muted);margin-top:4px}.customer-detail-card small{word-break:break-all}.customer-mini-stats button,.customer-cloud-stats button{min-height:88px}@media(max-width:760px){.cloud-customer-layout{grid-template-columns:1fr}.cloud-customer-list{max-height:260px;overflow:auto}.customer-list-btn{padding:14px}.customer-detail-card .toolbar{display:grid;grid-template-columns:1fr 1fr;gap:8px}.customer-detail-card .toolbar button{width:100%}}
+    `; document.head.appendChild(st);
+  }
+
+  function install(){
+    injectCustomerStyles();
+    window.renderCustomers = renderCloudCustomers;
+    const oldAll=window.renderAll || (typeof renderAll==='function'?renderAll:null);
+    if(oldAll && !window.__langarCustomerCloudWrap){
+      window.__langarCustomerCloudWrap=true;
+      window.renderAll=function(){ oldAll(); renderCloudCustomers(); renderCloudDashboardStats(); };
+    }
+    setTimeout(()=>{ renderCloudCustomers(); renderCloudDashboardStats(); },900);
+    document.addEventListener('click',e=>{
+      const btn=e.target.closest?.('[onclick*="customersPanel"],[onclick*="dashboardPanel"]');
+      if(btn) setTimeout(()=>{renderCloudCustomers(); renderCloudDashboardStats();},250);
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',install); else install();
+})();

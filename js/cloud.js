@@ -51,51 +51,74 @@
     if(!user) return;
     const phone = user.phone || extra.phone || '';
     const email = user.email || extra.email || null;
-    const referral = extra.referralCode || extra.referral_code || localStorage.langar_pending_referral || null;
+    const localProfile = readLS('langar_profile', {}) || {};
+
+    // If this phone/user already exists in Cloud, restore it instead of creating a second customer
+    // or overwriting the original profile with another name from another device.
+    let existing = null;
+    try{
+      const { data } = await client
+        .from('profiles')
+        .select('id,phone,email,first_name,last_name,birthday,app_language,customer_level,langar_credit,referral_code,created_at')
+        .eq('id', user.id)
+        .maybeSingle();
+      existing = data || null;
+    }catch(e){ console.warn('Profile lookup failed:', e.message); }
+
+    const firstName = existing?.first_name || extra.first_name || localProfile.firstName || '';
+    const lastName = existing?.last_name || extra.last_name || localProfile.lastName || '';
+    const birthDate = existing?.birthday || extra.birthday || localProfile.birthDate || null;
+    const referralCode = existing?.referral_code || localProfile.referralCode || ('REF-' + String(user.id).slice(0,6).toUpperCase());
+
     const payload = {
       id: user.id,
-      phone: phone || null,
+      phone: existing?.phone || phone || null,
       phone_verified: true,
-      email,
-      first_name: extra.first_name || null,
-      last_name: extra.last_name || null,
-      birthday: extra.birthday || null,
+      email: existing?.email || email,
+      first_name: firstName || null,
+      last_name: lastName || null,
+      birthday: birthDate || null,
       app_language: lang()==='hr'?'hr':'en',
+      referral_code: referralCode,
       push_opt_in: true,
       marketing_opt_in: true,
-      terms_accepted_at: new Date().toISOString(),
-      privacy_accepted_at: new Date().toISOString(),
+      terms_accepted_at: existing?.created_at ? undefined : new Date().toISOString(),
+      privacy_accepted_at: existing?.created_at ? undefined : new Date().toISOString(),
       last_seen_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       onesignal_external_id: user.id
     };
-    if(referral) payload.referral_code = undefined;
-    delete payload.referral_code;
-    const { error } = await client.from('profiles').upsert(payload, { onConflict: 'id' });
-    if(error) console.warn('Profile cloud upsert error:', error.message);
+    Object.keys(payload).forEach(k=>payload[k]===undefined && delete payload[k]);
 
-    const localProfile = readLS('langar_profile', {}) || {};
-    const firstName = extra.first_name || localProfile.firstName || '';
-    const lastName = extra.last_name || localProfile.lastName || '';
+    const { error } = await client.from('profiles').upsert(payload, { onConflict: 'id' });
+    if(error){
+      console.warn('Profile cloud upsert error:', error.message);
+      if(String(error.message||'').toLowerCase().includes('duplicate') || String(error.message||'').toLowerCase().includes('phone')){
+        alert(t('Ovaj broj je već registriran. Prijavite se istim brojem da se profil vrati.','This phone number is already registered. Please log in with the same number to restore the existing profile.'));
+      }
+    }
+
     writeLS('langar_profile', {
       ...localProfile,
       id: user.id,
       cloudId: user.id,
-      phone: phone || localProfile.phone || '',
-      email: email || localProfile.email || '',
+      phone: existing?.phone || phone || localProfile.phone || '',
+      email: existing?.email || email || localProfile.email || '',
       firstName,
       lastName,
-      birthDate: extra.birthday || localProfile.birthDate || '',
+      birthDate: birthDate || '',
       referralCodeInput: extra.referralCode || localProfile.referralCodeInput || '',
       referredBy: extra.referralCode || localProfile.referredBy || '',
       qr: localProfile.qr || ('LNG-' + String(user.id).slice(0,6).toUpperCase()),
-      referralCode: localProfile.referralCode || ('REF-' + String(user.id).slice(0,6).toUpperCase()),
-      credit: localProfile.credit || 0,
+      referralCode,
+      credit: Number(existing?.langar_credit ?? localProfile.credit ?? 0),
+      customerLevel: existing?.customer_level || localProfile.customerLevel || 'bronze',
       orders: localProfile.orders || 0,
       visits: localProfile.visits || 0,
       referrals: localProfile.referrals || 0,
       cloudReady: true,
-      createdAt: localProfile.createdAt || new Date().toISOString()
+      returningMember: !!existing,
+      createdAt: existing?.created_at || localProfile.createdAt || new Date().toISOString()
     });
   }
 
