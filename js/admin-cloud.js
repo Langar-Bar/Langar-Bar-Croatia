@@ -327,7 +327,7 @@
 })();
 
 // =============================
-// V4.2.2 — Cloud Customers & Rewards unified across devices
+// V4.2.3 — Cloud Customers & Rewards forced live sync + delete
 // =============================
 (function(){
   'use strict';
@@ -339,6 +339,8 @@
   const euro = n=>'€'+Number(n||0).toFixed(2);
   let customersCache=[];
   let selectedCustomerId=null;
+  let cloudCustomersLoadedAt=null;
+  let isRenderingCustomers=false;
 
   async function requireAdmin(){
     if(!client) throw new Error('Supabase SDK not loaded');
@@ -363,6 +365,8 @@
       .limit(500);
     if(error) throw error;
     customersCache=data||[];
+    cloudCustomersLoadedAt = new Date();
+    if(selectedCustomerId && !customersCache.some(c=>c.id===selectedCustomerId)) selectedCustomerId=null;
     if(!selectedCustomerId && customersCache.length) selectedCustomerId=customersCache[0].id;
     return customersCache;
   }
@@ -423,6 +427,7 @@
           <button class="secondary" id="cloudSendEspresso">Send Free Espresso Card</button>
           <button class="secondary" id="cloudSendBirthday">Send Birthday Card</button>
           <button class="secondary" id="cloudSendInboxTest">Send Inbox Note</button>
+          <button class="danger" id="cloudDeleteCustomer">Delete Customer</button>
         </div>
         <small id="cloudCustomerActionStatus" class="muted"></small>
       </div>
@@ -443,6 +448,7 @@
     $('#cloudSendEspresso')?.addEventListener('click',()=>sendCloudCard(c,'welcome_espresso'));
     $('#cloudSendBirthday')?.addEventListener('click',()=>sendCloudCard(c,'birthday'));
     $('#cloudSendInboxTest')?.addEventListener('click',()=>sendCloudInbox(c));
+    $('#cloudDeleteCustomer')?.addEventListener('click',()=>deleteCloudCustomer(c));
   }
 
   async function saveCloudCredit(c){
@@ -490,6 +496,31 @@
     }catch(err){ if(status) status.textContent='Error: '+(err.message||err); alert('Reward error: '+(err.message||err)); }
   }
 
+  async function deleteCloudCustomer(c){
+    const status=$('#cloudCustomerActionStatus');
+    try{
+      await requireAdmin();
+      const name=customerName(c);
+      const ok=confirm('Delete customer from Cloud list?\n\n'+name+'\n\nThis removes the profile and app-visible customer data. The Auth login record may still exist in Supabase Authentication.');
+      if(!ok) return;
+      if(status) status.textContent='Deleting customer from Cloud...';
+      const relatedTables=['reward_cards','wallet_transactions','inbox_messages','sushi_preorders','event_interests','feedback','menu_item_likes','menu_item_comments','devices','notification_preferences'];
+      for(const t of relatedTables){
+        await client.from(t).delete().eq('user_id', c.id);
+      }
+      const {error}=await client.from('profiles').delete().eq('id', c.id);
+      if(error) throw error;
+      selectedCustomerId=null;
+      if(status) status.textContent='Customer deleted from Cloud list.';
+      await renderCloudCustomers(true);
+      await renderCloudDashboardStats();
+    }catch(err){
+      const msg=(err.message||String(err));
+      if(status) status.textContent='Delete error: '+msg;
+      alert('Delete customer error: '+msg+'\n\nIf this says permission denied, run the V4.2.3 SQL once in Supabase.');
+    }
+  }
+
   async function sendCloudInbox(c){
     const status=$('#cloudCustomerActionStatus');
     try{
@@ -500,14 +531,16 @@
     }catch(err){ if(status) status.textContent='Error: '+(err.message||err); }
   }
 
-  async function renderCloudCustomers(){
+  async function renderCloudCustomers(force=false){
     const box=$('#customersAdmin'); if(!box || !client) return;
-    box.innerHTML='<p class="muted">Loading Cloud customers...</p>';
+    if(isRenderingCustomers && !force) return;
+    isRenderingCustomers=true;
+    box.innerHTML='<p class="muted">Loading live Cloud customers from Supabase...</p>';
     try{
       const list=await loadCustomers();
       const active=list.filter(c=>c.phone || c.email).length;
       box.innerHTML=`
-        <div class="admin-mobile-note"><b>Cloud synced customers.</b> Laptop and phone admin now read the same Supabase profiles table. Same phone number signs into the same existing customer profile.</div>
+        <div class="admin-mobile-note"><b>Cloud Live Customers.</b> This list is read directly from Supabase, not from this device. If laptop and phone differ, press <b>Force Cloud Refresh</b> and open the page with the latest version number.<br><small>Loaded: ${cloudCustomersLoadedAt?cloudCustomersLoadedAt.toLocaleString():'now'}</small></div>
         <div class="quick-grid customer-cloud-stats">
           <button><span>👥</span><b>${list.length}</b><small>Total profiles</small></button>
           <button><span>📱</span><b>${list.filter(c=>c.phone).length}</b><small>Phone users</small></button>
@@ -516,16 +549,19 @@
         </div>
         <div class="cloud-customer-layout">
           <div class="cloud-customer-list">
-            <div class="toolbar"><button class="secondary" id="refreshCloudCustomers">Refresh Customers</button></div>
+            <div class="toolbar"><button class="secondary" id="refreshCloudCustomers">Force Cloud Refresh</button><button class="secondary" id="clearLocalCustomerCache">Clear local customer cache</button></div>
             ${list.length?list.map(c=>`<button class="customer-list-btn ${c.id===selectedCustomerId?'active':''}" data-cloud-customer="${safe(c.id)}"><b>${safe(customerName(c))}</b><small>${safe(c.phone||c.email||'No contact')} · ${safe(c.customer_level||'bronze')} · ${euro(c.langar_credit)}</small></button>`).join(''):'<p class="muted">No Cloud customers yet.</p>'}
           </div>
           <div id="cloudCustomerDetail" class="cloud-customer-detail"></div>
         </div>
       `;
-      $('#refreshCloudCustomers')?.addEventListener('click',()=>{ selectedCustomerId=null; renderCloudCustomers(); });
+      $('#refreshCloudCustomers')?.addEventListener('click',()=>{ selectedCustomerId=null; renderCloudCustomers(true); renderCloudDashboardStats(); });
+      $('#clearLocalCustomerCache')?.addEventListener('click',()=>{ ['langar_profile','langar_cards','langar_inbox','langar_sushi_preorders','langar_orders_v3'].forEach(k=>localStorage.removeItem(k)); alert('Local prototype customer cache cleared on this device. Cloud customers are not deleted.'); selectedCustomerId=null; renderCloudCustomers(true); });
       $$('[data-cloud-customer]').forEach(btn=>btn.addEventListener('click',()=>{ selectedCustomerId=btn.dataset.cloudCustomer; renderCloudCustomers(); }));
       if(selectedCustomerId) renderCloudCustomerDetail(selectedCustomerId);
+      isRenderingCustomers=false;
     }catch(err){
+      isRenderingCustomers=false;
       box.innerHTML=`<p style="color:#ffb1a8">Cloud customers error: ${safe(err.message||err)}</p><p class="muted">Login as active Cloud Admin. If this still shows only one local profile, upload/test with Phone OTP so profiles are saved in Supabase.</p>`;
     }
   }
@@ -548,7 +584,7 @@
   function injectCustomerStyles(){
     if($('#cloudCustomerStyles')) return;
     const st=document.createElement('style'); st.id='cloudCustomerStyles'; st.textContent=`
-      .cloud-customer-layout{display:grid;grid-template-columns:280px 1fr;gap:16px;margin-top:14px}.cloud-customer-list{display:flex;flex-direction:column;gap:8px}.customer-list-btn{text-align:left;border:1px solid rgba(238,211,139,.24);background:rgba(255,255,255,.04);color:var(--cream);border-radius:18px;padding:12px;cursor:pointer}.customer-list-btn.active{border-color:var(--gold);background:rgba(238,211,139,.14);box-shadow:0 12px 28px rgba(0,0,0,.22)}.customer-list-btn small{display:block;color:var(--muted);margin-top:4px}.customer-detail-card small{word-break:break-all}.customer-mini-stats button,.customer-cloud-stats button{min-height:88px}@media(max-width:760px){.cloud-customer-layout{grid-template-columns:1fr}.cloud-customer-list{max-height:260px;overflow:auto}.customer-list-btn{padding:14px}.customer-detail-card .toolbar{display:grid;grid-template-columns:1fr 1fr;gap:8px}.customer-detail-card .toolbar button{width:100%}}
+      .cloud-customer-layout{display:grid;grid-template-columns:280px 1fr;gap:16px;margin-top:14px}.cloud-customer-list{display:flex;flex-direction:column;gap:8px}.customer-list-btn{text-align:left;border:1px solid rgba(238,211,139,.24);background:rgba(255,255,255,.04);color:var(--cream);border-radius:18px;padding:12px;cursor:pointer}.customer-list-btn.active{border-color:var(--gold);background:rgba(238,211,139,.14);box-shadow:0 12px 28px rgba(0,0,0,.22)}.customer-list-btn small{display:block;color:var(--muted);margin-top:4px}.customer-detail-card small{word-break:break-all}.customer-mini-stats button,.customer-cloud-stats button{min-height:88px}@media(max-width:760px){.cloud-customer-layout{grid-template-columns:1fr}.cloud-customer-list{max-height:260px;overflow:auto}.customer-list-btn{padding:14px}.customer-detail-card .toolbar{display:grid;grid-template-columns:1fr 1fr;gap:8px}.customer-detail-card .toolbar button{width:100%}.cloud-customer-list .toolbar{display:grid;grid-template-columns:1fr;gap:8px}}
     `; document.head.appendChild(st);
   }
 
@@ -558,12 +594,28 @@
     const oldAll=window.renderAll || (typeof renderAll==='function'?renderAll:null);
     if(oldAll && !window.__langarCustomerCloudWrap){
       window.__langarCustomerCloudWrap=true;
-      window.renderAll=function(){ oldAll(); renderCloudCustomers(); renderCloudDashboardStats(); };
+      window.renderAll=function(){ oldAll(); setTimeout(()=>{renderCloudCustomers(true); renderCloudDashboardStats();},80); };
     }
-    setTimeout(()=>{ renderCloudCustomers(); renderCloudDashboardStats(); },900);
+    const oldShow=window.showPanel;
+    if(oldShow && !window.__langarShowPanelCloudWrap){
+      window.__langarShowPanelCloudWrap=true;
+      window.showPanel=function(id){ oldShow(id); if(id==='customersPanel') setTimeout(()=>renderCloudCustomers(true),80); if(id==='dashboardPanel') setTimeout(()=>renderCloudDashboardStats(),80); };
+    }
+    const target=document.getElementById('customersAdmin');
+    if(target && !window.__langarCustomerObserver){
+      window.__langarCustomerObserver=true;
+      const obs=new MutationObserver(()=>{
+        const txt=(target.textContent||'');
+        if(txt.includes('No customer registered in prototype') || txt.includes('Phone:') && !txt.includes('Cloud Live Customers')){
+          setTimeout(()=>renderCloudCustomers(true),60);
+        }
+      });
+      obs.observe(target,{childList:true,subtree:true});
+    }
+    setTimeout(()=>{ renderCloudCustomers(true); renderCloudDashboardStats(); },900);
     document.addEventListener('click',e=>{
       const btn=e.target.closest?.('[onclick*="customersPanel"],[onclick*="dashboardPanel"]');
-      if(btn) setTimeout(()=>{renderCloudCustomers(); renderCloudDashboardStats();},250);
+      if(btn) setTimeout(()=>{renderCloudCustomers(true); renderCloudDashboardStats();},250);
     });
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',install); else install();
