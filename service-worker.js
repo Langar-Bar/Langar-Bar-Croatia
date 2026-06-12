@@ -1,4 +1,4 @@
-const CACHE_NAME = 'langar-bar-v4-1-2-secure-admin-reward-inbox';
+const CACHE_NAME = 'langar-bar-v4-1-3-admin-logout';
 const ASSETS = [
   './',
   './index.html',

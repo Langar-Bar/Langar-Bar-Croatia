@@ -18,6 +18,10 @@
     document.body.classList.remove('admin-unlocked');
     localStorage.removeItem('langar_admin_cloud_user');
     localStorage.removeItem('langar_admin_cloud_role');
+    const gate=$('#cloudAdminGate');
+    if(gate) gate.classList.remove('hidden');
+    const badge=$('#adminCloudBadge');
+    if(badge) badge.innerHTML='';
   }
   function unlockAdmin(user, role){
     document.body.classList.remove('admin-locked');
@@ -60,6 +64,8 @@
     badge.className='admin-login-shell';
     gate.insertAdjacentElement('afterend', badge);
     $('#adminCloudLogin').onclick=login;
+    const logoutBtn=$('#adminCloudLogout');
+    if(logoutBtn) logoutBtn.onclick=logout;
     $('#adminCloudPassword').addEventListener('keydown', e=>{ if(e.key==='Enter') login(); });
   }
   async function login(){
@@ -77,6 +83,16 @@
       unlockAdmin(data.user, admin.role);
     }catch(err){ lockAdmin(); status.textContent='Admin check error: '+err.message; status.className='admin-login-status error'; }
   }
+  async function logout(){
+    const btn=$('#adminCloudLogout');
+    if(btn) btn.disabled=true;
+    try{ await client.auth.signOut(); }catch(e){}
+    lockAdmin();
+    const status=$('#adminCloudStatus');
+    if(status){ status.textContent='You have logged out. Enter email and password to open Admin Mode again.'; status.className='admin-login-status ok'; }
+    if(btn) btn.disabled=false;
+  }
+
   async function boot(){
     injectGate();
     lockAdmin();

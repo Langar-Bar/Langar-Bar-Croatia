@@ -1,12 +1,11 @@
-# Langar Bar App V4.1.2 — Secure Admin + Reward Inbox Fix
+# Langar Bar App V4.1.3 — Admin Logout
 
-This version keeps the V4.1 cloud foundation and improves two important production-readiness issues:
+This version keeps V4.1.2 security and adds a Cloud Admin Logout button.
 
-- Admin page is locked by default. Only the Cloud Admin Login panel is visible until a verified active admin from `admin_members` logs in.
-- Invalid login or non-admin users cannot access dashboard/modules.
-- Successful admin login opens Admin Mode and reveals modules.
-- Welcome Free Espresso reward now behaves as a real digital card in Inbox/Rewards.
-- Old text-only welcome messages are removed, and espresso-card messages open the actual QR/code card.
-- Cache updated to V4.1.2.
+- Admin page remains locked until Cloud Admin login succeeds.
+- When logged in, admin can choose Logout.
+- If admin does not logout, Supabase session stays active and admin opens normally next time.
+- After logout, admin page returns to login-only mode and requires email/password again.
+- Cache updated to V4.1.3.
 
-Upload all files/folders to the root of the GitHub Pages repository and test with `?v=412`.
+Next planned step: V4.2 Cloud Menu + Likes + Feedback.
