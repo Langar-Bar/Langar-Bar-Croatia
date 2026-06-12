@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  const CLOUD_VERSION = 'V4.2 Cloud Menu Likes Feedback';
+  const CLOUD_VERSION = 'V4.2.4 Club Login Signup';
   const CONFIG = {
     supabaseUrl: 'https://fkanccgigogbxodiljqt.supabase.co',
     supabaseKey: 'sb_publishable_WbWIWgu9R2AKepJiRrygCw_1oWrdwG7',
@@ -177,6 +177,7 @@
     style.id='cloudStyles';
     style.textContent = `
       .club-rule{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.club-rule b::after{content: ':'}
+      .club-auth-box{display:block}.club-auth-tabs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0 16px}.club-auth-tabs button{border:1px solid rgba(238,211,139,.28);background:rgba(255,255,255,.05);color:var(--cream);border-radius:18px;padding:13px;font-weight:900;cursor:pointer}.club-auth-tabs button.active{background:linear-gradient(135deg,#f6d98b,#d8a33d);color:#17130a;box-shadow:0 10px 24px rgba(0,0,0,.22)}.club-auth-panel.hidden,.club-rule.hidden{display:none!important}.club-auth-panel h3{margin-top:0}
       .cloud-member-card{border:1px solid rgba(238,211,139,.35);background:linear-gradient(145deg,rgba(22,66,50,.86),rgba(7,18,14,.92));border-radius:26px;padding:18px;margin:16px 0;box-shadow:0 18px 40px rgba(0,0,0,.25)}
       .cloud-member-card h3{margin-top:0}.cloud-member-id{font-size:12px;color:var(--muted);word-break:break-all;background:rgba(0,0,0,.18);border:1px solid rgba(238,211,139,.22);border-radius:14px;padding:10px;margin:10px 0}.cloud-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.cloud-row>*{flex:1}.cloud-mini{font-size:12px;opacity:.78;line-height:1.5}.otp-modal label{display:block;text-align:left;margin:12px 0}.otp-modal input{width:100%;border:1px solid rgba(238,211,139,.35);border-radius:16px;background:#07120e;color:#fff;padding:14px;font-size:1.1rem;text-align:center;letter-spacing:.12em}.otp-modal .otp-icon{width:64px;height:64px;margin:0 auto 10px;display:grid;place-items:center;border-radius:22px;background:radial-gradient(circle at 30% 25%,#fff3c4,var(--gold) 42%,#72551b 100%);color:#111;font-size:2rem;box-shadow:0 14px 24px rgba(0,0,0,.28)}
     `;
@@ -210,20 +211,24 @@
   }
 
   function setClubRegisteredView(session){
+    const authBox = $('#clubAuthBox');
     const form = $('#clubForm');
+    const loginForm = $('#clubLoginForm');
     const rule = document.querySelector('#club .club-rule');
     const success = $('#clubSuccess');
+    if(authBox) authBox.classList.add('hidden');
     if(form) form.classList.add('hidden');
+    if(loginForm) loginForm.classList.add('hidden');
     if(rule) rule.classList.add('hidden');
     if(success){
       const local = readLS('langar_profile', {}) || {};
       const fullName = [local.firstName, local.lastName].filter(Boolean).join(' ') || t('Langar član','Langar member');
       success.className = 'cloud-member-card';
       success.innerHTML = `
-        <h3>${t('Vaša registracija je aktivna','Your registration is active')}</h3>
-        <p>${t('Vaš Langar Club profil je spremljen u Cloudu. Ako obrišete aplikaciju i ponovno se prijavite istim brojem, podaci se mogu vratiti.','Your Langar Club profile is saved in Cloud. If you delete the app and log in again with the same phone, your data can be restored.')}</p>
+        <h3>${t('Vaše članstvo je aktivno','Your membership is active')}</h3>
+        <p>${t('Vaš Langar Club profil je spremljen u Cloudu. Ako obrišete aplikaciju i ponovno se prijavite istim brojem, podaci se vraćaju iz Clouda.','Your Langar Club profile is saved in Cloud. If you delete the app and log in again with the same phone, your data is restored from Cloud.')}</p>
         <p><b>${safe(fullName)}</b><br><small>${safe(local.phone || session?.user?.phone || '')}</small></p>
-        <div class="cloud-member-id"><b>User ID</b><br>${safe(session?.user?.id || local.cloudId || local.id || '')}</div>
+        <div class="cloud-member-id"><b>Cloud Member ID</b><br>${safe(session?.user?.id || local.cloudId || local.id || '')}</div>
         <div class="cloud-row"><button id="syncCloudInbox" class="secondary">${t('Sinkroniziraj Inbox','Sync Inbox')}</button><button id="cloudSignOut" class="danger">${t('Odjava','Sign out')}</button></div>
       `;
       $('#syncCloudInbox')?.addEventListener('click', async()=>{ const r=await syncInbox(); alert(r.ok ? t('Cloud Inbox je sinkroniziran.','Cloud Inbox synced.') : (r.error?.message || r.reason || 'Error')); });
@@ -231,16 +236,29 @@
     }
   }
 
-  function setClubRegisterView(){
-    const form = $('#clubForm');
+  function showClubMode(mode){
+    const login = $('#clubLoginForm');
+    const signup = $('#clubForm');
     const rule = document.querySelector('#club .club-rule');
+    const loginTab = $('#clubLoginTab');
+    const signupTab = $('#clubSignupTab');
+    const isSignup = mode === 'signup';
+    if(login) login.classList.toggle('hidden', isSignup);
+    if(signup) signup.classList.toggle('hidden', !isSignup);
+    if(rule) rule.classList.toggle('hidden', !isSignup);
+    if(loginTab) loginTab.classList.toggle('active', !isSignup);
+    if(signupTab) signupTab.classList.toggle('active', isSignup);
+  }
+
+  function setClubRegisterView(){
+    const authBox = $('#clubAuthBox');
     const success = $('#clubSuccess');
-    if(form) form.classList.remove('hidden');
-    if(rule) rule.classList.remove('hidden');
+    if(authBox) authBox.classList.remove('hidden');
+    showClubMode('login');
     if(success){ success.className = 'success-card hidden'; success.innerHTML = ''; }
   }
 
-  function showOtpModal(phone, registration){
+  function showOtpModal(phone, registration, mode="signup"){
     const modal = $('#modal');
     const body = $('#modalBody');
     if(!modal || !body) return;
@@ -250,7 +268,7 @@
         <h2>${t('Unesite sigurnosni kod','Enter security code')}</h2>
         <p>${t('Kod je poslan na','Code was sent to')} <b>${safe(phone)}</b>.</p>
         <label>${t('OTP kod','OTP code')}<input id="clubOtpCode" inputmode="numeric" autocomplete="one-time-code" placeholder="123456"></label>
-        <button id="clubVerifyOtp" class="primary full">${t('Potvrdi registraciju','Verify registration')}</button>
+        <button id="clubVerifyOtp" class="primary full">${mode==='login' ? t('Potvrdi prijavu','Verify login') : t('Potvrdi registraciju','Verify registration')}</button>
         <button id="clubChangePhone" class="secondary full">${t('Promijeni broj','Change number')}</button>
         <p id="clubOtpMsg" class="cloud-mini"></p>
       </div>
@@ -265,7 +283,7 @@
       msg.textContent = t('Provjeravamo kod...','Verifying code...');
       const { data, error } = await client.auth.verifyOtp({ phone, token: code, type:'sms' });
       if(error){ msg.textContent = error.message; return; }
-      await upsertProfile(data.user, registration);
+      await upsertProfile(data.user, registration || { phone });
       await initOneSignal(data.user.id);
       await syncInbox();
       ensureWelcomeRewards();
@@ -278,6 +296,26 @@
 
   function wireClubRegistrationOtp(){
     const form = $('#clubForm');
+    const loginForm = $('#clubLoginForm');
+    $('#clubLoginTab')?.addEventListener('click',()=>showClubMode('login'));
+    $('#clubSignupTab')?.addEventListener('click',()=>showClubMode('signup'));
+    if(loginForm && loginForm.dataset.cloudLoginWired !== '1'){
+      loginForm.dataset.cloudLoginWired = '1';
+      loginForm.addEventListener('submit', async(e)=>{
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        const fd = new FormData(loginForm);
+        const phone = e164(fd.get('loginPhone'));
+        if(!phone){ alert(t('Unesite broj telefona.','Enter phone number.')); return; }
+        const btn = loginForm.querySelector('button[type="submit"], button.primary, button');
+        const oldText = btn ? btn.textContent : '';
+        if(btn){ btn.disabled = true; btn.textContent = t('Šaljemo kod...','Sending code...'); }
+        const { error } = await client.auth.signInWithOtp({ phone });
+        if(btn){ btn.disabled = false; btn.textContent = oldText; }
+        if(error){ alert(error.message); return; }
+        showOtpModal(phone, { phone }, 'login');
+      }, true);
+    }
     if(!form || form.dataset.cloudOtpWired === '1') return;
     form.dataset.cloudOtpWired = '1';
     form.addEventListener('submit', async(e)=>{
@@ -300,7 +338,7 @@
       const { error } = await client.auth.signInWithOtp({ phone: registration.phone });
       if(btn){ btn.disabled = false; btn.textContent = oldText; }
       if(error){ alert(error.message); return; }
-      showOtpModal(registration.phone, registration);
+      showOtpModal(registration.phone, registration, "signup");
     }, true);
   }
 

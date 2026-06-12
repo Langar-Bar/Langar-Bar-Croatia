@@ -90,10 +90,24 @@
 
   <main id="club" class="view">
     <section class="section-head"><h2>Langar Club</h2><p data-hr="Registrirajte se, primite espresso karticu, QR i skupljajte Langar Credit." data-en="Register, receive an espresso card, QR and earn Langar Credit.">Registrirajte se, primite espresso karticu, QR i skupljajte Langar Credit.</p></section>
-    <div class="club-rule"><b data-hr="Poklon dobrodošlice" data-en="Welcome Gift">Welcome Gift</b><span data-hr="Besplatni espresso za nove članove — jednokratna digitalna kartica" data-en="Free espresso for new members — one-time digital card">Besplatni espresso za nove članove — jednokratna digitalna kartica</span></div>
-    <form id="clubForm" class="form-card">
-      <label><span data-hr="Ime" data-en="First name">Ime</span><input required name="firstName"></label><label><span data-hr="Prezime" data-en="Last name">Prezime</span><input name="lastName"></label><label><span data-hr="Telefon" data-en="Phone">Telefon</span><input required name="phone"></label><label>Email<input type="email" name="email"></label><label><span data-hr="Datum rođenja" data-en="Birth date">Datum rođenja</span><input type="date" name="birthDate"></label><label><span data-hr="Referral code" data-en="Referral code">Referral code</span><input name="referralCode" placeholder="Optional"></label><button class="primary full" data-hr="Spremi profil" data-en="Save profile">Spremi profil</button>
-    </form>
+    <div id="clubAuthBox" class="club-auth-box">
+      <div class="club-auth-tabs" role="tablist">
+        <button type="button" class="active" id="clubLoginTab" data-club-mode="login" data-hr="Već sam član" data-en="Already a member">Već sam član</button>
+        <button type="button" id="clubSignupTab" data-club-mode="signup" data-hr="Nova registracija" data-en="New sign up">Nova registracija</button>
+      </div>
+      <form id="clubLoginForm" class="form-card club-auth-panel">
+        <h3 data-hr="Prijava postojećeg člana" data-en="Existing member login">Prijava postojećeg člana</h3>
+        <p class="muted" data-hr="Unesite isti broj mobitela s kojim ste se registrirali. Poslat ćemo SMS kod i vratiti vaš Cloud profil." data-en="Enter the same mobile number you registered with. We will send an SMS code and restore your Cloud profile.">Unesite isti broj mobitela s kojim ste se registrirali. Poslat ćemo SMS kod i vratiti vaš Cloud profil.</p>
+        <label><span data-hr="Telefon" data-en="Phone">Telefon</span><input required name="loginPhone" placeholder="+385..."></label>
+        <button class="primary full" data-hr="Pošalji kod za prijavu" data-en="Send login code">Pošalji kod za prijavu</button>
+      </form>
+      <div class="club-rule hidden"><b data-hr="Poklon dobrodošlice" data-en="Welcome Gift">Welcome Gift</b><span data-hr="Besplatni espresso za nove članove — jednokratna digitalna kartica" data-en="Free espresso for new members — one-time digital card">Besplatni espresso za nove članove — jednokratna digitalna kartica</span></div>
+      <form id="clubForm" class="form-card club-auth-panel hidden">
+        <h3 data-hr="Nova registracija" data-en="New sign up">Nova registracija</h3>
+        <p class="muted" data-hr="Ispunite profil, spremite ga i zatim unesite SMS kod. Ako se isti broj već registrirao, vratit ćemo postojeći profil umjesto stvaranja duplikata." data-en="Complete your profile, save it and then enter the SMS code. If the same number is already registered, we restore the existing profile instead of creating a duplicate.">Ispunite profil, spremite ga i zatim unesite SMS kod. Ako se isti broj već registrirao, vratit ćemo postojeći profil umjesto stvaranja duplikata.</p>
+        <label><span data-hr="Ime" data-en="First name">Ime</span><input required name="firstName"></label><label><span data-hr="Prezime" data-en="Last name">Prezime</span><input name="lastName"></label><label><span data-hr="Telefon" data-en="Phone">Telefon</span><input required name="phone" placeholder="+385..."></label><label>Email<input type="email" name="email"></label><label><span data-hr="Datum rođenja" data-en="Birth date">Datum rođenja</span><input type="date" name="birthDate"></label><label><span data-hr="Referral code" data-en="Referral code">Referral code</span><input name="referralCode" placeholder="Optional"></label><button class="primary full" data-hr="Spremi profil i pošalji kod" data-en="Save profile and send code">Spremi profil i pošalji kod</button>
+      </form>
+    </div>
     <div id="clubSuccess" class="success-card hidden"></div><div id="clubResult" class="qr-card hidden"></div>
   </main>
 

@@ -327,7 +327,7 @@
 })();
 
 // =============================
-// V4.2.3 — Cloud Customers & Rewards forced live sync + delete
+// V4.2.4 — Cloud Customers RPC sync + delete + login/signup support
 // =============================
 (function(){
   'use strict';
@@ -358,13 +358,25 @@
 
   async function loadCustomers(){
     await requireAdmin();
-    const {data,error}=await client
-      .from('profiles')
-      .select('id,phone,email,first_name,last_name,birthday,app_language,customer_level,langar_credit,referral_code,marketing_opt_in,push_opt_in,last_seen_at,created_at,updated_at')
-      .order('created_at',{ascending:false})
-      .limit(500);
-    if(error) throw error;
-    customersCache=data||[];
+    let rows=null;
+    let rpcError=null;
+    try{
+      const res = await client.rpc('admin_list_customers');
+      if(res.error) rpcError = res.error; else rows = res.data || [];
+    }catch(e){ rpcError = e; }
+    if(!rows){
+      const {data,error}=await client
+        .from('profiles')
+        .select('id,phone,email,first_name,last_name,birthday,app_language,customer_level,langar_credit,referral_code,marketing_opt_in,push_opt_in,last_seen_at,created_at,updated_at')
+        .order('created_at',{ascending:false})
+        .limit(500);
+      if(error){
+        const msg = rpcError ? ('RPC: '+(rpcError.message||rpcError)+' / Direct: '+error.message) : error.message;
+        throw new Error(msg);
+      }
+      rows=data||[];
+    }
+    customersCache=rows;
     cloudCustomersLoadedAt = new Date();
     if(selectedCustomerId && !customersCache.some(c=>c.id===selectedCustomerId)) selectedCustomerId=null;
     if(!selectedCustomerId && customersCache.length) selectedCustomerId=customersCache[0].id;
@@ -504,12 +516,19 @@
       const ok=confirm('Delete customer from Cloud list?\n\n'+name+'\n\nThis removes the profile and app-visible customer data. The Auth login record may still exist in Supabase Authentication.');
       if(!ok) return;
       if(status) status.textContent='Deleting customer from Cloud...';
-      const relatedTables=['reward_cards','wallet_transactions','inbox_messages','sushi_preorders','event_interests','feedback','menu_item_likes','menu_item_comments','devices','notification_preferences'];
-      for(const t of relatedTables){
-        await client.from(t).delete().eq('user_id', c.id);
+      let usedRpc=false;
+      try{
+        const rpc = await client.rpc('admin_delete_customer', { customer_id: c.id });
+        if(rpc.error) throw rpc.error;
+        usedRpc=true;
+      }catch(rpcErr){
+        const relatedTables=['reward_cards','wallet_transactions','inbox_messages','sushi_preorders','event_interests','feedback','menu_item_likes','menu_item_comments','devices','notification_preferences'];
+        for(const t of relatedTables){
+          await client.from(t).delete().eq('user_id', c.id);
+        }
+        const {error}=await client.from('profiles').delete().eq('id', c.id);
+        if(error) throw new Error((rpcErr?.message?('RPC delete failed: '+rpcErr.message+' / '):'') + error.message);
       }
-      const {error}=await client.from('profiles').delete().eq('id', c.id);
-      if(error) throw error;
       selectedCustomerId=null;
       if(status) status.textContent='Customer deleted from Cloud list.';
       await renderCloudCustomers(true);
@@ -517,7 +536,7 @@
     }catch(err){
       const msg=(err.message||String(err));
       if(status) status.textContent='Delete error: '+msg;
-      alert('Delete customer error: '+msg+'\n\nIf this says permission denied, run the V4.2.3 SQL once in Supabase.');
+      alert('Delete customer error: '+msg+'\n\nIf this says permission denied, run the V4.2.4 SQL once in Supabase.');
     }
   }
 
@@ -540,7 +559,7 @@
       const list=await loadCustomers();
       const active=list.filter(c=>c.phone || c.email).length;
       box.innerHTML=`
-        <div class="admin-mobile-note"><b>Cloud Live Customers.</b> This list is read directly from Supabase, not from this device. If laptop and phone differ, press <b>Force Cloud Refresh</b> and open the page with the latest version number.<br><small>Loaded: ${cloudCustomersLoadedAt?cloudCustomersLoadedAt.toLocaleString():'now'}</small></div>
+        <div class="admin-mobile-note"><b>Cloud Live Customers (RPC sync).</b> This list is read directly from Supabase, not from this device. If laptop and phone differ, press <b>Force Cloud Refresh</b> and open the page with the latest version number.<br><small>Loaded: ${cloudCustomersLoadedAt?cloudCustomersLoadedAt.toLocaleString():'now'}</small></div>
         <div class="quick-grid customer-cloud-stats">
           <button><span>👥</span><b>${list.length}</b><small>Total profiles</small></button>
           <button><span>📱</span><b>${list.filter(c=>c.phone).length}</b><small>Phone users</small></button>
@@ -570,13 +589,20 @@
     const d=$('#adminDashboard'); if(!d || !client) return;
     try{
       await requireAdmin();
-      const [profiles, inbox, sushi, cards] = await Promise.all([
-        client.from('profiles').select('id',{count:'exact',head:true}),
-        client.from('inbox_messages').select('id',{count:'exact',head:true}),
-        client.from('sushi_preorders').select('id',{count:'exact',head:true}),
-        client.from('reward_cards').select('id',{count:'exact',head:true})
-      ]);
-      const counts={customers:profiles.count||0,inbox:inbox.count||0,sushi:sushi.count||0,cards:cards.count||0};
+      let counts=null;
+      try{
+        const rpc = await client.rpc('admin_dashboard_counts');
+        if(!rpc.error && rpc.data) counts = Array.isArray(rpc.data) ? rpc.data[0] : rpc.data;
+      }catch(e){}
+      if(!counts){
+        const [profiles, inbox, sushi, cards] = await Promise.all([
+          client.from('profiles').select('id',{count:'exact',head:true}),
+          client.from('inbox_messages').select('id',{count:'exact',head:true}),
+          client.from('sushi_preorders').select('id',{count:'exact',head:true}),
+          client.from('reward_cards').select('id',{count:'exact',head:true})
+        ]);
+        counts={customers:profiles.count||0,inbox:inbox.count||0,sushi:sushi.count||0,cards:cards.count||0};
+      }
       d.innerHTML=`<button><span>👥</span><b>${counts.customers}</b><small>Cloud Customers</small></button><button><span>✉️</span><b>${counts.inbox}</b><small>Cloud Inbox</small></button><button><span>🍣</span><b>${counts.sushi}</b><small>Sushi Pre-orders</small></button><button><span>🎁</span><b>${counts.cards}</b><small>Reward Cards</small></button><button><span>🔐</span><b>ON</b><small>Secure Admin</small></button><button><span>☁️</span><b>SYNC</b><small>Supabase</small></button>`;
     }catch(e){ /* admin may not be logged in yet */ }
   }
