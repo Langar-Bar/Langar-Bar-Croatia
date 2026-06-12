@@ -3912,31 +3912,7 @@ const LANGAR_DEFAULT_MENU = [
     "active": true,
     "sort": 20,
     "items": [
-      {
-        "id": "desserts_001",
-        "name": {
-          "en": "Cupcake with Ice Cream",
-          "hr": "Cupcake sa sladoledom"
-        },
-        "desc": {
-          "en": "Served with chocolate, pistachio, caramel or strawberry sauce.",
-          "hr": "Poslužuje se s čokoladnim, pistacija, karamel ili jagoda umakom."
-        },
-        "ingredients": {
-          "en": "Cupcake, soft-serve ice cream, chosen sauce.",
-          "hr": "Cupcake, sladoled iz aparata, odabrani umak."
-        },
-        "price": "€4.50",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "ask staff"
-      },
+      
       {
         "id": "desserts_002",
         "name": {
@@ -4670,12 +4646,12 @@ const LANGAR_DEFAULT_MENU = [
           "hr": "Teriyaki Chicken Taco"
         },
         "desc": {
-          "en": "Shredded chicken, teriyaki sauce, coleslaw and sesame.",
-          "hr": "Trgana piletina, teriyaki umak, coleslaw salata i sezam."
+          "en": "Grilled chicken thigh with basmati rice, teriyaki sauce and sesame.",
+          "hr": "Grilani pileći zabatak s basmati rižom, teriyaki umakom i sezamom."
         },
         "ingredients": {
-          "en": "Shredded chicken, teriyaki sauce, coleslaw, sesame.",
-          "hr": "Trgana piletina, teriyaki umak, coleslaw, sezam."
+          "en": "Grilled chicken thigh, basmati rice, teriyaki sauce, sesame.",
+          "hr": "Grilani pileći zabatak, basmati riža, teriyaki umak, sezam."
         },
         "price": "€6.90",
         "isNew": true,
@@ -4988,56 +4964,6 @@ const LANGAR_DEFAULT_MENU = [
         },
         "price": "€5.80",
         "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "ask staff"
-      },
-      {
-        "id": "tapas_006",
-        "name": {
-          "en": "Prosciutto Tapas",
-          "hr": "Prosciutto Tapas"
-        },
-        "desc": {
-          "en": "Prosciutto, olives, cheese and fresh fruit.",
-          "hr": "Pršut, masline, sir i svježe voće."
-        },
-        "ingredients": {
-          "en": "Prosciutto, olives, cheese, fresh fruit.",
-          "hr": "Pršut, masline, sir, svježe voće."
-        },
-        "price": "€6.50",
-        "isNew": true,
-        "isFeatured": true,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "ask staff"
-      },
-      {
-        "id": "tapas_007",
-        "name": {
-          "en": "Cheese & Olive Tapas",
-          "hr": "Cheese & Olive Tapas"
-        },
-        "desc": {
-          "en": "Selected cheeses, olives and crispy crackers.",
-          "hr": "Odabrani sirevi, masline i hrskavi krekeri."
-        },
-        "ingredients": {
-          "en": "Selected cheeses, olives, crispy crackers.",
-          "hr": "Odabrani sirevi, masline, hrskavi krekeri."
-        },
-        "price": "€6.20",
-        "isNew": true,
         "isFeatured": false,
         "isKids": false,
         "isAlcoholic": false,
