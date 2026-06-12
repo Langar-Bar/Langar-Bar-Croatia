@@ -1,11 +1,18 @@
-# Langar Bar App V4.1.3 — Admin Logout
+Langar Bar App V4.2.1 — Cloud Sushi + Mobile Admin
 
-This version keeps V4.1.2 security and adds a Cloud Admin Logout button.
+Changes:
+- Sushi pre-orders are saved to Supabase when the customer is logged in.
+- Admin Sushi Pre-orders reads from Cloud, so laptop and phone show the same orders.
+- Updating sushi status creates a customer Inbox confirmation/update.
+- Mobile admin layout improved with compact module buttons and auto-scroll to selected panel.
+- Admin PWA icon added with a different red/gold Admin design.
+- Admin page now links its own manifest: admin-manifest.webmanifest.
+- Service Worker cache updated to V4.2.1.
 
-- Admin page remains locked until Cloud Admin login succeeds.
-- When logged in, admin can choose Logout.
-- If admin does not logout, Supabase session stays active and admin opens normally next time.
-- After logout, admin page returns to login-only mode and requires email/password again.
-- Cache updated to V4.1.3.
+Test URLs:
+App:   https://langar-bar.github.io/Langar-Bar-Croatia/?v=421
+Admin: https://langar-bar.github.io/Langar-Bar-Croatia/admin.html?v=421
 
-Next planned step: V4.2 Cloud Menu + Likes + Feedback.
+Important:
+- For Cloud sushi sync, customer should be logged in through Langar Club / Phone OTP before placing sushi pre-order.
+- Local old sushi pre-orders remain only on the device where they were created; new Cloud pre-orders sync across devices.

@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  const CLOUD_VERSION = 'V4.1.2 Secure Admin + Reward Inbox';
+  const CLOUD_VERSION = 'V4.2 Cloud Menu Likes Feedback';
   const CONFIG = {
     supabaseUrl: 'https://fkanccgigogbxodiljqt.supabase.co',
     supabaseKey: 'sb_publishable_WbWIWgu9R2AKepJiRrygCw_1oWrdwG7',
@@ -313,5 +313,197 @@
     }, true);
   }
 
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
+
+// =============================
+// V4.2 — Cloud Menu + Likes + Feedback
+// =============================
+(function(){
+  'use strict';
+  const wait = (ms)=>new Promise(r=>setTimeout(r,ms));
+  const safeText = v=>String(v||'').trim();
+  const money = n => `€${Number(n||0).toFixed(2)}`;
+  const appLang = ()=>localStorage.langar_lang || document.documentElement.lang || 'hr';
+  const LS2 = { get(k,d){ try{return JSON.parse(localStorage.getItem(k)) ?? d}catch{return d} }, set(k,v){ localStorage.setItem(k, JSON.stringify(v)); } };
+  let originalGetMenu = null;
+  let originalToggleLike = null;
+  let originalRenderPublicFeedback = null;
+  let booted = false;
+
+  function client(){ return window.LangarCloud?.client || null; }
+  function mapCloudMenu(cats=[], items=[]){
+    return cats.map(cat=>{
+      const catItems = items.filter(i=>i.category_id===cat.id).map(i=>({
+        id:i.id,
+        sku:i.sku || i.id,
+        cloudId:i.id,
+        name:{en:i.name_en||'', hr:i.name_hr||i.name_en||''},
+        desc:{en:i.description_en||'', hr:i.description_hr||i.description_en||''},
+        ingredients:{en:i.ingredients_en||i.description_en||'', hr:i.ingredients_hr||i.ingredients_en||''},
+        price: money(i.price),
+        icon:i.icon || cat.icon || '✦',
+        available:i.active!==false && i.available_in_menu!==false,
+        orderable:i.allow_online_order!==false,
+        isNew:!!i.is_new,
+        isFeatured:!!i.is_featured,
+        isSushiPreorder:!!i.is_sushi_preorder,
+        allergens:Array.isArray(i.allergens) && i.allergens.length ? i.allergens.join(', ') : 'ask staff',
+        rewardEligible:true
+      }));
+      return {
+        id:cat.slug,
+        cloudId:cat.id,
+        icon:cat.icon || '✦',
+        title:{en:cat.title_en||cat.slug, hr:cat.title_hr||cat.title_en||cat.slug},
+        description:{en:cat.description_en||'', hr:cat.description_hr||cat.description_en||''},
+        active:cat.active!==false,
+        sort:cat.sort_order||0,
+        items:catItems
+      };
+    }).filter(c=>c.active!==false).sort((a,b)=>(a.sort||0)-(b.sort||0));
+  }
+  async function loadCloudMenu(){
+    const c = client(); if(!c) return false;
+    const catsRes = await c.from('menu_categories').select('id,slug,title_en,title_hr,description_en,description_hr,icon,sort_order,active').eq('active',true).order('sort_order',{ascending:true});
+    const itemsRes = await c.from('menu_items').select('id,category_id,sku,name_en,name_hr,description_en,description_hr,ingredients_en,ingredients_hr,allergens,price,icon,sort_order,active,available_in_menu,allow_online_order,is_new,is_featured,is_sushi_preorder').eq('active',true).eq('available_in_menu',true).order('sort_order',{ascending:true});
+    if(catsRes.error || itemsRes.error){ console.warn('Cloud menu load error', catsRes.error?.message || itemsRes.error?.message); return false; }
+    if(!catsRes.data?.length || !itemsRes.data?.length){
+      window.LangarCloudMenuLoaded = false;
+      return false;
+    }
+    const mapped = mapCloudMenu(catsRes.data, itemsRes.data);
+    if(mapped.length){
+      LS2.set('langar_cloud_menu_cache', mapped);
+      window.LangarCloudMenuLoaded = true;
+      window.LangarCloudMenuCache = mapped;
+      return true;
+    }
+    return false;
+  }
+  async function loadCloudStats(){
+    const c=client(); if(!c) return;
+    const {data,error}=await c.from('v_menu_item_stats').select('item_id,likes_count,positive_comments_count,online_sales_count,manual_sales_count,popular_score,best_seller_score');
+    if(error){ console.warn('Cloud stats error', error.message); return; }
+    const likes={}, comments={}, sales={}, scores={};
+    (data||[]).forEach(r=>{ likes[r.item_id]=+r.likes_count||0; comments[r.item_id]=+r.positive_comments_count||0; sales[r.item_id]=(+r.online_sales_count||0)+(+r.manual_sales_count||0); scores[r.item_id]=+r.popular_score||0; });
+    LS2.set('langar_cloud_like_counts', likes);
+    LS2.set('langar_cloud_comment_counts', comments);
+    LS2.set('langar_pos_sales', sales);
+    LS2.set('langar_cloud_popular_scores', scores);
+  }
+  async function loadOwnLikes(){
+    const c=client(); if(!c) return;
+    const {data:sessionData}=await c.auth.getSession();
+    const user=sessionData?.session?.user; if(!user) return;
+    const {data,error}=await c.from('menu_item_likes').select('item_id').eq('user_id', user.id);
+    if(error){ console.warn('Cloud likes error', error.message); return; }
+    const map={}; (data||[]).forEach(r=>{ map[r.item_id]=true; });
+    LS2.set('langar_item_likes', map);
+  }
+  async function loadPublicFeedback(){
+    const c=client(); if(!c) return;
+    const {data,error}=await c.from('v_public_feedback').select('id,rating,message,display_name,created_at').order('created_at',{ascending:false}).limit(30);
+    if(error){ console.warn('Public feedback load error', error.message); return; }
+    const mapped=(data||[]).map(f=>({id:f.id,rating:f.rating,message:f.message,name:f.display_name,createdAt:f.created_at,status:'public'}));
+    if(mapped.length) LS2.set('langar_feedback', mapped);
+  }
+  async function cloudToggleLike(item){
+    const c=client(); if(!c || !item?.cloudId){ if(originalToggleLike) return originalToggleLike(item); return; }
+    const {data:sessionData}=await c.auth.getSession();
+    const user=sessionData?.session?.user;
+    if(!user){ alert(appLang()==='hr'?'Prijavite se u Langar Club kako bi se lajk spremio u Cloud.':'Please join/login to Langar Club so your like can be saved in Cloud.'); return; }
+    const current = LS2.get('langar_item_likes',{});
+    if(current[item.id]){
+      const {error}=await c.from('menu_item_likes').delete().eq('user_id', user.id).eq('item_id', item.cloudId || item.id);
+      if(error){ alert('Cloud like error: '+error.message); return; }
+      delete current[item.id];
+    } else {
+      const {error}=await c.from('menu_item_likes').insert({user_id:user.id,item_id:item.cloudId || item.id});
+      if(error && !String(error.message||'').includes('duplicate')){ alert('Cloud like error: '+error.message); return; }
+      current[item.id]=true;
+    }
+    LS2.set('langar_item_likes', current);
+    await loadCloudStats();
+    if(typeof renderMenu==='function') renderMenu();
+    if(typeof renderOrderMenu==='function') renderOrderMenu();
+    if(typeof renderHomeMarketing==='function') renderHomeMarketing();
+  }
+  function overrideGetMenu(){
+    if(!originalGetMenu && typeof getMenu==='function') originalGetMenu=getMenu;
+    if(originalGetMenu && !getMenu.__cloudV42){
+      getMenu = function(){
+        const cloud = window.LangarCloudMenuCache || LS2.get('langar_cloud_menu_cache', null);
+        if(Array.isArray(cloud) && cloud.length) return cloud;
+        return originalGetMenu();
+      };
+      getMenu.__cloudV42 = true;
+    }
+  }
+  function overrideLike(){
+    if(!originalToggleLike && typeof toggleLike==='function') originalToggleLike=toggleLike;
+    if(originalToggleLike && !toggleLike.__cloudV42){
+      toggleLike = function(item){ return cloudToggleLike(item); };
+      toggleLike.__cloudV42 = true;
+    }
+  }
+  function overridePublicFeedback(){
+    if(!originalRenderPublicFeedback && typeof renderPublicFeedback==='function') originalRenderPublicFeedback=renderPublicFeedback;
+    if(originalRenderPublicFeedback && !renderPublicFeedback.__cloudV42){
+      renderPublicFeedback = function(){ originalRenderPublicFeedback(); };
+      renderPublicFeedback.__cloudV42 = true;
+    }
+  }
+  function setupFeedbackForm(){
+    const form=document.querySelector('#feedbackForm'); if(!form || form.dataset.cloudV42) return;
+    form.dataset.cloudV42='1';
+    form.onsubmit=async e=>{
+      e.preventDefault();
+      const data=Object.fromEntries(new FormData(form).entries());
+      const c=client();
+      const rating=+data.rating;
+      if(c){
+        const {data:sessionData}=await c.auth.getSession();
+        const user=sessionData?.session?.user;
+        if(user){
+          const {error}=await c.from('feedback').insert({
+            user_id:user.id,
+            rating,
+            message:data.message||'',
+            customer_name:data.name||'',
+            is_public:rating>=4,
+            status:rating>=4?'public':'admin_only'
+          });
+          if(error){ alert('Cloud feedback error: '+error.message); return; }
+          form.reset();
+          await loadPublicFeedback();
+          if(typeof renderPublicFeedback==='function') renderPublicFeedback();
+          if(typeof renderHomeMarketing==='function') renderHomeMarketing();
+          if(typeof maybeGoogleReviewPrompt==='function') maybeGoogleReviewPrompt(rating);
+          return;
+        }
+      }
+      const list=LS2.get('langar_feedback',[]);
+      list.unshift({id:'FB-'+Date.now(),createdAt:new Date().toISOString(),status:rating>=4?'public':'admin_only',...data});
+      LS2.set('langar_feedback',list);
+      form.reset();
+      if(typeof renderPublicFeedback==='function') renderPublicFeedback();
+      if(typeof renderHomeMarketing==='function') renderHomeMarketing();
+      if(typeof maybeGoogleReviewPrompt==='function') maybeGoogleReviewPrompt(rating);
+    };
+  }
+  async function refreshCloudData(){
+    overrideGetMenu(); overrideLike(); overridePublicFeedback(); setupFeedbackForm();
+    await loadCloudMenu();
+    await Promise.allSettled([loadCloudStats(), loadOwnLikes(), loadPublicFeedback()]);
+    overrideGetMenu();
+    if(typeof renderAll==='function') renderAll();
+  }
+  async function boot(){
+    if(booted) return; booted=true;
+    for(let i=0;i<20 && !window.LangarCloud;i++) await wait(150);
+    await refreshCloudData();
+    window.LangarCloudV42 = { refreshCloudData, loadCloudMenu, loadCloudStats, loadOwnLikes, loadPublicFeedback };
+  }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();

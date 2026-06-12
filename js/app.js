@@ -366,7 +366,78 @@ function saveEventInterest(ev){ const p=profile(); const interests=LS.get('langa
   addInbox({id:uid('msg'), type:'message', title: state.lang==='hr'?'Interes za event spremljen':'Event interest saved', body: state.lang==='hr'?`Spremili smo vaš interes za: ${textOf(ev.title,'hr')}. Termin: ${eventDateTimeLabel(ev)}. Ako se termin promijeni, obavijest dolazi u Inbox.`:`We saved your interest for: ${textOf(ev.title,'en')}. Time: ${eventDateTimeLabel(ev)}. If the schedule changes, you will receive an Inbox notice.`, unread:true, createdAt:new Date().toISOString()}); renderInboxBadge(); alert(state.lang==='hr'?'Interes je spremljen u Inbox.':'Interest saved in Inbox.'); $('#modal').classList.add('hidden'); }
 function renderEventCalendar(){ const box=$('#eventCalendarView'); if(!box) return; const list=eventsList().filter(e=>e.active!==false); box.innerHTML=list.map(ev=>`<article class="event-card clickable" data-event="${ev.id}"><span>${ev.icon||'✦'}</span><div><h3>${textOf(ev.title)}</h3><small>${eventDateTimeLabel(ev)}</small><p>${textOf(ev.body)}</p><button class="secondary event-interest" data-event="${ev.id}">${state.lang==='hr'?'Zanima me':'I’m interested'}</button></div></article>`).join(''); $$('.event-card.clickable').forEach(card=>card.onclick=(e)=>{ if(e.target.classList.contains('event-interest')) return; const ev=list.find(x=>x.id===card.dataset.event); if(ev) openEventDetails(ev); }); $$('.event-interest').forEach(btn=>btn.onclick=(e)=>{ e.stopPropagation(); const ev=list.find(x=>x.id===btn.dataset.event); if(ev) saveEventInterest(ev); }); }
 function sushiItems(){ return LS.get('langar_sushi_items',[{id:'SUSHI-MIX',name:{hr:'Sushi Mix Box',en:'Sushi Mix Box'},price:'from €12.00',active:true},{id:'SUSHI-SALMON',name:{hr:'Salmon Sushi Box',en:'Salmon Sushi Box'},price:'from €14.00',active:true},{id:'SUSHI-VEGGIE',name:{hr:'Veggie Sushi Box',en:'Veggie Sushi Box'},price:'from €10.00',active:true}]); }
-function renderSushiPreorder(){ const box=$('#sushiPreorderView'); if(!box) return; const tomorrow=new Date(); tomorrow.setDate(tomorrow.getDate()+1); tomorrow.setMinutes(tomorrow.getMinutes()-tomorrow.getTimezoneOffset()); const min=tomorrow.toISOString().slice(0,10); const opts=sushiItems().filter(x=>x.active!==false).map(x=>`<option value="${x.id}">${textOf(x.name)} — ${x.price}</option>`).join(''); box.innerHTML=`<section class="form-card"><h3>${state.lang==='hr'?'Rezervacija sushija':'Sushi Pre-order'}</h3><p class="muted">${state.lang==='hr'?'Sushi naručujemo svjež prema rezervacijama. Molimo rezervirajte najmanje 1 dan ranije.':'We source sushi fresh based on pre-orders. Please reserve at least 1 day in advance.'}</p><form id="sushiForm"><label>${state.lang==='hr'?'Vrsta sushija':'Sushi type'}<select name="sushiId" required>${opts}</select></label><label>${state.lang==='hr'?'Količina':'Quantity'}<input type="number" min="1" value="1" name="qty" required></label><label>${state.lang==='hr'?'Datum':'Date'}<input type="date" name="date" min="${min}" value="${min}" required></label><label>${state.lang==='hr'?'Vrijeme':'Time'}<input type="time" name="time" value="18:00" required></label><label>${state.lang==='hr'?'Način':'Mode'}<select name="mode"><option value="cafe">${state.lang==='hr'?'Serviranje u kafiću':'Serve in café'}</option><option value="pickup">Pick-up</option><option value="delivery">Delivery</option></select></label><label>${state.lang==='hr'?'Ime':'Name'}<input name="name" required></label><label>${state.lang==='hr'?'Telefon':'Phone'}<input name="phone" required></label><label>${state.lang==='hr'?'Napomena':'Note'}<textarea name="note" placeholder="Allergy, preferred type, delivery address..."></textarea></label><button class="primary full">${state.lang==='hr'?'Pošalji rezervaciju':'Send pre-order'}</button></form><p class="legal mini">${state.lang==='hr'?'Admin potvrđuje dostupnost i točan iznos. Cilj je mjeriti potražnju prije dnevne prodaje.':'Admin confirms availability and final amount. The goal is to measure demand before daily sushi sales.'}</p></section>`; const f=$('#sushiForm'); if(f) f.onsubmit=e=>{e.preventDefault(); const data=Object.fromEntries(new FormData(f).entries()); const item=sushiItems().find(x=>x.id===data.sushiId); const list=LS.get('langar_sushi_preorders',[]); list.unshift({id:uid('SUSHI'),status:'pending',itemName:textOf(item?.name,'en'),itemNameHr:textOf(item?.name,'hr'),createdAt:new Date().toISOString(),...data}); LS.set('langar_sushi_preorders',list); addInbox({id:uid('msg'),type:'message',title:state.lang==='hr'?'Sushi rezervacija primljena':'Sushi pre-order received',body:state.lang==='hr'?`Primili smo vašu sushi rezervaciju za ${textOf(item?.name,'hr')} (${data.date} ${data.time}). Admin će potvrditi dostupnost.`:`We received your sushi pre-order for ${textOf(item?.name,'en')} (${data.date} ${data.time}). Admin will confirm availability.`,unread:true,createdAt:new Date().toISOString()}); f.reset(); alert(state.lang==='hr'?'Sushi rezervacija je poslana.':'Sushi pre-order sent.');}; }
+function renderSushiPreorder(){
+  const box=$('#sushiPreorderView');
+  if(!box) return;
+  const tomorrow=new Date();
+  tomorrow.setDate(tomorrow.getDate()+1);
+  tomorrow.setMinutes(tomorrow.getMinutes()-tomorrow.getTimezoneOffset());
+  const min=tomorrow.toISOString().slice(0,10);
+  const opts=sushiItems().filter(x=>x.active!==false).map(x=>`<option value="${x.id}">${textOf(x.name)} — ${x.price}</option>`).join('');
+  const profile=LS.get('langar_profile',{})||{};
+  box.innerHTML=`<section class="form-card sushi-preorder-card"><h3>${state.lang==='hr'?'Rezervacija sushija':'Sushi Pre-order'}</h3><p class="muted">${state.lang==='hr'?'Sushi naručujemo svjež prema rezervacijama. Molimo rezervirajte najmanje 1 dan ranije. Kada admin potvrdi rezervaciju, potvrda dolazi u vaš Inbox.':'We source sushi fresh based on pre-orders. Please reserve at least 1 day in advance. When admin confirms your pre-order, confirmation will appear in your Inbox.'}</p><form id="sushiForm"><label>${state.lang==='hr'?'Vrsta sushija':'Sushi type'}<select name="sushiId" required>${opts}</select></label><label>${state.lang==='hr'?'Količina':'Quantity'}<input type="number" min="1" value="1" name="qty" required></label><label>${state.lang==='hr'?'Datum':'Date'}<input type="date" name="date" min="${min}" value="${min}" required></label><label>${state.lang==='hr'?'Vrijeme':'Time'}<input type="time" name="time" value="18:00" required></label><label>${state.lang==='hr'?'Način':'Mode'}<select name="mode"><option value="dine_in">${state.lang==='hr'?'Serviranje u kafiću':'Serve in café'}</option><option value="pickup">Pick-up</option><option value="delivery">Delivery</option></select></label><label>${state.lang==='hr'?'Ime':'Name'}<input name="name" value="${profile.firstName||''} ${profile.lastName||''}" required></label><label>${state.lang==='hr'?'Telefon':'Phone'}<input name="phone" value="${profile.phone||''}" required></label><label>${state.lang==='hr'?'Adresa za dostavu':'Delivery address'}<input name="delivery_address" placeholder="${state.lang==='hr'?'Samo ako je delivery':'Only if delivery'}"></label><label>${state.lang==='hr'?'Napomena':'Note'}<textarea name="note" placeholder="Allergy, preferred type, delivery address..."></textarea></label><button class="primary full">${state.lang==='hr'?'Pošalji rezervaciju':'Send pre-order'}</button></form><p class="legal mini">${state.lang==='hr'?'Cloud pravilo: rezervacija se sprema u Supabase, pa je admin vidi i na laptopu i na mobitelu.':'Cloud rule: pre-order is saved in Supabase, so admin can see it on laptop and mobile.'}</p></section>`;
+  const f=$('#sushiForm');
+  if(f) f.onsubmit=async e=>{
+    e.preventDefault();
+    const btn=f.querySelector('button[type="submit"],button.primary');
+    if(btn) btn.disabled=true;
+    const data=Object.fromEntries(new FormData(f).entries());
+    const item=sushiItems().find(x=>x.id===data.sushiId);
+    const itemNameEn=textOf(item?.name,'en')||data.sushiId;
+    const itemNameHr=textOf(item?.name,'hr')||itemNameEn;
+    const qty=Math.max(1, parseInt(data.qty||'1',10));
+    const unit=priceNum(item?.price||0);
+    const localRow={id:uid('SUSHI'),status:'pending',itemName:itemNameEn,itemNameHr,createdAt:new Date().toISOString(),...data,qty};
+    try{
+      const cloud=window.LangarCloud;
+      const session=cloud && await cloud.getSession();
+      if(!cloud || !session?.user){
+        alert(state.lang==='hr'?'Prvo se registrirajte u Langar Clubu i potvrdite broj mobitela.':'Please register in Langar Club and verify your phone first.');
+        if(btn) btn.disabled=false;
+        return;
+      }
+      const preorderNumber='SUSHI-' + Date.now().toString(36).toUpperCase();
+      const {data:pre,error:preErr}=await cloud.client.from('sushi_preorders').insert({
+        user_id:session.user.id,
+        preorder_number:preorderNumber,
+        status:'pending',
+        fulfillment_type:data.mode || 'pickup',
+        requested_date:data.date,
+        requested_time:data.time || null,
+        customer_name:data.name,
+        customer_phone:data.phone,
+        delivery_address:data.delivery_address || null,
+        note:data.note || null,
+        total:unit*qty
+      }).select('id,preorder_number').single();
+      if(preErr) throw preErr;
+      const {error:itemErr}=await cloud.client.from('sushi_preorder_items').insert({
+        sushi_preorder_id:pre.id,
+        item_id:null,
+        item_name_en:itemNameEn,
+        item_name_hr:itemNameHr,
+        quantity:qty,
+        unit_price:unit,
+        total_price:unit*qty
+      });
+      if(itemErr) throw itemErr;
+      const list=LS.get('langar_sushi_preorders',[]);
+      list.unshift({...localRow,cloudId:pre.id,preorder_number:pre.preorder_number||preorderNumber});
+      LS.set('langar_sushi_preorders',list);
+      addInbox({id:uid('msg'),type:'message',title:state.lang==='hr'?'Sushi rezervacija poslana':'Sushi pre-order sent',body:state.lang==='hr'?`Primili smo vašu sushi rezervaciju za ${itemNameHr} (${data.date} ${data.time}). Admin će potvrditi dostupnost u Inboxu.`:`We received your sushi pre-order for ${itemNameEn} (${data.date} ${data.time}). Admin will confirm availability in your Inbox.`,unread:true,createdAt:new Date().toISOString()});
+      f.reset();
+      alert(state.lang==='hr'?'Sushi rezervacija je spremljena u Cloud i poslana adminu.':'Sushi pre-order saved in Cloud and sent to admin.');
+    }catch(err){
+      console.warn('Cloud sushi preorder error:', err);
+      const list=LS.get('langar_sushi_preorders',[]);
+      list.unshift(localRow);
+      LS.set('langar_sushi_preorders',list);
+      addInbox({id:uid('msg'),type:'message',title:state.lang==='hr'?'Sushi rezervacija spremljena lokalno':'Sushi pre-order saved locally',body:state.lang==='hr'?'Cloud spremanje nije uspjelo. Pokušajte ponovno ili kontaktirajte Langar Bar.':'Cloud save failed. Please try again or contact Langar Bar.',unread:true,createdAt:new Date().toISOString()});
+      alert((state.lang==='hr'?'Cloud greška: ':'Cloud error: ')+(err.message||err));
+    }finally{ if(btn) btn.disabled=false; }
+  };
+}
+
 function renderGallery(){ const g=$('#galleryView'); if(!g)return; const imgs=LS.get('langar_gallery',[{src:'assets/tacos_hero.jpeg',title:'Signature tacos',cat:'Tacos'},{src:'assets/prawn_tacos.jpeg',title:'Crunchy prawn tacos',cat:'Tacos'},{src:'assets/quesadilla_real.jpeg',title:'Quesadilla preview',cat:'Food'}]); g.innerHTML=imgs.map(i=>`<article><img src="${i.src}"><b>${i.title}</b><small>${i.cat}</small></article>`).join(''); }
 function renderPublicFeedback(){ const box=$('#publicFeedbackList'); if(!box) return; const publicItems=LS.get('langar_feedback',[]).filter(f=>+f.rating>=4); box.innerHTML=publicItems.length?publicItems.map(f=>`<article class="review-card"><b>${'★'.repeat(+f.rating)}</b><p>${f.message}</p><small>${f.name||'Langar guest'}${f.favorite?` · ${f.favorite}`:''}</small></article>`).join(''):`<p class="muted">${state.lang==='hr'?'Još nema javnih recenzija.':'No public reviews yet.'}</p>`; }
 function maybeGoogleReviewPrompt(rating){ if(+rating>=4){ const googleUrl=LS.get('langar_google_review_url','https://www.google.com/maps/search/?api=1&query=Langar+Bar+Dugo+Selo'); $('#modalBody').innerHTML=`<h2>${state.lang==='hr'?'Hvala na lijepoj ocjeni!':'Thank you for the kind rating!'}</h2><p>${state.lang==='hr'?'Vaša pozitivna recenzija može biti prikazana gostima u aplikaciji. Ako želite podržati Langar Bar i na Google Maps, otvorite Google recenziju.':'Your positive review may be shown to guests in the app. If you would like to support Langar Bar on Google Maps too, open Google review.'}</p><a class="primary full button-link" target="_blank" rel="noopener" href="${googleUrl}">${state.lang==='hr'?'Otvori Google Maps':'Open Google Maps'}</a><button class="secondary full" id="closeReviewPrompt">${state.lang==='hr'?'Kasnije':'Maybe later'}</button>`; $('#modal').classList.remove('hidden'); $('#closeReviewPrompt').onclick=()=>$('#modal').classList.add('hidden'); } else { alert(state.lang==='hr'?'Hvala. Vaša poruka je poslana adminu kako bismo je privatno riješili.':'Thank you. Your feedback was sent to admin so we can solve it privately.'); } }
