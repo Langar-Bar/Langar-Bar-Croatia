@@ -1,13 +1,10 @@
-# Langar Bar App V4.1 — Cloud Auth Foundation
+# Langar Bar App V4.1.1 — Club OTP Flow Fix
 
-This version keeps the V4.0 UI/UX structure and adds the first real cloud foundation:
+This version keeps the V4.1 cloud foundation and improves the Langar Club registration flow:
 
-- Supabase public config
-- Phone OTP login card in Langar Club
-- Cloud profile upsert after login
-- Cloud Inbox sync from `inbox_messages`
-- OneSignal SDK base and external user login after Supabase auth
-- Admin Cloud Login verification against `admin_members`
-- Service Worker cache updated to V4.1
-
-Production note: Orders, full menu manager, feedback, events, sushi pre-orders, coupons and credits will be migrated to Supabase in the next cloud phases. This version focuses on secure auth foundation and cloud inbox/profile connection without breaking the existing prototype UI.
+- Removed the separate visible Phone Login card from the Club page.
+- Registration form now sends OTP after the user fills the profile and taps Save profile.
+- OTP is entered in a small modal window.
+- After successful verification, the registration form closes and a compact Cloud Member ID card remains.
+- Welcome Gift text spacing/format fixed.
+- Cache updated to V4.1.1.

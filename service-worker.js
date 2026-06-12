@@ -1,4 +1,4 @@
-const CACHE_NAME = 'langar-bar-v4-1-cloud-auth';
+const CACHE_NAME = 'langar-bar-v4-1-1-club-otp-flow';
 const ASSETS = [
   './',
   './index.html',
