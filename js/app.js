@@ -293,16 +293,30 @@ function deleteInboxItem(item){
   }
   renderInbox(); renderInboxBadge();
 }
+function showDigitalCardModal(card, sourceItem){
+  if(!card) return;
+  const activeText = state.lang==='hr'?'Aktivan jednokratni kod':'Active one-time code';
+  const inactiveText = state.lang==='hr'?'Neaktivan kod':'Inactive code';
+  $('#modalBody').innerHTML=`<h2>${card.title}</h2><p>${card.body}</p><div class="qrbox"><b>${card.code}</b><small>${card.status==='active'?activeText:inactiveText}</small></div><p>Status: <b>${card.status}</b></p>${card.status==='active'?'<button class="primary full" id="redeemFromInbox">Redeem / Staff Scan</button>':''}<button class="secondary full" id="deleteInboxModal">${state.lang==='hr'?'Obriši poruku':'Delete message'}</button>`;
+  $('#modal').classList.remove('hidden');
+  const btn=$('#redeemFromInbox'); if(btn) btn.onclick=()=>{ redeemCard(card.id); $('#modal').classList.add('hidden'); renderInbox(); };
+  const del=$('#deleteInboxModal'); if(del) del.onclick=()=>{ deleteInboxItem(sourceItem || {...card,type:'card'}); $('#modal').classList.add('hidden'); };
+}
+function findWelcomeCard(){
+  return cards().find(c=>c.type==='welcome' && c.status==='active') || cards().find(c=>String(c.title||'').toLowerCase().includes('espresso') && c.status==='active');
+}
 function openInboxItem(item){
   markInboxItemRead(item);
   if(item.type==='card'){
     const card=cards().find(c=>c.id===item.id);
     if(!card) return;
-    $('#modalBody').innerHTML=`<h2>${card.title}</h2><p>${card.body}</p><div class="qrbox"><b>${card.code}</b><small>${card.status==='active'?'Active one-time code':'Inactive code'}</small></div><p>Status: <b>${card.status}</b></p>${card.status==='active'?'<button class="primary full" id="redeemFromInbox">Redeem / Staff Scan</button>':''}<button class="secondary full" id="deleteInboxModal">${state.lang==='hr'?'Obriši poruku':'Delete message'}</button>`;
-    $('#modal').classList.remove('hidden');
-    const btn=$('#redeemFromInbox'); if(btn) btn.onclick=()=>{ redeemCard(card.id); $('#modal').classList.add('hidden'); renderInbox(); };
-    const del=$('#deleteInboxModal'); if(del) del.onclick=()=>{deleteInboxItem(item); $('#modal').classList.add('hidden');};
+    showDigitalCardModal(card, item);
     return;
+  }
+  const looksLikeWelcomeCard = item.cloudWelcomeLocal || String(item.title+' '+item.body).toLowerCase().includes('espresso card') || String(item.title+' '+item.body).toLowerCase().includes('free espresso');
+  if(looksLikeWelcomeCard){
+    const welcomeCard = findWelcomeCard();
+    if(welcomeCard){ showDigitalCardModal(welcomeCard, item); return; }
   }
   $('#modalBody').innerHTML=`<h2>${item.title}</h2><p>${item.body}</p><small>${new Date(item.createdAt).toLocaleString()}</small><button class="secondary full" id="deleteInboxModal">${state.lang==='hr'?'Obriši poruku':'Delete message'}</button>`;
   $('#modal').classList.remove('hidden');

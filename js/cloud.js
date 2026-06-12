@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  const CLOUD_VERSION = 'V4.1.1 Club OTP Flow';
+  const CLOUD_VERSION = 'V4.1.2 Secure Admin + Reward Inbox';
   const CONFIG = {
     supabaseUrl: 'https://fkanccgigogbxodiljqt.supabase.co',
     supabaseKey: 'sb_publishable_WbWIWgu9R2AKepJiRrygCw_1oWrdwG7',
@@ -163,9 +163,10 @@
   function ensureWelcomeRewards(){
     try{
       const cards = readLS('langar_cards', []);
-      if(!cards.some(c=>c.type==='welcome')){
+      let welcomeCard = cards.find(c=>c.type==='welcome');
+      if(!welcomeCard){
         const code = 'FREE-' + Math.floor(100000+Math.random()*900000);
-        cards.unshift({
+        welcomeCard = {
           id:'welcome-' + Date.now(),
           type:'welcome',
           title:'Free Espresso Card',
@@ -174,22 +175,14 @@
           status:'active',
           unread:true,
           createdAt:new Date().toISOString()
-        });
+        };
+        cards.unshift(welcomeCard);
         writeLS('langar_cards', cards);
       }
-      const inbox = readLS('langar_inbox', []);
-      if(!inbox.some(m=>m.cloudWelcomeLocal)){
-        inbox.unshift({
-          id:'msg-welcome-cloud-' + Date.now(),
-          type:'message',
-          title:'Welcome to Langar Club',
-          body:'Your free espresso card is ready in Inbox and Rewards.',
-          unread:true,
-          cloudWelcomeLocal:true,
-          createdAt:new Date().toISOString()
-        });
-        writeLS('langar_inbox', inbox);
-      }
+      const inbox = readLS('langar_inbox', []).filter(m=>!m.cloudWelcomeLocal);
+      // The card itself appears in Inbox because active reward cards are listed there.
+      // Old text-only welcome messages are removed so tapping the Inbox item opens the actual QR/code card.
+      writeLS('langar_inbox', inbox);
     }catch(e){ console.warn('Welcome reward local sync failed', e); }
   }
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'langar-bar-v4-1-1-club-otp-flow';
+const CACHE_NAME = 'langar-bar-v4-1-2-secure-admin-reward-inbox';
 const ASSETS = [
   './',
   './index.html',
