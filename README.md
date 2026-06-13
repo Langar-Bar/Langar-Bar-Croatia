@@ -1,10 +1,8 @@
-# Langar Bar App V4.3.2 — Stable Clean Admin Hub
+# Langar Bar App V4.3.3 — Stable Admin Hub
 
-Fixes admin module disappearance and restores a clean menu-style Admin Dashboard.
-
-- Admin opens as icon cards, like the main app menu.
-- Side module list is hidden after login.
-- Every module opens on its own page.
-- Back / Home / Forward navigation retained.
-- Mobile overflow and table swipe behavior retained.
-- Pull-to-refresh retained.
+- Admin panel rebuilt as stable icon module hub.
+- Removed mobile left/right swipe navigation from admin to stop accidental panel changes and Safari crashes.
+- Each module opens by tapping its icon card.
+- Back / Home / Forward buttons remain.
+- Pull-to-refresh remains.
+- Mobile tables scroll inside their own table area.
