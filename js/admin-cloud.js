@@ -611,24 +611,7 @@
         ]);
         counts={customers:profiles.count||0,inbox:inbox.count||0,sushi:sushi.count||0,cards:cards.count||0};
       }
-      d.innerHTML=`
-        <button data-admin-open="customersPanel"><span>👥</span><b>${counts.customers}</b><small>Cloud Customers</small></button>
-        <button data-admin-open="notificationsPanel"><span>✉️</span><b>${counts.inbox}</b><small>Cloud Inbox</small></button>
-        <button data-admin-open="sushiPanel"><span>🍣</span><b>${counts.sushi}</b><small>Sushi Pre-orders</small></button>
-        <button data-admin-open="customersPanel"><span>🎁</span><b>${counts.cards}</b><small>Reward Cards</small></button>
-        <button data-admin-open="menuPanel"><span>☕</span><b>MENU</b><small>Menu Manager</small></button>
-        <button data-admin-open="quickPricePanel"><span>💶</span><b>PRICE</b><small>Quick Price</small></button>
-        <button data-admin-open="ordersPanel"><span>🧾</span><b>ORDERS</b><small>Orders / Delivery</small></button>
-        <button data-admin-open="reservationsPanel"><span>📅</span><b>BOOK</b><small>Reservations</small></button>
-        <button data-admin-open="eventsPanel"><span>🎉</span><b>EVENTS</b><small>Event Manager</small></button>
-        <button data-admin-open="feedbackPanel"><span>⭐</span><b>REVIEWS</b><small>Feedback</small></button>
-        <button data-admin-open="experiencePanel"><span>✨</span><b>TOOLS</b><small>Experience</small></button>
-        <button data-admin-open="settingsPanel"><span>⚙️</span><b>SYNC</b><small>Settings</small></button>
-      `;
-      d.querySelectorAll('[data-admin-open]').forEach(btn=>btn.addEventListener('click',()=>{
-        const id = btn.dataset.adminOpen;
-        if(window.showPanel) window.showPanel(id);
-      }));
+      d.innerHTML=`<button><span>👥</span><b>${counts.customers}</b><small>Cloud Customers</small></button><button><span>✉️</span><b>${counts.inbox}</b><small>Cloud Inbox</small></button><button><span>🍣</span><b>${counts.sushi}</b><small>Sushi Pre-orders</small></button><button><span>🎁</span><b>${counts.cards}</b><small>Reward Cards</small></button><button><span>🔐</span><b>ON</b><small>Secure Admin</small></button><button><span>☁️</span><b>SYNC</b><small>Supabase</small></button>`;
     }catch(e){ /* admin may not be logged in yet */ }
   }
 
@@ -639,29 +622,8 @@
     `; document.head.appendChild(st);
   }
 
-
-
-  function installAdminPullToRefresh(){
-    if(window.__langarAdminPullRefreshInstalled) return;
-    window.__langarAdminPullRefreshInstalled = true;
-    let startY=0, pulling=false, indicator=null;
-    function show(){
-      if(!indicator){
-        indicator=document.createElement('div');
-        indicator.textContent='Release to refresh admin';
-        indicator.style.cssText='position:fixed;left:50%;top:12px;transform:translate(-50%,-70px);z-index:9999;background:rgba(74,21,21,.97);color:#fff4d6;border:1px solid rgba(245,215,139,.38);border-radius:999px;padding:10px 16px;font-weight:900;box-shadow:0 14px 28px rgba(0,0,0,.32);transition:transform .18s ease, opacity .18s ease;opacity:0;pointer-events:none';
-        document.body.appendChild(indicator);
-      }
-      indicator.style.opacity='1'; indicator.style.transform='translate(-50%,0)';
-    }
-    document.addEventListener('touchstart',e=>{ if(window.scrollY<=2){ startY=e.touches[0].clientY; pulling=true; } },{passive:true});
-    document.addEventListener('touchmove',e=>{ if(pulling && e.touches[0].clientY-startY>45) show(); },{passive:true});
-    document.addEventListener('touchend',()=>{ if(!pulling) return; const active=indicator&&indicator.style.opacity==='1'; pulling=false; if(active){ indicator.textContent='Refreshing admin...'; setTimeout(()=>location.reload(),120); } else if(indicator){ indicator.style.opacity='0'; indicator.style.transform='translate(-50%,-70px)'; } },{passive:true});
-  }
-
   function install(){
     injectCustomerStyles();
-    installAdminPullToRefresh();
     window.renderCustomers = renderCloudCustomers;
     const oldAll=window.renderAll || (typeof renderAll==='function'?renderAll:null);
     if(oldAll && !window.__langarCustomerCloudWrap){
