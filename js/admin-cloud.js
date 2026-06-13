@@ -327,7 +327,7 @@
 })();
 
 // =============================
-// V4.2.4 — Cloud Customers RPC sync + delete + login/signup support
+// V4.2.5 — Safe Customer Delete + Admin Protection
 // =============================
 (function(){
   'use strict';
@@ -375,8 +375,14 @@
         throw new Error(msg);
       }
       rows=data||[];
+      // Safety fallback: even if RPC is unavailable, never show active admins as customers.
+      try{
+        const {data:admins}=await client.from('admin_members').select('user_id,active').eq('active',true);
+        const adminIds=new Set((admins||[]).map(a=>a.user_id));
+        rows=rows.filter(p=>!adminIds.has(p.id));
+      }catch(e){}
     }
-    customersCache=rows;
+    customersCache=(rows||[]).filter(c=>c && c.id);
     cloudCustomersLoadedAt = new Date();
     if(selectedCustomerId && !customersCache.some(c=>c.id===selectedCustomerId)) selectedCustomerId=null;
     if(!selectedCustomerId && customersCache.length) selectedCustomerId=customersCache[0].id;
@@ -512,22 +518,24 @@
     const status=$('#cloudCustomerActionStatus');
     try{
       await requireAdmin();
+      // Hard protection: never delete an active admin from the customer screen, even if old cache shows it.
+      try{
+        const {data:adminRow,error:adminErr}=await client.from('admin_members').select('role,active').eq('user_id',c.id).eq('active',true).maybeSingle();
+        if(adminErr) throw adminErr;
+        if(adminRow) throw new Error('This user is an active admin and cannot be deleted from Customers & Rewards. Use Admin Members settings, not customer delete.');
+      }catch(checkErr){
+        if(String(checkErr.message||checkErr).includes('active admin')) throw checkErr;
+        // Continue only if the check failed because the table is inaccessible; RPC will still protect admins.
+      }
       const name=customerName(c);
-      const ok=confirm('Delete customer from Cloud list?\n\n'+name+'\n\nThis removes the profile and app-visible customer data. The Auth login record may still exist in Supabase Authentication.');
+      const ok=confirm('Delete customer from Cloud list?\n\n'+name+'\n\nThis removes the customer profile, inbox, reward cards and test app data. Active admins are protected and cannot be deleted here.');
       if(!ok) return;
       if(status) status.textContent='Deleting customer from Cloud...';
-      let usedRpc=false;
       try{
         const rpc = await client.rpc('admin_delete_customer', { customer_id: c.id });
         if(rpc.error) throw rpc.error;
-        usedRpc=true;
       }catch(rpcErr){
-        const relatedTables=['reward_cards','wallet_transactions','inbox_messages','sushi_preorders','event_interests','feedback','menu_item_likes','menu_item_comments','devices','notification_preferences'];
-        for(const t of relatedTables){
-          await client.from(t).delete().eq('user_id', c.id);
-        }
-        const {error}=await client.from('profiles').delete().eq('id', c.id);
-        if(error) throw new Error((rpcErr?.message?('RPC delete failed: '+rpcErr.message+' / '):'') + error.message);
+        throw new Error((rpcErr?.message||String(rpcErr)) + ' — Run the V4.2.5 Safe Customer Delete SQL in Supabase.');
       }
       selectedCustomerId=null;
       if(status) status.textContent='Customer deleted from Cloud list.';
@@ -536,7 +544,7 @@
     }catch(err){
       const msg=(err.message||String(err));
       if(status) status.textContent='Delete error: '+msg;
-      alert('Delete customer error: '+msg+'\n\nIf this says permission denied, run the V4.2.4 SQL once in Supabase.');
+      alert('Delete customer error: '+msg);
     }
   }
 

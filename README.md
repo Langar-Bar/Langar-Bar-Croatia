@@ -1,13 +1,18 @@
-Langar Bar App V4.2.4 — Club Login / Sign Up + Customers RPC Sync
+Langar Bar App V4.2.5 — Cloud Sushi + Mobile Admin
 
-Updates:
-- Club now has two clear modes: existing member login and new sign up.
-- Existing members enter the same phone number, receive SMS OTP and restore their Cloud profile.
-- New customers complete the sign-up form, receive SMS OTP and then get a Cloud profile.
-- Duplicate registration with the same phone restores the same Supabase Auth user/profile instead of creating a second visible customer.
-- Admin customer list can use secure Supabase RPC functions for consistent laptop/mobile sync.
-- Admin delete customer can use RPC for safer cleanup of test customers.
-- Service Worker cache updated to V4.2.4.
+Changes:
+- Sushi pre-orders are saved to Supabase when the customer is logged in.
+- Admin Sushi Pre-orders reads from Cloud, so laptop and phone show the same orders.
+- Updating sushi status creates a customer Inbox confirmation/update.
+- Mobile admin layout improved with compact module buttons and auto-scroll to selected panel.
+- Admin PWA icon added with a different red/gold Admin design.
+- Admin page now links its own manifest: admin-manifest.webmanifest.
+- Service Worker cache updated to V4.2.5.
 
-Required optional SQL:
-Run langar_bar_v424_admin_customer_rpc.sql in Supabase for strongest Customers & Rewards sync and delete.
+Test URLs:
+App:   https://langar-bar.github.io/Langar-Bar-Croatia/?v=423
+Admin: https://langar-bar.github.io/Langar-Bar-Croatia/admin.html?v=423
+
+Important:
+- For Cloud sushi sync, customer should be logged in through Langar Club / Phone OTP before placing sushi pre-order.
+- Local old sushi pre-orders remain only on the device where they were created; new Cloud pre-orders sync across devices.
