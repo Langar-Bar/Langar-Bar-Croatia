@@ -1,3 +1,3 @@
-# Langar Bar App V4.3.0
+Langar Bar App V4.3.1 — Mobile Admin Width Fixes
 
-Mobile admin polish: English-only admin dashboard text, responsive module cards and panels, stable pull-to-refresh.
+Fixes mobile overflow in Customers, Menu Manager and Event Manager; improves button/card wrapping and table horizontal scroll; swipe navigation ignores tables/forms so horizontal scrolling works.
