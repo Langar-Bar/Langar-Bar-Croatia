@@ -1,3 +1,3 @@
-Langar Bar App V4.2.9 — Clean Admin Hub Fix
+# Langar Bar App V4.3.0
 
-Fixes blank admin dashboard after login, restores category-style admin hub, and adds robust pull-to-refresh on admin.
+Mobile admin polish: English-only admin dashboard text, responsive module cards and panels, stable pull-to-refresh.
