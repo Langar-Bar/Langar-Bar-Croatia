@@ -1,3 +1,10 @@
-Langar Bar App V4.3.1 — Mobile Admin Width Fixes
+# Langar Bar App V4.3.2 — Stable Clean Admin Hub
 
-Fixes mobile overflow in Customers, Menu Manager and Event Manager; improves button/card wrapping and table horizontal scroll; swipe navigation ignores tables/forms so horizontal scrolling works.
+Fixes admin module disappearance and restores a clean menu-style Admin Dashboard.
+
+- Admin opens as icon cards, like the main app menu.
+- Side module list is hidden after login.
+- Every module opens on its own page.
+- Back / Home / Forward navigation retained.
+- Mobile overflow and table swipe behavior retained.
+- Pull-to-refresh retained.
