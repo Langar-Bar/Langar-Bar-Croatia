@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  const CLOUD_VERSION = 'V4.2.6 Club Login Pull Refresh';
+  const CLOUD_VERSION = 'V4.2.4 Club Login Signup';
   const CONFIG = {
     supabaseUrl: 'https://fkanccgigogbxodiljqt.supabase.co',
     supabaseKey: 'sb_publishable_WbWIWgu9R2AKepJiRrygCw_1oWrdwG7',
@@ -251,7 +251,6 @@
   }
 
   function setClubRegisterView(){
-    ensureClubAuthMarkup();
     const authBox = $('#clubAuthBox');
     const success = $('#clubSuccess');
     if(authBox) authBox.classList.remove('hidden');
@@ -343,86 +342,8 @@
     }, true);
   }
 
-
-
-  function ensureClubAuthMarkup(){
-    const club = document.getElementById('club');
-    const form = document.getElementById('clubForm');
-    if(!club || !form) return;
-    let authBox = document.getElementById('clubAuthBox');
-    if(!authBox){
-      authBox = document.createElement('div');
-      authBox.id = 'clubAuthBox';
-      authBox.className = 'club-auth-box';
-      authBox.innerHTML = `
-        <div class="club-auth-tabs">
-          <button type="button" id="clubLoginTab" class="active">${t('Već sam član','Already a member')}</button>
-          <button type="button" id="clubSignupTab">${t('Nova registracija','New sign up')}</button>
-        </div>
-        <form id="clubLoginForm" class="form-card club-auth-panel">
-          <h3>${t('Prijava člana','Member login')}</h3>
-          <p class="cloud-mini">${t('Ako ste već registrirani, unesite isti broj telefona i primite SMS kod.','If you already registered, enter the same phone number and receive an SMS code.')}</p>
-          <label>${t('Telefon','Phone')}<input required name="loginPhone" placeholder="+385..."></label>
-          <button class="primary full" type="submit">${t('Pošalji kod za prijavu','Send login code')}</button>
-        </form>
-      `;
-      form.parentNode.insertBefore(authBox, form);
-      authBox.appendChild(form);
-    } else if(form.parentNode !== authBox){
-      authBox.appendChild(form);
-    }
-    form.classList.add('club-auth-panel');
-    let h = form.querySelector('h3');
-    if(!h){
-      h = document.createElement('h3');
-      h.textContent = t('Nova registracija','New sign up');
-      form.insertBefore(h, form.firstChild);
-    }
-    let note = form.querySelector('.signup-cloud-note');
-    if(!note){
-      note = document.createElement('p');
-      note.className = 'cloud-mini signup-cloud-note';
-      note.textContent = t('Ako još nemate profil, ispunite obrazac i potvrdite broj SMS kodom.','If you do not have a profile yet, fill the form and confirm your number with an SMS code.');
-      h.after(note);
-    }
-  }
-
-  function installPullToRefresh(label){
-    if(window.__langarPullRefreshInstalled) return;
-    window.__langarPullRefreshInstalled = true;
-    let startY = 0, pulling = false, indicator = null;
-    function makeIndicator(){
-      if(indicator) return indicator;
-      indicator = document.createElement('div');
-      indicator.id = 'pullRefreshIndicator';
-      indicator.textContent = label || 'Release to refresh';
-      indicator.style.cssText = 'position:fixed;left:50%;top:12px;transform:translate(-50%,-70px);z-index:9999;background:rgba(7,18,14,.96);color:#fff4d6;border:1px solid rgba(245,215,139,.35);border-radius:999px;padding:10px 16px;font-weight:900;box-shadow:0 14px 28px rgba(0,0,0,.32);transition:transform .18s ease, opacity .18s ease;opacity:0;pointer-events:none';
-      document.body.appendChild(indicator);
-      return indicator;
-    }
-    document.addEventListener('touchstart', e=>{
-      if(window.scrollY <= 2){ startY = e.touches[0].clientY; pulling = true; }
-    }, {passive:true});
-    document.addEventListener('touchmove', e=>{
-      if(!pulling) return;
-      const dy = e.touches[0].clientY - startY;
-      if(dy > 45){ const el=makeIndicator(); el.style.opacity='1'; el.style.transform='translate(-50%,0)'; }
-    }, {passive:true});
-    document.addEventListener('touchend', e=>{
-      if(!pulling) return;
-      const el = indicator;
-      const dy = el && el.style.opacity === '1';
-      pulling = false;
-      if(el){ el.textContent = t('Osvježavamo...','Refreshing...'); }
-      if(dy){ setTimeout(()=>location.reload(), 120); }
-      else if(el){ el.style.opacity='0'; el.style.transform='translate(-50%,-70px)'; }
-    }, {passive:true});
-  }
-
   async function boot(){
     injectStyles();
-    ensureClubAuthMarkup();
-    installPullToRefresh(t('Pustite za osvježavanje','Release to refresh'));
     wireClubRegistrationOtp();
     const session = await getSession();
     if(session){
