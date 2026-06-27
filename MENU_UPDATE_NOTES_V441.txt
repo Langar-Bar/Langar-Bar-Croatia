@@ -1,0 +1,8 @@
+Langar Bar V4.4.1 — Breakfast Modal Add-ons
+
+Changes:
+- Breakfast Add-ons & Upgrades category is hidden from main menu and order category grid.
+- Add-on category icon changed from plus to bread internally.
+- Breakfast items now show included drink choices and optional add-ons inside the item detail modal.
+- Breakfast item added to cart includes selected drink and selected add-ons, with correct combined price.
+- Service worker cache and menu localStorage key bumped to force fresh menu/cache.

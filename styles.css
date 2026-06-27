@@ -99,3 +99,15 @@
 @keyframes iconBreathe{0%,100%{transform:translateY(0) scale(1);filter:brightness(1)}50%{transform:translateY(-2px) scale(1.035);filter:brightness(1.08)}}
 @keyframes hintPulse{0%,100%{opacity:.35;transform:translateX(0)}50%{opacity:.9;transform:translateX(-4px)}}
 @media (max-width:560px){.menu-detail-head::after{content:"⇠ ⇢"}.menu-cat-icon{width:56px;height:56px}}
+
+
+/* V4.4.1 Breakfast detail add-ons */
+.breakfast-options{margin-top:14px;border:1px solid var(--line);border-radius:20px;padding:14px;background:rgba(217,180,95,.06)}
+.breakfast-options h4{margin:6px 0 8px}
+.option-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:8px 0 12px}
+.option-chip{display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--line);border-radius:16px;padding:10px 11px;background:rgba(255,255,255,.045);cursor:pointer;color:var(--cream);font-weight:800}
+.option-chip input{width:auto;margin:0;accent-color:var(--gold)}
+.option-chip b{color:var(--gold2);white-space:nowrap}
+.option-chip.selected{border-color:rgba(245,215,139,.65);background:rgba(217,180,95,.16);box-shadow:0 0 0 1px rgba(245,215,139,.18)}
+.breakfast-total-hint{margin-top:8px}
+@media(max-width:520px){.option-grid{grid-template-columns:1fr}.option-chip{align-items:flex-start}}

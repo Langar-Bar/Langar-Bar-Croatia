@@ -198,12 +198,13 @@ const LANGAR_DEFAULT_MENU = [
       "hr": "Doručak dodaci i nadoplate"
     },
     "description": {
-      "en": "Add bread, baked beans, tapas scoop or drink upgrades to breakfast.",
-      "hr": "Dodajte kruh, zapečeni grah, tapas kuglicu ili nadoplatu pića uz doručak."
+      "en": "Optional breakfast sides and drink upgrades shown inside breakfast item details.",
+      "hr": "Dodatni prilozi i nadoplate pića prikazuju se unutar detalja doručka."
     },
-    "icon": "➕🍳",
+    "icon": "🥖",
     "homeExplore": false,
     "active": true,
+    "hiddenInMenu": true,
     "sort": 2,
     "items": [
       {
