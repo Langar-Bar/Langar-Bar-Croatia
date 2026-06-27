@@ -660,7 +660,7 @@
 
 
 // =============================
-// V4.4.7 — Cloud customer orders status notifications + archive
+// V4.4.8 — Cloud customer orders status notifications + archive + staff alarm
 // =============================
 (function(){
   'use strict';
@@ -674,6 +674,56 @@
   const statuses = ['new','accepted','preparing','ready','completed','cancelled','rejected'];
   let lastSeenNewest = localStorage.langar_admin_last_order_seen || '';
   let pollTimer = null;
+  let alarmTimer = null;
+  let alarmCtx = null;
+  let alarmUnlocked = localStorage.langar_admin_alarm_unlocked === '1';
+  let lastNotifiedOrderIds = '';
+  function ackedOrders(){ try{return JSON.parse(localStorage.langar_admin_order_ack_ids||'{}')}catch{return {}} }
+  function saveAckedOrders(map){ localStorage.langar_admin_order_ack_ids = JSON.stringify(map||{}); }
+  function currentNewUnacked(allRows){ const ack=ackedOrders(); return (allRows||[]).filter(o=>String(o.status||'new')==='new' && !ack[o.id]); }
+  function ackOrderIds(ids){ const ack=ackedOrders(); (ids||[]).forEach(id=>{ if(id) ack[id]=new Date().toISOString(); }); saveAckedOrders(ack); stopOrderAlarm(); }
+  async function unlockAlarmSound(){
+    try{
+      alarmCtx = alarmCtx || new (window.AudioContext||window.webkitAudioContext)();
+      if(alarmCtx.state==='suspended') await alarmCtx.resume();
+      alarmUnlocked = true; localStorage.langar_admin_alarm_unlocked='1';
+      if('Notification' in window && Notification.permission==='default') await Notification.requestPermission().catch(()=>{});
+      return true;
+    }catch(e){ alert('Alarm sound could not be enabled: '+(e.message||e)); return false; }
+  }
+  function beepOnce(){
+    try{
+      alarmCtx = alarmCtx || new (window.AudioContext||window.webkitAudioContext)();
+      if(alarmCtx.state==='suspended') return;
+      const osc=alarmCtx.createOscillator(); const gain=alarmCtx.createGain();
+      osc.type='sine'; osc.frequency.setValueAtTime(880, alarmCtx.currentTime);
+      gain.gain.setValueAtTime(0.0001, alarmCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.18, alarmCtx.currentTime+0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, alarmCtx.currentTime+0.32);
+      osc.connect(gain); gain.connect(alarmCtx.destination); osc.start(); osc.stop(alarmCtx.currentTime+0.35);
+    }catch(e){}
+  }
+  function browserNotifyNewOrders(unacked){
+    if(!unacked?.length) return;
+    const key=unacked.map(o=>o.id).sort().join('|');
+    if(key===lastNotifiedOrderIds) return;
+    lastNotifiedOrderIds=key;
+    try{
+      if('Notification' in window && Notification.permission==='granted'){
+        const first=unacked[0];
+        new Notification('Langar Bar — New order', {body:`${unacked.length} new order(s). First: ${first.order_number||first.id.slice(0,8)} ${typeLabel(first.fulfillment_type)}`, icon:'assets/admin-icon-192.png', badge:'assets/admin-icon-192.png', tag:'langar-admin-new-order'});
+      }
+    }catch(e){}
+  }
+  function startOrderAlarm(unacked){
+    if(!unacked?.length){ stopOrderAlarm(); return; }
+    browserNotifyNewOrders(unacked);
+    if(!alarmUnlocked) return;
+    if(alarmTimer) return;
+    beepOnce();
+    alarmTimer=setInterval(beepOnce, 1800);
+  }
+  function stopOrderAlarm(){ if(alarmTimer){ clearInterval(alarmTimer); alarmTimer=null; } }
   function typeLabel(t){ return t==='dine_in'?'Dine-in':(t==='delivery'?'Delivery':'Pick-up'); }
   async function requireAdmin(){
     const {data}=await client.auth.getSession();
@@ -705,15 +755,20 @@
       const archive=allRows.filter(o=>terminalStatus(o.status) || todayKey(o.created_at)!==localToday());
       if(orderFilter==='live') rows=live; else if(orderFilter==='today') rows=today; else if(orderFilter==='archive') rows=archive; else rows=allRows;
       const open=allRows.filter(o=>!terminalStatus(o.status));
+      const unacked=currentNewUnacked(allRows);
       const newest=allRows[0]?.id || '';
-      const hasNew = newest && lastSeenNewest && newest !== lastSeenNewest && rows[0]?.status==='new';
+      const hasNew = unacked.length>0;
       if(newest){ localStorage.langar_admin_last_order_seen = newest; lastSeenNewest = newest; }
-      box.innerHTML = `<div class="cloud-orders-toolbar ${hasNew?'order-alert-flash':''}"><span class="order-pill">Open: ${open.length}</span><span class="order-pill">New: ${allRows.filter(o=>o.status==='new').length}</span><span class="order-pill">Today total: ${euro(today.reduce((s,o)=>s+Number(o.total||0),0))}</span><button id="refreshCloudOrders" class="secondary">Refresh</button></div><div class="order-filter-tabs"><button data-order-filter="live" class="secondary ${orderFilter==='live'?'active':''}">Live Queue</button><button data-order-filter="today" class="secondary ${orderFilter==='today'?'active':''}">Today</button><button data-order-filter="archive" class="secondary ${orderFilter==='archive'?'active':''}">Archive</button><button data-order-filter="all" class="secondary ${orderFilter==='all'?'active':''}">All 80</button></div>` +
+      startOrderAlarm(unacked);
+      const alarmBanner = unacked.length ? `<div class="order-alarm-banner"><div><b>🔔 ${unacked.length} NEW ORDER${unacked.length>1?'S':''}</b><small>Alarm continues until staff checks or accepts the order.</small></div><button id="enableOrderAlarm" class="primary">${alarmUnlocked?'Alarm on':'Enable alarm sound'}</button><button id="ackOrderAlarm" class="secondary">I checked / stop alarm</button></div>` : `<div class="order-alarm-quiet"><span>✓ No unchecked new orders</span><button id="enableOrderAlarm" class="secondary">${alarmUnlocked?'Alarm enabled':'Enable alarm sound'}</button></div>`;
+      box.innerHTML = `${alarmBanner}<div class="cloud-orders-toolbar ${hasNew?'order-alert-flash':''}"><span class="order-pill">Open: ${open.length}</span><span class="order-pill">New: ${allRows.filter(o=>o.status==='new').length}</span><span class="order-pill">Today total: ${euro(today.reduce((s,o)=>s+Number(o.total||0),0))}</span><button id="refreshCloudOrders" class="secondary">Refresh</button></div><div class="order-filter-tabs"><button data-order-filter="live" class="secondary ${orderFilter==='live'?'active':''}">Live Queue</button><button data-order-filter="today" class="secondary ${orderFilter==='today'?'active':''}">Today</button><button data-order-filter="archive" class="secondary ${orderFilter==='archive'?'active':''}">Archive</button><button data-order-filter="all" class="secondary ${orderFilter==='all'?'active':''}">All 80</button></div>` +
         (rows.length?`<div class="cloud-orders-list">${rows.map(o=>{
           const items=normalizeItems(o.items);
           return `<article class="cloud-order-card ${o.status==='new'?'new':''}"><div class="cloud-order-head"><div><h3>${safe(o.order_number||o.id.slice(0,8))} <span class="order-source-badge">${typeLabel(o.fulfillment_type)}</span></h3><div class="cloud-order-meta">${new Date(o.created_at).toLocaleString()}${o.table_number?` · Table: <b>${safe(o.table_number)}</b>`:''}${o.customer_name?` · ${safe(o.customer_name)}`:''}${o.customer_phone?` · ${safe(o.customer_phone)}`:''}</div>${o.delivery_address?`<div class="cloud-order-meta">Address: ${safe(o.delivery_address)}</div>`:''}</div><div><b>${euro(o.total)}</b><br><small>${safe(statusLabels[o.status]||o.status)}</small></div></div><div class="cloud-order-items">${items.map(i=>`<div><span>${safe(i.qty||1)} × ${safe(i.name_hr||i.name_en||i.name||'Item')}</span><b>${euro(i.line_total ?? ((i.qty||1)*(i.price||0)))}</b></div>`).join('')||'<p class="muted">No items</p>'}</div>${o.note?`<p class="muted"><b>Note:</b> ${safe(o.note)}</p>`:''}<div class="cloud-order-actions"><select data-order-status="${o.id}">${statuses.map(st=>`<option value="${st}" ${o.status===st?'selected':''}>${statusLabels[st]}</option>`).join('')}</select><label class="checkline"><input type="checkbox" data-order-paid="${o.id}" ${o.paid?'checked':''}> Paid / entered in Remaris</label></div></article>`;
         }).join('')}</div>`:'<p class="muted">Connected to Cloud. No orders yet. Submit a new customer test order after uploading V4.4.6.</p><div class="legal-block"><b>Tablet workflow</b><p>Customer orders appear here. Staff enter the same order manually in Remaris and then update status here.</p></div>');
       $('#refreshCloudOrders')?.addEventListener('click', renderCloudOrders);
+      $('#enableOrderAlarm')?.addEventListener('click', async()=>{ await unlockAlarmSound(); startOrderAlarm(currentNewUnacked(allRows)); renderCloudOrders(); });
+      $('#ackOrderAlarm')?.addEventListener('click', ()=>{ ackOrderIds(unacked.map(o=>o.id)); renderCloudOrders(); });
       document.querySelectorAll('[data-order-filter]').forEach(btn=>btn.onclick=()=>{ orderFilter=btn.dataset.orderFilter; localStorage.langar_admin_order_filter=orderFilter; renderCloudOrders(); });
       document.querySelectorAll('[data-order-status]').forEach(sel=>sel.onchange=()=>updateOrder(sel.dataset.orderStatus,{status:sel.value}));
       document.querySelectorAll('[data-order-paid]').forEach(ch=>ch.onchange=()=>updateOrder(ch.dataset.orderPaid,{paid:ch.checked}));
@@ -730,6 +785,7 @@
       const now=new Date().toISOString();
       const next={...patch, updated_at:now};
       if(patch.status){
+        if(before?.status==='new' && patch.status!=='new') ackOrderIds([id]);
         next.status_updated_at=now;
         const hist=Array.isArray(before?.status_history)?before.status_history:[];
         next.status_history=[...hist,{from:before?.status||null,to:patch.status,at:now,by:admin.id||admin.email||'admin'}];

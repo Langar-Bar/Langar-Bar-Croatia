@@ -556,7 +556,7 @@ function renderPublicFeedback(){ const box=$('#publicFeedbackList'); if(!box) re
 function maybeGoogleReviewPrompt(rating){ if(+rating>=4){ const googleUrl=LS.get('langar_google_review_url','https://www.google.com/maps/search/?api=1&query=Langar+Bar+Dugo+Selo'); $('#modalBody').innerHTML=`<h2>${state.lang==='hr'?'Hvala na lijepoj ocjeni!':'Thank you for the kind rating!'}</h2><p>${state.lang==='hr'?'Vaša pozitivna recenzija može biti prikazana gostima u aplikaciji. Ako želite podržati Langar Bar i na Google Maps, otvorite Google recenziju.':'Your positive review may be shown to guests in the app. If you would like to support Langar Bar on Google Maps too, open Google review.'}</p><a class="primary full button-link" target="_blank" rel="noopener" href="${googleUrl}">${state.lang==='hr'?'Otvori Google Maps':'Open Google Maps'}</a><button class="secondary full" id="closeReviewPrompt">${state.lang==='hr'?'Kasnije':'Maybe later'}</button>`; $('#modal').classList.remove('hidden'); $('#closeReviewPrompt').onclick=()=>$('#modal').classList.add('hidden'); } else { alert(state.lang==='hr'?'Hvala. Vaša poruka je poslana adminu kako bismo je privatno riješili.':'Thank you. Your feedback was sent to admin so we can solve it privately.'); } }
 
 // =============================
-// V4.4.7 — Customer order status tracker
+// V4.4.8 — Customer order status tracker + pickup/delivery notifications
 // =============================
 const orderStatusLabels = {
   new:{hr:'Poslana', en:'Sent'},
@@ -577,6 +577,25 @@ function orderMessageForStatus(o, st){
   const hr={accepted:`Vaša narudžba ${num} je prihvaćena.`,preparing:`Vaša narudžba ${num} je u pripremi.`,ready:`Vaša narudžba ${num} je spremna.`,completed:`Vaša narudžba ${num} je završena. Hvala.`,cancelled:`Vaša narudžba ${num} je otkazana. Molimo kontaktirajte osoblje ako je potrebno.`,rejected:`Vaša narudžba ${num} je odbijena. Molimo kontaktirajte osoblje ili pošaljite novu narudžbu.`};
   return state.lang==='hr'?(hr[st]||`Status narudžbe ${num}: ${orderStatusText(st)}`):(en[st]||`Order ${num} status: ${orderStatusText(st)}`);
 }
+
+async function requestOrderStatusNotifications(order){
+  try{
+    if(!('Notification' in window)) return;
+    if((order?.type||'')==='dine_in') return;
+    if(Notification.permission==='default'){
+      await Notification.requestPermission();
+    }
+  }catch(e){}
+}
+function showOrderBrowserNotification(order, newStatus){
+  try{
+    if(!('Notification' in window) || Notification.permission!=='granted') return;
+    if((order?.type||'')==='dine_in') return;
+    const title = state.lang==='hr' ? 'Langar Bar — status narudžbe' : 'Langar Bar — order status';
+    const body = orderMessageForStatus(order, newStatus);
+    new Notification(title, { body, tag:'langar-order-'+(order.cloudId||order.id||'status'), badge:'assets/icon-192.png', icon:'assets/icon-192.png' });
+  }catch(e){}
+}
 function notifyOrderStatusIfNeeded(order, newStatus){
   if(!order || !newStatus) return;
   const key='order_status_'+(order.cloudId||order.id)+'_'+newStatus;
@@ -585,6 +604,7 @@ function notifyOrderStatusIfNeeded(order, newStatus){
   sent[key]=new Date().toISOString(); LS.set('langar_order_status_notified',sent);
   if(['accepted','preparing','ready','completed','cancelled','rejected'].includes(String(newStatus))){
     addInbox({id:uid('msg'),type:'message',title:state.lang==='hr'?'Ažuriranje narudžbe':'Order update',body:orderMessageForStatus(order,newStatus),unread:true,createdAt:new Date().toISOString()});
+    showOrderBrowserNotification(order,newStatus);
   }
 }
 async function syncCustomerOrderStatuses(){
@@ -617,8 +637,18 @@ function updateOrderTypeFields(){
   const type=state.orderType;
   const tableWrap=$('#orderTableWrap');
   const addressWrap=$('#orderAddressWrap');
+  const nameInput=$('#orderName');
+  const phoneInput=$('#orderPhone');
   if(tableWrap) tableWrap.classList.toggle('hidden', type!=='dine_in');
   if(addressWrap) addressWrap.classList.toggle('hidden', type!=='delivery');
+  if(nameInput){ nameInput.required = type!=='dine_in'; nameInput.placeholder = type==='dine_in' ? 'Optional / nije obavezno' : 'Name / Ime'; }
+  if(phoneInput){ phoneInput.required = type!=='dine_in'; phoneInput.placeholder = type==='dine_in' ? 'Optional / nije obavezno' : '+385...'; }
+  const note=$('#orderModeNote');
+  if(note){
+    note.textContent = type==='dine_in'
+      ? (state.lang==='hr'?'Za narudžbu u kafiću nije potrebna registracija. Dovoljan je broj stola.':'No registration is needed for in-café table ordering. Table number is enough.')
+      : (state.lang==='hr'?'Za pick-up/delivery status ostaje vidljiv na ovom uređaju. Uključite obavijesti ako želite poruke o statusu.':'For pick-up/delivery, status remains visible on this device. Enable notifications to receive order updates.');
+  }
 }
 function renderAll(){ renderCategoryTabs(); renderMenu(); renderOrderCategoryTabs(); renderOrderMenu(); renderCart(); renderDashboard(); renderHomeMarketing(); renderPublicFeedback(); renderAppQr(); renderInboxBadge(); renderReservationCalendar(); renderEventCalendar(); renderSushiPreorder(); updateOrderTypeFields(); renderCustomerOrderStatus(); }
 function setupEvents(){
@@ -660,6 +690,8 @@ function setupEvents(){
   $('#submitOrder').onclick=async()=>{
     if(!state.cart.length)return alert(T[state.lang].emptyCart);
     if(state.orderType==='dine_in' && !$('#orderTable')?.value.trim()) return alert(state.lang==='hr'?'Unesite broj stola.':'Please enter table number.');
+    if(state.orderType!=='dine_in' && !$('#orderName')?.value.trim()) return alert(state.lang==='hr'?'Unesite ime za pick-up/delivery.':'Please enter name for pick-up/delivery.');
+    if(state.orderType!=='dine_in' && !$('#orderPhone')?.value.trim()) return alert(state.lang==='hr'?'Unesite telefon za pick-up/delivery.':'Please enter phone number for pick-up/delivery.');
     if(state.orderType==='delivery' && !$('#orderAddress')?.value.trim()) return alert(state.lang==='hr'?'Unesite adresu dostave.':'Please enter delivery address.');
     const total=state.cart.reduce((sum,it)=>sum+priceNum(it.price)*it.qty,0);
     const order={id:uid('ORD'),status:'new',paid:false,type:state.orderType,tableNumber:$('#orderTable')?.value.trim()||'',name:$('#orderName').value,phone:$('#orderPhone').value,address:$('#orderAddress').value,note:$('#orderNote').value,items:state.cart.map(it=>({...it, nameSnapshot:itemName(it,'en'), nameSnapshotHr:itemName(it,'hr')})),total:+total.toFixed(2),referredBy:profile()?.referredBy||null,createdAt:new Date().toISOString()};
@@ -679,7 +711,8 @@ function setupEvents(){
       return;
     }
     state.cart=[]; renderCart(); renderCustomerOrderStatus(); addInbox({id:uid('msg'),type:'message',title:state.lang==='hr'?'Narudžba je poslana':'Order sent',body:state.lang==='hr'?`Vaša narudžba ${order.cloudOrderNumber||order.id} je poslana kafiću. Status možete pratiti u aplikaciji.`:`Your order ${order.cloudOrderNumber||order.id} was sent to the café. You can follow the status in the app.`,unread:true,createdAt:new Date().toISOString()});
-    alert(state.lang==='hr'?'Narudžba je poslana kafiću i vidljiva je na admin tabletu.':'Order was sent to the café and is visible on the admin tablet.');
+    if(order.type!=='dine_in') await requestOrderStatusNotifications(order);
+    alert(state.lang==='hr'?'Narudžba je poslana kafiću i vidljiva je na admin tabletu. Status možete pratiti u aplikaciji.':'Order was sent to the café and is visible on the admin tablet. You can follow the status in the app.');
   };
   if(!localStorage.langar_popup_closed) setTimeout(()=>$('#welcomePopup').classList.remove('hidden'),800);
   updateBackButton();
