@@ -1,0 +1,15 @@
+Langar Bar V4.4.2 — Club Registration + Cloud Restore
+
+Changes:
+- Fixed Langar Club screen: registration/login forms are now visible.
+- Added email/password registration and login.
+- Profile is saved to Supabase profiles table and restored on login.
+- LocalStorage still stores a fast local copy, but Cloud is the source for restored profile/credit/cards.
+- Welcome espresso reward is synced to reward_cards when Supabase policies allow it.
+- Rewards/cards and inbox sync after login.
+- Added Supabase SQL patch: langar_bar_v442_club_cloud_restore.sql.
+
+Important:
+- In Supabase Auth, enable Email provider.
+- For easiest customer flow, disable required email confirmation, or tell users to confirm email before login.
+- Run the SQL patch once if profiles/reward cards do not save or restore.

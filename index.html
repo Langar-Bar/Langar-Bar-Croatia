@@ -89,11 +89,36 @@
   </main>
 
   <main id="club" class="view">
-    <section class="section-head"><h2>Langar Club</h2><p data-hr="Registrirajte se, primite espresso karticu, QR i skupljajte Langar Credit." data-en="Register, receive an espresso card, QR and earn Langar Credit.">Registrirajte se, primite espresso karticu, QR i skupljajte Langar Credit.</p></section>
+    <section class="section-head"><h2>Langar Club</h2><p data-hr="Registrirajte se, spremite profil u Cloud, primite espresso karticu, QR i skupljajte Langar Credit." data-en="Register, save your profile in Cloud, receive an espresso card, QR and earn Langar Credit.">Registrirajte se, spremite profil u Cloud, primite espresso karticu, QR i skupljajte Langar Credit.</p></section>
     <div class="club-rule"><b data-hr="Poklon dobrodošlice" data-en="Welcome Gift">Welcome Gift</b><span data-hr="Besplatni espresso za nove članove — jednokratna digitalna kartica" data-en="Free espresso for new members — one-time digital card">Besplatni espresso za nove članove — jednokratna digitalna kartica</span></div>
-    <form id="clubForm" class="form-card">
-      <label><span data-hr="Ime" data-en="First name">Ime</span><input required name="firstName"></label><label><span data-hr="Prezime" data-en="Last name">Prezime</span><input name="lastName"></label><label><span data-hr="Telefon" data-en="Phone">Telefon</span><input required name="phone"></label><label>Email<input type="email" name="email"></label><label><span data-hr="Datum rođenja" data-en="Birth date">Datum rođenja</span><input type="date" name="birthDate"></label><label><span data-hr="Referral code" data-en="Referral code">Referral code</span><input name="referralCode" placeholder="Optional"></label><button class="primary full" data-hr="Spremi profil" data-en="Save profile">Spremi profil</button>
-    </form>
+    <div id="clubAuthBox" class="club-auth-box form-card">
+      <div class="club-auth-tabs" role="tablist" aria-label="Langar Club login and registration">
+        <button type="button" id="clubLoginTab" class="active" data-hr="Prijava" data-en="Login">Prijava</button>
+        <button type="button" id="clubSignupTab" data-hr="Registracija" data-en="Register">Registracija</button>
+      </div>
+      <form id="clubLoginForm" class="club-auth-panel">
+        <h3 data-hr="Prijava člana" data-en="Member login">Prijava člana</h3>
+        <p class="muted" data-hr="Prijavite se istim emailom i lozinkom kako bi se profil, kredit i digitalne kartice vratili iz Clouda." data-en="Log in with the same email and password to restore your profile, credit and digital cards from Cloud.">Prijavite se istim emailom i lozinkom kako bi se profil, kredit i digitalne kartice vratili iz Clouda.</p>
+        <label>Email / Login ID<input type="email" name="loginEmail" autocomplete="email" required placeholder="name@example.com"></label>
+        <label><span data-hr="Lozinka" data-en="Password">Lozinka</span><input type="password" name="loginPassword" autocomplete="current-password" required minlength="6"></label>
+        <button class="primary full" data-hr="Prijavi se" data-en="Login">Prijavi se</button>
+        <p class="legal mini" data-hr="Ako ste već član, nemojte se ponovno registrirati. Samo se prijavite istim emailom." data-en="If you are already a member, do not register again. Log in with the same email.">Ako ste već član, nemojte se ponovno registrirati. Samo se prijavite istim emailom.</p>
+      </form>
+      <form id="clubForm" class="club-auth-panel hidden">
+        <h3 data-hr="Nova registracija" data-en="New registration">Nova registracija</h3>
+        <label><span data-hr="Ime" data-en="First name">Ime</span><input required name="firstName" autocomplete="given-name"></label>
+        <label><span data-hr="Prezime" data-en="Last name">Prezime</span><input name="lastName" autocomplete="family-name"></label>
+        <label><span data-hr="Telefon" data-en="Phone">Telefon</span><input required name="phone" autocomplete="tel" placeholder="+385..."></label>
+        <label>Email / Login ID<input type="email" name="email" autocomplete="email" required placeholder="name@example.com"></label>
+        <label><span data-hr="Lozinka" data-en="Password">Lozinka</span><input type="password" name="password" autocomplete="new-password" minlength="6" required></label>
+        <label><span data-hr="Ponovite lozinku" data-en="Repeat password">Ponovite lozinku</span><input type="password" name="passwordConfirm" autocomplete="new-password" minlength="6" required></label>
+        <label><span data-hr="Datum rođenja" data-en="Birth date">Datum rođenja</span><input type="date" name="birthDate"></label>
+        <label><span data-hr="Referral code" data-en="Referral code">Referral code</span><input name="referralCode" placeholder="Optional"></label>
+        <label class="checkline"><input type="checkbox" name="terms" required> <span data-hr="Prihvaćam Langar Club uvjete i spremanje profila u Cloud." data-en="I accept Langar Club terms and Cloud profile storage.">Prihvaćam Langar Club uvjete i spremanje profila u Cloud.</span></label>
+        <button class="primary full" data-hr="Registriraj se" data-en="Register">Registriraj se</button>
+        <p class="legal mini" data-hr="Profil se sprema u Supabase Cloud. Ako aplikaciju obrišete i ponovno instalirate, prijavite se istim emailom i lozinkom." data-en="Profile is saved in Supabase Cloud. If you delete and reinstall the app, log in with the same email and password.">Profil se sprema u Supabase Cloud. Ako aplikaciju obrišete i ponovno instalirate, prijavite se istim emailom i lozinkom.</p>
+      </form>
+    </div>
     <div id="clubSuccess" class="success-card hidden"></div><div id="clubResult" class="qr-card hidden"></div>
   </main>
 
