@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  const CLOUD_VERSION = 'V4.4.2 Club Email Password Cloud Restore';
+  const CLOUD_VERSION = 'V4.4.3 Club Visible Fix + Cloud Restore';
   const CONFIG = {
     supabaseUrl: 'https://fkanccgigogbxodiljqt.supabase.co',
     supabaseKey: 'sb_publishable_WbWIWgu9R2AKepJiRrygCw_1oWrdwG7',

@@ -127,6 +127,61 @@ function renderReservationCalendar(){
   }
 }
 
+
+function renderClubState(){
+  const club = document.getElementById('club');
+  if(!club) return;
+  const authBox = document.getElementById('clubAuthBox');
+  const loginForm = document.getElementById('clubLoginForm');
+  const signupForm = document.getElementById('clubForm');
+  const loginTab = document.getElementById('clubLoginTab');
+  const signupTab = document.getElementById('clubSignupTab');
+  const success = document.getElementById('clubSuccess');
+  const result = document.getElementById('clubResult');
+  const rule = club.querySelector('.club-rule');
+  const p = profile();
+
+  function showMode(mode){
+    const signup = mode === 'signup';
+    if(loginForm) loginForm.classList.toggle('hidden', signup);
+    if(signupForm) signupForm.classList.toggle('hidden', !signup);
+    if(loginTab) loginTab.classList.toggle('active', !signup);
+    if(signupTab) signupTab.classList.toggle('active', signup);
+  }
+  if(loginTab && loginTab.dataset.localClubTabsWired !== '1'){
+    loginTab.dataset.localClubTabsWired = '1';
+    loginTab.addEventListener('click',()=>showMode('login'));
+  }
+  if(signupTab && signupTab.dataset.localClubTabsWired !== '1'){
+    signupTab.dataset.localClubTabsWired = '1';
+    signupTab.addEventListener('click',()=>showMode('signup'));
+  }
+
+  // If Cloud is active it will replace this view after session check. This fallback prevents a blank Club page.
+  if(!p){
+    if(authBox) authBox.classList.remove('hidden');
+    if(rule) rule.classList.remove('hidden');
+    if(success){ success.className='success-card hidden'; success.innerHTML=''; }
+    if(result){ result.className='qr-card hidden'; result.innerHTML=''; }
+    showMode('login');
+    return;
+  }
+
+  if(authBox) authBox.classList.add('hidden');
+  if(rule) rule.classList.add('hidden');
+  if(success){
+    success.className='success-card';
+    success.innerHTML = `<h3>${state.lang==='hr'?'Dobrodošli u Langar Club':'Welcome to Langar Club'}</h3><p>${state.lang==='hr'?'Vaš profil je spremljen na ovom uređaju. Ako ste prijavljeni u Cloud, kredit i kartice se vraćaju nakon ponovne prijave.':'Your profile is saved on this device. If you are logged in to Cloud, credit and cards restore after login.'}</p><div class="club-profile-summary"><b>${escapeHtml([p.firstName,p.lastName].filter(Boolean).join(' ') || p.email || p.phone || 'Langar member')}</b><small>${escapeHtml(p.email || p.phone || '')}</small><span>Langar Credit: <b>€${Number(p.credit||0).toFixed(2)}</b></span></div><div class="cloud-row"><button class="secondary" data-go="rewards">${state.lang==='hr'?'Otvori nagrade':'Open Rewards'}</button><button class="secondary" data-go="referral">${state.lang==='hr'?'Referral QR':'Referral QR'}</button></div>`;
+    attachNav();
+  }
+  if(result){
+    const code = p.qr || p.referralCode || p.id || 'LANGAR';
+    result.className='qr-card';
+    result.innerHTML = `<h3>${state.lang==='hr'?'Članski QR':'Member QR'}</h3><div class="qr-real"><img src="${qrUrl(String(code),220)}" alt="Member QR"><b>${escapeHtml(code)}</b></div>`;
+  }
+}
+window.renderClubState = renderClubState;
+
 function ensureWelcomeInbox(){ if(localStorage.langar_booted_v3) return; localStorage.langar_booted_v3='1'; const msgs=[{id:uid('msg'),type:'message',title:'Opening Soon',body:'Join Langar Club and receive your opening invitation and welcome espresso card.',unread:true,createdAt:new Date().toISOString()}]; LS.set('langar_inbox', msgs); }
 let viewStack = ['home'];
 function updateBackButton(){
