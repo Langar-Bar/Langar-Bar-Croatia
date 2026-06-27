@@ -48,7 +48,7 @@ const T = {
   en:{ tap:'Tap for ingredients', ingredients:'Ingredients', add:'Add', emptyCart:'Your cart is empty.', orderSaved:'Order was sent to Admin Orders.', eligible:'Eligible for Langar Credit', alcoholic:'18+', unavailable:'Currently unavailable', notOrderable:'Not available for online ordering', welcome:'Welcome', join:'Join now', noProfile:'You are not a Langar Club member yet.'}
 };
 let state = { lang: localStorage.langar_lang || 'hr', activeCat:'classic_coffee', activeOrderCat:'classic_coffee', menuMode:'grid', orderMode:'grid', cart:[], orderType:'dine_in' };
-const MENU_STORAGE_KEY = 'langar_menu_v9';
+const MENU_STORAGE_KEY = 'langar_menu_v10';
 function textOf(value, lang=state.lang){
   if(value && typeof value === 'object') return value[lang] || value.en || value.hr || '';
   return value || '';
@@ -129,6 +129,11 @@ function renderReservationCalendar(){
 
 
 function renderClubState(){
+  // V4.4.5: Langar Club must be real Cloud login/register, not an old local-only Save Profile view.
+  if(window.LangarCloudAuth && typeof window.LangarCloudAuth.renderClub === 'function'){
+    window.LangarCloudAuth.renderClub();
+    return;
+  }
   const club = document.getElementById('club');
   if(!club) return;
   const authBox = document.getElementById('clubAuthBox');
@@ -140,13 +145,13 @@ function renderClubState(){
   const result = document.getElementById('clubResult');
   const rule = club.querySelector('.club-rule');
   const p = profile();
-
   function showMode(mode){
     const signup = mode === 'signup';
     if(loginForm) loginForm.classList.toggle('hidden', signup);
     if(signupForm) signupForm.classList.toggle('hidden', !signup);
     if(loginTab) loginTab.classList.toggle('active', !signup);
     if(signupTab) signupTab.classList.toggle('active', signup);
+    if(rule) rule.classList.toggle('hidden', !signup);
   }
   if(loginTab && loginTab.dataset.localClubTabsWired !== '1'){
     loginTab.dataset.localClubTabsWired = '1';
@@ -156,22 +161,19 @@ function renderClubState(){
     signupTab.dataset.localClubTabsWired = '1';
     signupTab.addEventListener('click',()=>showMode('signup'));
   }
-
-  // If Cloud is active it will replace this view after session check. This fallback prevents a blank Club page.
-  if(!p){
+  // Only a Cloud-ready profile should hide the registration/login area.
+  if(!p || !p.cloudReady){
     if(authBox) authBox.classList.remove('hidden');
-    if(rule) rule.classList.remove('hidden');
     if(success){ success.className='success-card hidden'; success.innerHTML=''; }
     if(result){ result.className='qr-card hidden'; result.innerHTML=''; }
     showMode('login');
     return;
   }
-
   if(authBox) authBox.classList.add('hidden');
   if(rule) rule.classList.add('hidden');
   if(success){
     success.className='success-card';
-    success.innerHTML = `<h3>${state.lang==='hr'?'Dobrodošli u Langar Club':'Welcome to Langar Club'}</h3><p>${state.lang==='hr'?'Vaš profil je spremljen na ovom uređaju. Ako ste prijavljeni u Cloud, kredit i kartice se vraćaju nakon ponovne prijave.':'Your profile is saved on this device. If you are logged in to Cloud, credit and cards restore after login.'}</p><div class="club-profile-summary"><b>${escapeHtml([p.firstName,p.lastName].filter(Boolean).join(' ') || p.email || p.phone || 'Langar member')}</b><small>${escapeHtml(p.email || p.phone || '')}</small><span>Langar Credit: <b>€${Number(p.credit||0).toFixed(2)}</b></span></div><div class="cloud-row"><button class="secondary" data-go="rewards">${state.lang==='hr'?'Otvori nagrade':'Open Rewards'}</button><button class="secondary" data-go="referral">${state.lang==='hr'?'Referral QR':'Referral QR'}</button></div>`;
+    success.innerHTML = `<h3>${state.lang==='hr'?'Dobrodošli u Langar Club':'Welcome to Langar Club'}</h3><p>${state.lang==='hr'?'Vaš Cloud profil je aktivan. Kredit, kartice i rođendanske pogodnosti vraćaju se nakon prijave.':'Your Cloud profile is active. Credit, cards and birthday rewards restore after login.'}</p><div class="club-profile-summary"><b>${escapeHtml([p.firstName,p.lastName].filter(Boolean).join(' ') || p.email || p.phone || 'Langar member')}</b><small>${escapeHtml(p.email || p.phone || '')}</small><span>Langar Credit: <b>€${Number(p.credit||0).toFixed(2)}</b></span></div><div class="cloud-row"><button class="secondary" data-go="rewards">${state.lang==='hr'?'Otvori nagrade':'Open Rewards'}</button><button class="secondary" data-go="referral">${state.lang==='hr'?'Referral QR':'Referral QR'}</button></div>`;
     attachNav();
   }
   if(result){
@@ -571,6 +573,7 @@ function setupEvents(){
   $('#closeInbox').onclick=()=>$('#inboxPanel').classList.add('hidden');
   $('#closePopup').onclick=$('#popupLater').onclick=()=>{ $('#welcomePopup').classList.add('hidden'); localStorage.langar_popup_closed='1';};
   $('#clubForm').onsubmit=e=>{
+    if(window.LangarCloudAuth){ e.preventDefault(); return; }
     e.preventDefault();
     const data=Object.fromEntries(new FormData(e.target).entries());
     const pendingRef=localStorage.langar_pending_referral||data.referralCode||''; const p={...data, referralCodeInput:pendingRef, referredBy:pendingRef, id:uid('CUST'), qr:'LNG-'+Math.floor(100000+Math.random()*900000), referralCode:'REF-'+Math.floor(100000+Math.random()*900000), credit:0, orders:0, visits:0, referrals:0, referralRewardPosted:false, createdAt:new Date().toISOString()};
@@ -603,14 +606,21 @@ function setupEvents(){
     const order={id:uid('ORD'),status:'new',paid:false,type:state.orderType,tableNumber:$('#orderTable')?.value.trim()||'',name:$('#orderName').value,phone:$('#orderPhone').value,address:$('#orderAddress').value,note:$('#orderNote').value,items:state.cart.map(it=>({...it, nameSnapshot:itemName(it,'en'), nameSnapshotHr:itemName(it,'hr')})),total:+total.toFixed(2),referredBy:profile()?.referredBy||null,createdAt:new Date().toISOString()};
     const orders=LS.get('langar_orders_v3',[]); orders.unshift(order); LS.set('langar_orders_v3',orders);
     let cloudOk=false;
+    let cloudError='';
     if(window.LangarOrderCloud && typeof window.LangarOrderCloud.submitOrder==='function'){
       const btn=$('#submitOrder'); const oldText=btn.textContent; btn.disabled=true; btn.textContent=state.lang==='hr'?'Šaljem narudžbu...':'Sending order...';
       try{ const res=await window.LangarOrderCloud.submitOrder(order); cloudOk=!!res?.ok; if(res?.order_number) order.cloudOrderNumber=res.order_number; }
-      catch(err){ console.warn('Cloud order submit failed', err); }
+      catch(err){ cloudError = err?.message || String(err); console.warn('Cloud order submit failed', err); }
       btn.disabled=false; btn.textContent=oldText;
+    } else {
+      cloudError = 'Order Cloud module is not loaded.';
+    }
+    if(!cloudOk){
+      alert((state.lang==='hr'?'Narudžba nije poslana u Cloud/Admin tablet. Košarica je ostala spremljena za ponovni pokušaj. Greška: ':'Order was not sent to Cloud/Admin tablet. Cart stays available for retry. Error: ') + cloudError);
+      return;
     }
     state.cart=[]; renderCart();
-    alert(cloudOk ? (state.lang==='hr'?'Narudžba je poslana kafiću.':'Order was sent to the café.') : (state.lang==='hr'?'Narudžba je spremljena lokalno. Ako nije vidljiva na admin tabletu, provjerite Cloud SQL.':'Order saved locally. If it is not visible on the admin tablet, check Cloud SQL.'));
+    alert(state.lang==='hr'?'Narudžba je poslana kafiću i vidljiva je na admin tabletu.':'Order was sent to the café and is visible on the admin tablet.');
   };
   if(!localStorage.langar_popup_closed) setTimeout(()=>$('#welcomePopup').classList.remove('hidden'),800);
   updateBackButton();

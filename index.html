@@ -100,8 +100,10 @@
       <form id="clubLoginForm" class="club-auth-panel">
         <h3 data-hr="Prijava člana" data-en="Member login">Prijava člana</h3>
         <p class="muted" data-hr="Prijavite se istim emailom i lozinkom kako bi se profil, kredit i digitalne kartice vratili iz Clouda." data-en="Log in with the same email and password to restore your profile, credit and digital cards from Cloud.">Prijavite se istim emailom i lozinkom kako bi se profil, kredit i digitalne kartice vratili iz Clouda.</p>
-        <label>Email / Login ID<input type="email" name="loginEmail" autocomplete="email" required placeholder="name@example.com"></label>
-        <label><span data-hr="Lozinka" data-en="Password">Lozinka</span><input type="password" name="loginPassword" autocomplete="current-password" required minlength="6"></label>
+        <label>Email / Login ID<input type="email" name="loginEmail" autocomplete="email" placeholder="name@example.com"></label>
+        <label><span data-hr="Lozinka" data-en="Password">Lozinka</span><input type="password" name="loginPassword" autocomplete="current-password" minlength="6"></label>
+        <div class="or-divider"><span data-hr="ili" data-en="or">ili</span></div>
+        <label><span data-hr="Telefon za SMS kod" data-en="Phone for SMS code">Telefon za SMS kod</span><input name="loginPhone" autocomplete="tel" placeholder="+385..."></label>
         <button class="primary full" data-hr="Prijavi se" data-en="Login">Prijavi se</button>
         <p class="legal mini" data-hr="Ako ste već član, nemojte se ponovno registrirati. Samo se prijavite istim emailom." data-en="If you are already a member, do not register again. Log in with the same email.">Ako ste već član, nemojte se ponovno registrirati. Samo se prijavite istim emailom.</p>
       </form>
@@ -113,11 +115,11 @@
         <label>Email / Login ID<input type="email" name="email" autocomplete="email" required placeholder="name@example.com"></label>
         <label><span data-hr="Lozinka" data-en="Password">Lozinka</span><input type="password" name="password" autocomplete="new-password" minlength="6" required></label>
         <label><span data-hr="Ponovite lozinku" data-en="Repeat password">Ponovite lozinku</span><input type="password" name="passwordConfirm" autocomplete="new-password" minlength="6" required></label>
-        <label><span data-hr="Datum rođenja" data-en="Birth date">Datum rođenja</span><input type="date" name="birthDate"></label>
+        <label><span data-hr="Datum rođenja" data-en="Birth date">Datum rođenja</span><input type="date" name="birthDate" required></label>
         <label><span data-hr="Referral code" data-en="Referral code">Referral code</span><input name="referralCode" placeholder="Optional"></label>
         <label class="checkline"><input type="checkbox" name="terms" required> <span data-hr="Prihvaćam Langar Club uvjete i spremanje profila u Cloud." data-en="I accept Langar Club terms and Cloud profile storage.">Prihvaćam Langar Club uvjete i spremanje profila u Cloud.</span></label>
         <button class="primary full" data-hr="Registriraj se" data-en="Register">Registriraj se</button>
-        <p class="legal mini" data-hr="Profil se sprema u Supabase Cloud. Ako aplikaciju obrišete i ponovno instalirate, prijavite se istim emailom i lozinkom." data-en="Profile is saved in Supabase Cloud. If you delete and reinstall the app, log in with the same email and password.">Profil se sprema u Supabase Cloud. Ako aplikaciju obrišete i ponovno instalirate, prijavite se istim emailom i lozinkom.</p>
+        <p class="legal mini" data-hr="Profil se sprema u Supabase Cloud. Email i telefon koriste se za zaštitu od duplih profila. Ako je email potvrda uključena, potvrdite email prije prve prijave." data-en="Profile is saved in Supabase Cloud. Email and phone protect against duplicate profiles. If email confirmation is enabled, confirm your email before the first login.">Profil se sprema u Supabase Cloud. Email i telefon koriste se za zaštitu od duplih profila. Ako je email potvrda uključena, potvrdite email prije prve prijave.</p>
       </form>
     </div>
     <div id="clubSuccess" class="success-card hidden"></div><div id="clubResult" class="qr-card hidden"></div>

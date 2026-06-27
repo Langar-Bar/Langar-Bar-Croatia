@@ -1,0 +1,12 @@
+Langar Bar V4.4.5
+
+Fixes:
+- Club page no longer falls back to old local-only Save Profile when there is no Cloud session.
+- Club Login/Register is restored and enforced as Cloud-based membership.
+- Birth date is required for birthday rewards.
+- Login supports email/password and optional phone SMS code if Supabase Phone provider is enabled.
+- Customer order submit now shows exact Supabase error and keeps cart if Cloud insert fails.
+- New SQL grants anon/authenticated insert/select/update privileges needed for customer_orders API access under RLS.
+- Admin Orders panel points to V4.4.5 SQL and shows clearer connected/no-order status.
+
+Run SQL: langar_bar_v445_club_orders_fix.sql

@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  const CLOUD_VERSION = 'V4.4.3 Club Visible Fix + Cloud Restore';
+  const CLOUD_VERSION = 'V4.4.5 Club Auth + Orders Reliability';
   const CONFIG = {
     supabaseUrl: 'https://fkanccgigogbxodiljqt.supabase.co',
     supabaseKey: 'sb_publishable_WbWIWgu9R2AKepJiRrygCw_1oWrdwG7',
@@ -245,7 +245,7 @@
     style.id='cloudStyles';
     style.textContent = `
       .club-rule{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.club-rule b::after{content: ':'}
-      .club-auth-box{display:block}.club-auth-tabs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0 16px}.club-auth-tabs button{border:1px solid rgba(238,211,139,.28);background:rgba(255,255,255,.05);color:var(--cream);border-radius:18px;padding:13px;font-weight:900;cursor:pointer}.club-auth-tabs button.active{background:linear-gradient(135deg,#f6d98b,#d8a33d);color:#17130a;box-shadow:0 10px 24px rgba(0,0,0,.22)}.club-auth-panel.hidden,.club-rule.hidden{display:none!important}.club-auth-panel h3{margin-top:0}.checkline{display:flex!important;align-items:flex-start;gap:10px}.checkline input{width:auto!important;margin-top:4px}
+      .club-auth-box{display:block}.club-auth-tabs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0 16px}.club-auth-tabs button{border:1px solid rgba(238,211,139,.28);background:rgba(255,255,255,.05);color:var(--cream);border-radius:18px;padding:13px;font-weight:900;cursor:pointer}.club-auth-tabs button.active{background:linear-gradient(135deg,#f6d98b,#d8a33d);color:#17130a;box-shadow:0 10px 24px rgba(0,0,0,.22)}.club-auth-panel.hidden,.club-rule.hidden{display:none!important}.club-auth-panel h3{margin-top:0}.or-divider{display:flex;align-items:center;gap:10px;margin:12px 0;color:var(--muted);font-size:.82rem;text-transform:uppercase}.or-divider:before,.or-divider:after{content:'';height:1px;background:rgba(238,211,139,.22);flex:1}.checkline{display:flex!important;align-items:flex-start;gap:10px}.checkline input{width:auto!important;margin-top:4px}
       .cloud-member-card{border:1px solid rgba(238,211,139,.35);background:linear-gradient(145deg,rgba(22,66,50,.86),rgba(7,18,14,.92));border-radius:26px;padding:18px;margin:16px 0;box-shadow:0 18px 40px rgba(0,0,0,.25)}
       .cloud-member-card h3{margin-top:0}.cloud-member-id{font-size:12px;color:var(--muted);word-break:break-all;background:rgba(0,0,0,.18);border:1px solid rgba(238,211,139,.22);border-radius:14px;padding:10px;margin:10px 0}.cloud-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.cloud-row>*{flex:1}.cloud-mini{font-size:12px;opacity:.78;line-height:1.5}.cloud-ok{color:#bff3ce}.cloud-warn{color:#ffd58a}
       .otp-modal label{display:block;text-align:left;margin:12px 0}.otp-modal input{width:100%;border:1px solid rgba(238,211,139,.35);border-radius:16px;background:#07120e;color:#fff;padding:14px;font-size:1.1rem;text-align:center;letter-spacing:.12em}.otp-modal .otp-icon{width:64px;height:64px;margin:0 auto 10px;display:grid;place-items:center;border-radius:22px;background:radial-gradient(circle at 30% 25%,#fff3c4,var(--gold) 42%,#72551b 100%);color:#111;font-size:2rem;box-shadow:0 14px 24px rgba(0,0,0,.28)}
@@ -258,6 +258,32 @@
     const p = readLS('langar_profile', null);
     const cards = readLS('langar_cards', []);
     return { loggedIn:!!session, userId:session?.user?.id||null, email:session?.user?.email||p?.email||'', localProfile:!!p, cloudReady:!!p?.cloudReady, localCards:cards.length, version:CLOUD_VERSION };
+  }
+
+  function ensureClubMarkup(){
+    const club = document.getElementById('club');
+    if(!club) return;
+    const hasRequired = document.getElementById('clubAuthBox') && document.getElementById('clubLoginForm') && document.getElementById('clubForm') && document.querySelector('[name="birthDate"]');
+    const oldLocalOnly = /save profile/i.test(club.textContent || '') && !document.getElementById('clubLoginForm');
+    if(hasRequired && !oldLocalOnly){
+      const bd=document.querySelector('#clubForm [name="birthDate"]'); if(bd) bd.required=true;
+      const loginForm=document.getElementById('clubLoginForm');
+      if(loginForm && !loginForm.querySelector('[name="loginPhone"]')){
+        const pass=loginForm.querySelector('[name="loginPassword"]')?.closest('label');
+        if(pass) pass.insertAdjacentHTML('afterend', `<div class="or-divider"><span>${t('ili','or')}</span></div><label>${t('Telefon za SMS kod','Phone for SMS code')}<input name="loginPhone" autocomplete="tel" placeholder="+385..."></label>`);
+        const email=loginForm.querySelector('[name="loginEmail"]'); if(email) email.required=false;
+        const pw=loginForm.querySelector('[name="loginPassword"]'); if(pw) pw.required=false;
+      }
+      return;
+    }
+    club.innerHTML = `
+      <section class="section-head"><h2>Langar Club</h2><p>${t('Registrirajte se u Cloud kako biste zaštitili kredit, kartice i rođendanske pogodnosti.','Register in Cloud to protect your credit, cards and birthday rewards.')}</p></section>
+      <div class="club-rule"><b>${t('Poklon dobrodošlice','Welcome Gift')}</b><span>${t('Besplatan espresso za nove članove — jednokratna digitalna kartica','Free espresso for new members — one-time digital card')}</span></div>
+      <div id="clubAuthBox" class="club-auth-box form-card">
+        <div class="club-auth-tabs" role="tablist"><button type="button" id="clubLoginTab" class="active">${t('Prijava','Login')}</button><button type="button" id="clubSignupTab">${t('Registracija','Register')}</button></div>
+        <form id="clubLoginForm" class="club-auth-panel"><h3>${t('Prijava člana','Member login')}</h3><p class="muted">${t('Prijavite se emailom i lozinkom ili telefonom kroz SMS kod.','Log in with email/password or phone SMS code.')}</p><label>Email / Login ID<input type="email" name="loginEmail" autocomplete="email" placeholder="name@example.com"></label><label>${t('Lozinka','Password')}<input type="password" name="loginPassword" autocomplete="current-password" minlength="6"></label><div class="or-divider"><span>${t('ili','or')}</span></div><label>${t('Telefon za SMS kod','Phone for SMS code')}<input name="loginPhone" autocomplete="tel" placeholder="+385..."></label><button class="primary full">${t('Prijavi se','Login')}</button><p class="legal mini">${t('Ako ste već član, nemojte se ponovno registrirati. Samo se prijavite istim emailom ili telefonom.','If you are already a member, do not register again. Log in with the same email or phone.')}</p></form>
+        <form id="clubForm" class="club-auth-panel hidden"><h3>${t('Nova registracija','New registration')}</h3><label>${t('Ime','First name')}<input required name="firstName" autocomplete="given-name"></label><label>${t('Prezime','Last name')}<input name="lastName" autocomplete="family-name"></label><label>${t('Telefon','Phone')}<input required name="phone" autocomplete="tel" placeholder="+385..."></label><label>Email / Login ID<input type="email" name="email" autocomplete="email" required placeholder="name@example.com"></label><label>${t('Lozinka','Password')}<input type="password" name="password" autocomplete="new-password" minlength="6" required></label><label>${t('Ponovite lozinku','Repeat password')}<input type="password" name="passwordConfirm" autocomplete="new-password" minlength="6" required></label><label>${t('Datum rođenja','Birth date')}<input type="date" name="birthDate" required></label><label>${t('Referral code','Referral code')}<input name="referralCode" placeholder="Optional"></label><label class="checkline"><input type="checkbox" name="terms" required> <span>${t('Prihvaćam Langar Club uvjete i spremanje profila u Cloud.','I accept Langar Club terms and Cloud profile storage.')}</span></label><button class="primary full">${t('Registriraj se','Register')}</button><p class="legal mini">${t('Email i telefon koriste se za zaštitu od duplih profila. Ako je email potvrda uključena, potvrdite email prije prve prijave.','Email and phone protect against duplicate profiles. If email confirmation is enabled, confirm your email before first login.')}</p></form>
+      </div><div id="clubSuccess" class="success-card hidden"></div><div id="clubResult" class="qr-card hidden"></div>`;
   }
 
   function setClubRegisteredView(session){
@@ -291,7 +317,7 @@
     if(loginTab) loginTab.classList.toggle('active', !isSignup);
     if(signupTab) signupTab.classList.toggle('active', isSignup);
   }
-  function setClubRegisterView(){ const authBox=$('#clubAuthBox'), success=$('#clubSuccess'); if(authBox) authBox.classList.remove('hidden'); showClubMode('login'); if(success){ success.className='success-card hidden'; success.innerHTML=''; } }
+  function setClubRegisterView(){ ensureClubMarkup(); const authBox=$('#clubAuthBox'), success=$('#clubSuccess'), result=$('#clubResult'); if(authBox) authBox.classList.remove('hidden'); showClubMode('login'); if(success){ success.className='success-card hidden'; success.innerHTML=''; } if(result){ result.className='qr-card hidden'; result.innerHTML=''; } }
 
   function showOtpModal(phone, registration, mode="signup"){
     const modal = $('#modal'), body = $('#modalBody'); if(!modal || !body) return;
@@ -308,6 +334,7 @@
   }
 
   function wireClubRegistrationOtp(){
+    ensureClubMarkup();
     const form = $('#clubForm'); const loginForm = $('#clubLoginForm');
     $('#clubLoginTab')?.addEventListener('click',()=>showClubMode('login')); $('#clubSignupTab')?.addEventListener('click',()=>showClubMode('signup'));
     if(loginForm && loginForm.dataset.cloudLoginWired !== '1'){
@@ -349,7 +376,7 @@
         if(error) throw error;
         let session = data.session || await getSession();
         if(!session && data.user){
-          alert(t('Registracija je primljena. Ako je email potvrda uključena u Supabaseu, otvorite email za potvrdu pa se prijavite.','Registration received. If email confirmation is enabled in Supabase, open the confirmation email and then log in.'));
+          alert(t('Registracija je primljena. Provjerite email za potvrdu, zatim se prijavite. Telefon ostaje vezan uz ovaj profil nakon Cloud potvrde.','Registration received. Check your email for confirmation, then log in. The phone remains attached to this profile after Cloud confirmation.'));
           showClubMode('login'); return;
         }
         if(!session) throw new Error(t('Registracija nije vratila sesiju. Pokušajte se prijaviti.','Registration did not return a session. Try logging in.'));
@@ -381,7 +408,9 @@
   }
 
   async function boot(){
-    injectStyles(); wireClubRegistrationOtp(); overrideRedeemCard();
+    injectStyles(); ensureClubMarkup(); wireClubRegistrationOtp(); overrideRedeemCard();
+    window.LangarCloudAuth = { renderClub: async()=>{ ensureClubMarkup(); wireClubRegistrationOtp(); const s=await getSession(); if(s) setClubRegisteredView(s); else setClubRegisterView(); }, showLogin:()=>showClubMode('login'), showSignup:()=>showClubMode('signup') };
+    window.renderClubState = window.LangarCloudAuth.renderClub;
     const session = await getSession();
     if(session){ await upsertProfile(session.user, { phone:session.user.phone, email:session.user.email }); await initOneSignal(session.user.id); await ensureWelcomeRewards(); await syncInbox(); await syncRewardCards(); setClubRegisteredView(session); }
     else { setClubRegisterView(); }
@@ -588,7 +617,7 @@
 
 
 // =============================
-// V4.4.4 — Customer orders to Cloud Admin tablet
+// V4.4.5 — Customer orders to Cloud Admin tablet
 // =============================
 (function(){
   'use strict';
@@ -615,7 +644,7 @@
       paid: false
     };
     const { data, error } = await client.from('customer_orders').insert(payload).select('id,order_number').single();
-    if(error) throw error;
+    if(error){ const msg = [error.message, error.details, error.hint, error.code].filter(Boolean).join(' | '); throw new Error(msg || 'Unknown Supabase order insert error'); }
     return { ok:true, id:data.id, order_number:data.order_number };
   }
   window.LangarOrderCloud = { submitOrder, client };
