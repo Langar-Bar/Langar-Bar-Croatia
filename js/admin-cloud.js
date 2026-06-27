@@ -660,7 +660,7 @@
 
 
 // =============================
-// V4.4.6 — Cloud customer orders panel session fix
+// V4.4.7 — Cloud customer orders status notifications + archive
 // =============================
 (function(){
   'use strict';
@@ -683,23 +683,38 @@
     return data.session.user;
   }
   function normalizeItems(items){ if(Array.isArray(items)) return items; try{return JSON.parse(items||'[]')}catch{return []} }
+  function terminalStatus(st){ return ['completed','cancelled','rejected'].includes(String(st||'').toLowerCase()); }
+  function todayKey(d){ const x=new Date(d); return x.toISOString().slice(0,10); }
+  function localToday(){ const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
+  let orderFilter = localStorage.langar_admin_order_filter || 'live';
+  function orderStatusMessage(status, orderNumber){
+    const en={accepted:`Your order ${orderNumber} has been accepted.`,preparing:`Your order ${orderNumber} is now being prepared.`,ready:`Your order ${orderNumber} is ready.`,completed:`Your order ${orderNumber} is completed. Thank you.`,cancelled:`Your order ${orderNumber} was cancelled. Please contact staff if needed.`,rejected:`Your order ${orderNumber} was rejected. Please contact staff or place another order.`};
+    const hr={accepted:`Vaša narudžba ${orderNumber} je prihvaćena.`,preparing:`Vaša narudžba ${orderNumber} je u pripremi.`,ready:`Vaša narudžba ${orderNumber} je spremna.`,completed:`Vaša narudžba ${orderNumber} je završena. Hvala.`,cancelled:`Vaša narudžba ${orderNumber} je otkazana. Molimo kontaktirajte osoblje ako je potrebno.`,rejected:`Vaša narudžba ${orderNumber} je odbijena. Molimo kontaktirajte osoblje ili pošaljite novu narudžbu.`};
+    return {title_en:'Order update', title_hr:'Ažuriranje narudžbe', body_en:en[status]||`Order ${orderNumber} status: ${statusLabels[status]||status}`, body_hr:hr[status]||`Status narudžbe ${orderNumber}: ${statusLabels[status]||status}`};
+  }
   async function renderCloudOrders(){
     const box=$('#ordersAdmin'); if(!box) return;
     try{
       await requireAdmin();
       const {data,error}=await client.from('customer_orders').select('*').order('created_at',{ascending:false}).limit(80);
       if(error) throw error;
-      const rows=data||[];
-      const open=rows.filter(o=>!['completed','cancelled','rejected'].includes(o.status));
-      const newest=rows[0]?.id || '';
+      let rows=data||[];
+      const allRows=rows.slice();
+      const live=allRows.filter(o=>!terminalStatus(o.status));
+      const today=allRows.filter(o=>todayKey(o.created_at)===localToday());
+      const archive=allRows.filter(o=>terminalStatus(o.status) || todayKey(o.created_at)!==localToday());
+      if(orderFilter==='live') rows=live; else if(orderFilter==='today') rows=today; else if(orderFilter==='archive') rows=archive; else rows=allRows;
+      const open=allRows.filter(o=>!terminalStatus(o.status));
+      const newest=allRows[0]?.id || '';
       const hasNew = newest && lastSeenNewest && newest !== lastSeenNewest && rows[0]?.status==='new';
       if(newest){ localStorage.langar_admin_last_order_seen = newest; lastSeenNewest = newest; }
-      box.innerHTML = `<div class="cloud-orders-toolbar ${hasNew?'order-alert-flash':''}"><span class="order-pill">Open: ${open.length}</span><span class="order-pill">New: ${rows.filter(o=>o.status==='new').length}</span><span class="order-pill">Today total: ${euro(rows.filter(o=>new Date(o.created_at).toDateString()===new Date().toDateString()).reduce((s,o)=>s+Number(o.total||0),0))}</span><button id="refreshCloudOrders" class="secondary">Refresh</button></div>` +
+      box.innerHTML = `<div class="cloud-orders-toolbar ${hasNew?'order-alert-flash':''}"><span class="order-pill">Open: ${open.length}</span><span class="order-pill">New: ${allRows.filter(o=>o.status==='new').length}</span><span class="order-pill">Today total: ${euro(today.reduce((s,o)=>s+Number(o.total||0),0))}</span><button id="refreshCloudOrders" class="secondary">Refresh</button></div><div class="order-filter-tabs"><button data-order-filter="live" class="secondary ${orderFilter==='live'?'active':''}">Live Queue</button><button data-order-filter="today" class="secondary ${orderFilter==='today'?'active':''}">Today</button><button data-order-filter="archive" class="secondary ${orderFilter==='archive'?'active':''}">Archive</button><button data-order-filter="all" class="secondary ${orderFilter==='all'?'active':''}">All 80</button></div>` +
         (rows.length?`<div class="cloud-orders-list">${rows.map(o=>{
           const items=normalizeItems(o.items);
           return `<article class="cloud-order-card ${o.status==='new'?'new':''}"><div class="cloud-order-head"><div><h3>${safe(o.order_number||o.id.slice(0,8))} <span class="order-source-badge">${typeLabel(o.fulfillment_type)}</span></h3><div class="cloud-order-meta">${new Date(o.created_at).toLocaleString()}${o.table_number?` · Table: <b>${safe(o.table_number)}</b>`:''}${o.customer_name?` · ${safe(o.customer_name)}`:''}${o.customer_phone?` · ${safe(o.customer_phone)}`:''}</div>${o.delivery_address?`<div class="cloud-order-meta">Address: ${safe(o.delivery_address)}</div>`:''}</div><div><b>${euro(o.total)}</b><br><small>${safe(statusLabels[o.status]||o.status)}</small></div></div><div class="cloud-order-items">${items.map(i=>`<div><span>${safe(i.qty||1)} × ${safe(i.name_hr||i.name_en||i.name||'Item')}</span><b>${euro(i.line_total ?? ((i.qty||1)*(i.price||0)))}</b></div>`).join('')||'<p class="muted">No items</p>'}</div>${o.note?`<p class="muted"><b>Note:</b> ${safe(o.note)}</p>`:''}<div class="cloud-order-actions"><select data-order-status="${o.id}">${statuses.map(st=>`<option value="${st}" ${o.status===st?'selected':''}>${statusLabels[st]}</option>`).join('')}</select><label class="checkline"><input type="checkbox" data-order-paid="${o.id}" ${o.paid?'checked':''}> Paid / entered in Remaris</label></div></article>`;
         }).join('')}</div>`:'<p class="muted">Connected to Cloud. No orders yet. Submit a new customer test order after uploading V4.4.6.</p><div class="legal-block"><b>Tablet workflow</b><p>Customer orders appear here. Staff enter the same order manually in Remaris and then update status here.</p></div>');
       $('#refreshCloudOrders')?.addEventListener('click', renderCloudOrders);
+      document.querySelectorAll('[data-order-filter]').forEach(btn=>btn.onclick=()=>{ orderFilter=btn.dataset.orderFilter; localStorage.langar_admin_order_filter=orderFilter; renderCloudOrders(); });
       document.querySelectorAll('[data-order-status]').forEach(sel=>sel.onchange=()=>updateOrder(sel.dataset.orderStatus,{status:sel.value}));
       document.querySelectorAll('[data-order-paid]').forEach(ch=>ch.onchange=()=>updateOrder(ch.dataset.orderPaid,{paid:ch.checked}));
     }catch(err){
@@ -708,7 +723,26 @@
     }
   }
   async function updateOrder(id, patch){
-    try{ await requireAdmin(); const {error}=await client.from('customer_orders').update({...patch, updated_at:new Date().toISOString()}).eq('id',id); if(error) throw error; await renderCloudOrders(); }
+    try{
+      const admin=await requireAdmin();
+      const {data:before,error:readErr}=await client.from('customer_orders').select('id,user_id,order_number,status,status_history').eq('id',id).maybeSingle();
+      if(readErr) throw readErr;
+      const now=new Date().toISOString();
+      const next={...patch, updated_at:now};
+      if(patch.status){
+        next.status_updated_at=now;
+        const hist=Array.isArray(before?.status_history)?before.status_history:[];
+        next.status_history=[...hist,{from:before?.status||null,to:patch.status,at:now,by:admin.id||admin.email||'admin'}];
+        if(terminalStatus(patch.status)){ next.completed_at=now; next.archived_at=now; }
+      }
+      if(Object.prototype.hasOwnProperty.call(patch,'paid') && patch.paid){ next.remaris_entered_at=now; }
+      const {error}=await client.from('customer_orders').update(next).eq('id',id); if(error) throw error;
+      if(patch.status && before?.user_id && before.status!==patch.status && ['accepted','preparing','ready','completed','cancelled','rejected'].includes(patch.status)){
+        const msg=orderStatusMessage(patch.status, before.order_number||id.slice(0,8));
+        await client.from('inbox_messages').insert({user_id:before.user_id,type:'order_status',...msg,data:{order_id:id,order_number:before.order_number,status:patch.status,campaign_key:'order_'+id+'_'+patch.status}}).then(()=>{});
+      }
+      await renderCloudOrders();
+    }
     catch(err){ alert('Order update error: '+(err.message||err)); }
   }
   function install(){

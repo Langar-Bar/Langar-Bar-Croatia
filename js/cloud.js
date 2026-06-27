@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  const CLOUD_VERSION = 'V4.4.6 Club Auth + Orders Reliability';
+  const CLOUD_VERSION = 'V4.4.7 Club Auth + Order Status';
   const CONFIG = {
     supabaseUrl: 'https://fkanccgigogbxodiljqt.supabase.co',
     supabaseKey: 'sb_publishable_WbWIWgu9R2AKepJiRrygCw_1oWrdwG7',
@@ -643,9 +643,9 @@
       status: 'new',
       paid: false
     };
-    const { data, error } = await client.from('customer_orders').insert(payload).select('id,order_number').single();
+    const { data, error } = await client.from('customer_orders').insert(payload).select('id,order_number,order_token,status,created_at').single();
     if(error){ const msg = [error.message, error.details, error.hint, error.code].filter(Boolean).join(' | '); throw new Error(msg || 'Unknown Supabase order insert error'); }
-    return { ok:true, id:data.id, order_number:data.order_number };
+    return { ok:true, id:data.id, order_number:data.order_number, order_token:data.order_token, status:data.status || 'new', created_at:data.created_at };
   }
   window.LangarOrderCloud = { submitOrder, client };
 })();

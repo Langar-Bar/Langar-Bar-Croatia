@@ -554,6 +554,65 @@ function renderSushiPreorder(){
 function renderGallery(){ const g=$('#galleryView'); if(!g)return; const imgs=LS.get('langar_gallery',[{src:'assets/tacos_hero.jpeg',title:'Signature tacos',cat:'Tacos'},{src:'assets/prawn_tacos.jpeg',title:'Crunchy prawn tacos',cat:'Tacos'},{src:'assets/quesadilla_real.jpeg',title:'Quesadilla preview',cat:'Food'}]); g.innerHTML=imgs.map(i=>`<article><img src="${i.src}"><b>${i.title}</b><small>${i.cat}</small></article>`).join(''); }
 function renderPublicFeedback(){ const box=$('#publicFeedbackList'); if(!box) return; const publicItems=LS.get('langar_feedback',[]).filter(f=>+f.rating>=4); box.innerHTML=publicItems.length?publicItems.map(f=>`<article class="review-card"><b>${'★'.repeat(+f.rating)}</b><p>${f.message}</p><small>${f.name||'Langar guest'}${f.favorite?` · ${f.favorite}`:''}</small></article>`).join(''):`<p class="muted">${state.lang==='hr'?'Još nema javnih recenzija.':'No public reviews yet.'}</p>`; }
 function maybeGoogleReviewPrompt(rating){ if(+rating>=4){ const googleUrl=LS.get('langar_google_review_url','https://www.google.com/maps/search/?api=1&query=Langar+Bar+Dugo+Selo'); $('#modalBody').innerHTML=`<h2>${state.lang==='hr'?'Hvala na lijepoj ocjeni!':'Thank you for the kind rating!'}</h2><p>${state.lang==='hr'?'Vaša pozitivna recenzija može biti prikazana gostima u aplikaciji. Ako želite podržati Langar Bar i na Google Maps, otvorite Google recenziju.':'Your positive review may be shown to guests in the app. If you would like to support Langar Bar on Google Maps too, open Google review.'}</p><a class="primary full button-link" target="_blank" rel="noopener" href="${googleUrl}">${state.lang==='hr'?'Otvori Google Maps':'Open Google Maps'}</a><button class="secondary full" id="closeReviewPrompt">${state.lang==='hr'?'Kasnije':'Maybe later'}</button>`; $('#modal').classList.remove('hidden'); $('#closeReviewPrompt').onclick=()=>$('#modal').classList.add('hidden'); } else { alert(state.lang==='hr'?'Hvala. Vaša poruka je poslana adminu kako bismo je privatno riješili.':'Thank you. Your feedback was sent to admin so we can solve it privately.'); } }
+
+// =============================
+// V4.4.7 — Customer order status tracker
+// =============================
+const orderStatusLabels = {
+  new:{hr:'Poslana', en:'Sent'},
+  accepted:{hr:'Prihvaćena', en:'Accepted'},
+  preparing:{hr:'U pripremi', en:'Preparing'},
+  ready:{hr:'Spremna', en:'Ready'},
+  completed:{hr:'Završena', en:'Completed'},
+  cancelled:{hr:'Otkazana', en:'Cancelled'},
+  rejected:{hr:'Odbijena', en:'Rejected'}
+};
+function orderStatusText(st){ const o=orderStatusLabels[String(st||'new').toLowerCase()]||orderStatusLabels.new; return state.lang==='hr'?o.hr:o.en; }
+function isTerminalOrder(st){ return ['completed','cancelled','rejected'].includes(String(st||'').toLowerCase()); }
+function customerOrders(){ return LS.get('langar_orders_v3',[]); }
+function saveCustomerOrders(list){ LS.set('langar_orders_v3', list); }
+function orderMessageForStatus(o, st){
+  const num=o.cloudOrderNumber||o.order_number||o.id||'';
+  const en={accepted:`Your order ${num} has been accepted.`,preparing:`Your order ${num} is now being prepared.`,ready:`Your order ${num} is ready.`,completed:`Your order ${num} is completed. Thank you.`,cancelled:`Your order ${num} was cancelled. Please contact staff if needed.`,rejected:`Your order ${num} was rejected. Please contact staff or place another order.`};
+  const hr={accepted:`Vaša narudžba ${num} je prihvaćena.`,preparing:`Vaša narudžba ${num} je u pripremi.`,ready:`Vaša narudžba ${num} je spremna.`,completed:`Vaša narudžba ${num} je završena. Hvala.`,cancelled:`Vaša narudžba ${num} je otkazana. Molimo kontaktirajte osoblje ako je potrebno.`,rejected:`Vaša narudžba ${num} je odbijena. Molimo kontaktirajte osoblje ili pošaljite novu narudžbu.`};
+  return state.lang==='hr'?(hr[st]||`Status narudžbe ${num}: ${orderStatusText(st)}`):(en[st]||`Order ${num} status: ${orderStatusText(st)}`);
+}
+function notifyOrderStatusIfNeeded(order, newStatus){
+  if(!order || !newStatus) return;
+  const key='order_status_'+(order.cloudId||order.id)+'_'+newStatus;
+  const sent=LS.get('langar_order_status_notified',{});
+  if(sent[key]) return;
+  sent[key]=new Date().toISOString(); LS.set('langar_order_status_notified',sent);
+  if(['accepted','preparing','ready','completed','cancelled','rejected'].includes(String(newStatus))){
+    addInbox({id:uid('msg'),type:'message',title:state.lang==='hr'?'Ažuriranje narudžbe':'Order update',body:orderMessageForStatus(order,newStatus),unread:true,createdAt:new Date().toISOString()});
+  }
+}
+async function syncCustomerOrderStatuses(){
+  const orders=customerOrders();
+  const track=orders.filter(o=>o.cloudOrderToken && !String(o.status||'new').match(/^(completed|cancelled|rejected)$/));
+  if(!track.length || !window.LangarOrderCloud?.client) return;
+  let changed=false;
+  for(const o of track.slice(0,10)){
+    try{
+      const {data,error}=await window.LangarOrderCloud.client.rpc('get_customer_order_by_token',{p_token:o.cloudOrderToken});
+      if(error) continue;
+      const row=Array.isArray(data)?data[0]:data;
+      if(!row) continue;
+      const old=o.status||'new';
+      o.status=row.status||old; o.paid=!!row.paid; o.updatedAt=row.updated_at||o.updatedAt; o.completedAt=row.completed_at||o.completedAt; o.cloudOrderNumber=row.order_number||o.cloudOrderNumber;
+      if(o.status!==old){ notifyOrderStatusIfNeeded(o,o.status); changed=true; }
+    }catch(e){ console.warn('Order status sync failed', e.message||e); }
+  }
+  if(changed){ saveCustomerOrders(orders); renderCustomerOrderStatus(); renderInboxBadge(); }
+}
+function renderCustomerOrderStatus(){
+  const box=document.getElementById('customerOrderStatus'); if(!box) return;
+  const orders=customerOrders().filter(o=>o.cloudId||o.cloudOrderToken).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,5);
+  if(!orders.length){ box.innerHTML=''; return; }
+  box.innerHTML=`<div class="my-orders-card"><h4>${state.lang==='hr'?'Moje zadnje narudžbe':'My recent orders'}</h4>${orders.map(o=>`<div class="my-order-line ${isTerminalOrder(o.status)?'terminal':''}"><div><b>${escapeHtml(o.cloudOrderNumber||o.id)}</b><small>${new Date(o.createdAt).toLocaleString()}${o.tableNumber?` · Table ${escapeHtml(o.tableNumber)}`:''}</small></div><span class="status-badge ${escapeHtml(o.status||'new')}">${orderStatusText(o.status||'new')}</span></div>`).join('')}<button type="button" class="secondary full" id="refreshMyOrders">${state.lang==='hr'?'Osvježi status':'Refresh status'}</button></div>`;
+  const btn=document.getElementById('refreshMyOrders'); if(btn) btn.onclick=syncCustomerOrderStatuses;
+}
+
 function updateOrderTypeFields(){
   const type=state.orderType;
   const tableWrap=$('#orderTableWrap');
@@ -561,7 +620,7 @@ function updateOrderTypeFields(){
   if(tableWrap) tableWrap.classList.toggle('hidden', type!=='dine_in');
   if(addressWrap) addressWrap.classList.toggle('hidden', type!=='delivery');
 }
-function renderAll(){ renderCategoryTabs(); renderMenu(); renderOrderCategoryTabs(); renderOrderMenu(); renderCart(); renderDashboard(); renderHomeMarketing(); renderPublicFeedback(); renderAppQr(); renderInboxBadge(); renderReservationCalendar(); renderEventCalendar(); renderSushiPreorder(); updateOrderTypeFields(); }
+function renderAll(){ renderCategoryTabs(); renderMenu(); renderOrderCategoryTabs(); renderOrderMenu(); renderCart(); renderDashboard(); renderHomeMarketing(); renderPublicFeedback(); renderAppQr(); renderInboxBadge(); renderReservationCalendar(); renderEventCalendar(); renderSushiPreorder(); updateOrderTypeFields(); renderCustomerOrderStatus(); }
 function setupEvents(){
   attachNav();
   const back=$('#backBtn'); if(back) back.onclick=goBack; const refInput=document.querySelector('[name="referralCode"]'); if(refInput && localStorage.langar_pending_referral && !refInput.value) refInput.value=localStorage.langar_pending_referral;
@@ -609,7 +668,7 @@ function setupEvents(){
     let cloudError='';
     if(window.LangarOrderCloud && typeof window.LangarOrderCloud.submitOrder==='function'){
       const btn=$('#submitOrder'); const oldText=btn.textContent; btn.disabled=true; btn.textContent=state.lang==='hr'?'Šaljem narudžbu...':'Sending order...';
-      try{ const res=await window.LangarOrderCloud.submitOrder(order); cloudOk=!!res?.ok; if(res?.order_number) order.cloudOrderNumber=res.order_number; }
+      try{ const res=await window.LangarOrderCloud.submitOrder(order); cloudOk=!!res?.ok; if(res?.id) order.cloudId=res.id; if(res?.order_number) order.cloudOrderNumber=res.order_number; if(res?.order_token) order.cloudOrderToken=res.order_token; if(res?.status) order.status=res.status; const saved=LS.get('langar_orders_v3',[]); const idx=saved.findIndex(x=>x.id===order.id); if(idx>=0){ saved[idx]=order; LS.set('langar_orders_v3',saved); } }
       catch(err){ cloudError = err?.message || String(err); console.warn('Cloud order submit failed', err); }
       btn.disabled=false; btn.textContent=oldText;
     } else {
@@ -619,10 +678,10 @@ function setupEvents(){
       alert((state.lang==='hr'?'Narudžba nije poslana u Cloud/Admin tablet. Košarica je ostala spremljena za ponovni pokušaj. Greška: ':'Order was not sent to Cloud/Admin tablet. Cart stays available for retry. Error: ') + cloudError);
       return;
     }
-    state.cart=[]; renderCart();
+    state.cart=[]; renderCart(); renderCustomerOrderStatus(); addInbox({id:uid('msg'),type:'message',title:state.lang==='hr'?'Narudžba je poslana':'Order sent',body:state.lang==='hr'?`Vaša narudžba ${order.cloudOrderNumber||order.id} je poslana kafiću. Status možete pratiti u aplikaciji.`:`Your order ${order.cloudOrderNumber||order.id} was sent to the café. You can follow the status in the app.`,unread:true,createdAt:new Date().toISOString()});
     alert(state.lang==='hr'?'Narudžba je poslana kafiću i vidljiva je na admin tabletu.':'Order was sent to the café and is visible on the admin tablet.');
   };
   if(!localStorage.langar_popup_closed) setTimeout(()=>$('#welcomePopup').classList.remove('hidden'),800);
   updateBackButton();
 }
-const urlRef=new URLSearchParams(location.search).get('ref'); if(urlRef) localStorage.langar_pending_referral=urlRef; ensureWelcomeInbox(); setupEvents(); setLang(state.lang); if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(()=>{})); }
+const urlRef=new URLSearchParams(location.search).get('ref'); if(urlRef) localStorage.langar_pending_referral=urlRef; ensureWelcomeInbox(); setupEvents(); setLang(state.lang); setInterval(syncCustomerOrderStatuses, 20000); setTimeout(syncCustomerOrderStatuses, 1200); if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(()=>{})); }
