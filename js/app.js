@@ -48,7 +48,7 @@ const T = {
   en:{ tap:'Tap for ingredients', ingredients:'Ingredients', add:'Add', emptyCart:'Your cart is empty.', orderSaved:'Order was sent to Admin Orders.', eligible:'Eligible for Langar Credit', alcoholic:'18+', unavailable:'Currently unavailable', notOrderable:'Not available for online ordering', welcome:'Welcome', join:'Join now', noProfile:'You are not a Langar Club member yet.'}
 };
 let state = { lang: localStorage.langar_lang || 'hr', activeCat:'classic_coffee', activeOrderCat:'classic_coffee', menuMode:'grid', orderMode:'grid', cart:[], orderType:'pickup' };
-const MENU_STORAGE_KEY = 'langar_menu_v6';
+const MENU_STORAGE_KEY = 'langar_menu_v7';
 function textOf(value, lang=state.lang){
   if(value && typeof value === 'object') return value[lang] || value.en || value.hr || '';
   return value || '';

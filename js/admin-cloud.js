@@ -154,6 +154,9 @@
     const status=$('#cloudMenuStatus');
     try{
       const user=await requireAdminSession();
+      if(status) status.textContent='Cleaning old cloud menu...';
+      try{ await client.from('menu_items').update({active:false,available_in_menu:false}).neq('id','00000000-0000-0000-0000-000000000000'); }catch(_e){ console.warn('Menu item cleanup skipped', _e?.message||_e); }
+      try{ await client.from('menu_categories').update({active:false}).neq('id','00000000-0000-0000-0000-000000000000'); }catch(_e){ console.warn('Menu category cleanup skipped', _e?.message||_e); }
       if(status) status.textContent='Uploading categories...';
       const menu=getLocalMenu();
       const catRows=menu.map((c,idx)=>({

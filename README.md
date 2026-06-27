@@ -1,8 +1,14 @@
-# Langar Bar App V4.3.3 — Stable Admin Hub
+# Langar Bar Croatia
 
-- Admin panel rebuilt as stable icon module hub.
-- Removed mobile left/right swipe navigation from admin to stop accidental panel changes and Safari crashes.
-- Each module opens by tapping its icon card.
-- Back / Home / Forward buttons remain.
-- Pull-to-refresh remains.
-- Mobile tables scroll inside their own table area.
+Version: V4.4.0 Breakfast Menu Update
+
+Changes in this package:
+- Updated full customer menu data.
+- Added Breakfast category with egg/omelette items, breakfast combos and included drink choices.
+- Added Breakfast Add-ons & Upgrades.
+- Updated tacos, tapas, focaccia pizza, desserts, soft serve, matcha/tea pricing and extra sauces.
+- Bumped local menu storage key to `langar_menu_v7` so users receive the updated menu instead of old cached localStorage.
+- Bumped service worker cache to `langar-bar-v4-4-0-breakfast-menu`.
+- Added Supabase SQL seed file for cloud menu update.
+
+After upload to GitHub Pages, ask users/admin to refresh once. If using Supabase cloud menu, run the new seed SQL or open Admin > Settings/Cloud Menu and upload local menu after logging in as admin.
