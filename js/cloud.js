@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  const CLOUD_VERSION = 'V4.4.9 Public Order RPC + RLS Fix';
+  const CLOUD_VERSION = 'V4.5.0 Order RPC + Customer Tracking Fix';
   const CONFIG = {
     supabaseUrl: 'https://fkanccgigogbxodiljqt.supabase.co',
     supabaseKey: 'sb_publishable_WbWIWgu9R2AKepJiRrygCw_1oWrdwG7',
@@ -641,30 +641,48 @@
       total: Number(order.total || 0),
       currency: 'EUR',
       status: 'new',
-      paid: false
+      paid: false,
+      app_version: 'v450'
     };
-    // V4.4.9: Use a SECURITY DEFINER RPC for public/guest orders. This avoids browser RLS edge cases
-    // while still keeping admin/customer reads protected by the table policies.
-    const rpcPayload = {
-      p_user_id: payload.user_id,
-      p_fulfillment_type: payload.fulfillment_type,
-      p_table_number: payload.table_number,
-      p_customer_name: payload.customer_name,
-      p_customer_phone: payload.customer_phone,
-      p_delivery_address: payload.delivery_address,
-      p_note: payload.note,
-      p_items: payload.items,
-      p_total: payload.total
-    };
-    let { data, error } = await client.rpc('submit_customer_order', rpcPayload);
-    if(error && String(error.message||'').toLowerCase().includes('function public.submit_customer_order')){
-      // Fallback for sites where the new SQL was not executed yet.
-      const direct = await client.from('customer_orders').insert(payload).select('id,order_number,order_token,status,created_at').single();
-      data = direct.data; error = direct.error;
+
+    // V4.5.0: submit through a single JSON RPC. This is the reliable path for guest orders.
+    // Do not silently fallback to direct table insert, because that can hit RLS and confuse staff.
+    let data=null, error=null;
+    let r = await client.rpc('submit_customer_order_payload', { p_order: payload });
+    data = r.data; error = r.error;
+
+    // Compatibility path only for projects that already installed V4.4.9 SQL but not V4.5.0 yet.
+    if(error && String(error.message||'').toLowerCase().includes('submit_customer_order_payload')){
+      r = await client.rpc('submit_customer_order', {
+        p_user_id: payload.user_id,
+        p_fulfillment_type: payload.fulfillment_type,
+        p_table_number: payload.table_number,
+        p_customer_name: payload.customer_name,
+        p_customer_phone: payload.customer_phone,
+        p_delivery_address: payload.delivery_address,
+        p_note: payload.note,
+        p_items: payload.items,
+        p_total: payload.total
+      });
+      data = r.data; error = r.error;
     }
-    if(error){ const msg = [error.message, error.details, error.hint, error.code].filter(Boolean).join(' | '); throw new Error(msg || 'Unknown Supabase order insert error'); }
+
+    if(error){
+      const msg = [error.message, error.details, error.hint, error.code].filter(Boolean).join(' | ');
+      if(String(msg).includes('submit_customer_order_payload') || String(msg).includes('submit_customer_order')){
+        throw new Error('Order Cloud SQL is not installed or schema cache is old. Run langar_bar_v450_order_rpc_status_realtime_fix.sql in Supabase SQL Editor, then refresh the app. Details: ' + msg);
+      }
+      throw new Error(msg || 'Unknown Supabase order submit error');
+    }
     const row = Array.isArray(data) ? data[0] : data;
+    if(!row?.order_token){ throw new Error('Order was submitted but Cloud did not return an order tracking token. Run V4.5.0 SQL again.'); }
     return { ok:true, id:row.id, order_number:row.order_number, order_token:row.order_token, status:row.status || 'new', created_at:row.created_at };
   }
-  window.LangarOrderCloud = { submitOrder, client };
+  async function getOrderByToken(token){
+    if(!token) return null;
+    const {data,error}=await client.rpc('get_customer_order_by_token',{p_token:token});
+    if(error) throw error;
+    return Array.isArray(data)?data[0]:data;
+  }
+  window.LangarOrderCloud = { submitOrder, getOrderByToken, client };
 })();

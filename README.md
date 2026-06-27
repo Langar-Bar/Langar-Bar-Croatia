@@ -12,3 +12,7 @@ Changes in this package:
 - Added Supabase SQL seed file for cloud menu update.
 
 After upload to GitHub Pages, ask users/admin to refresh once. If using Supabase cloud menu, run the new seed SQL or open Admin > Settings/Cloud Menu and upload local menu after logging in as admin.
+
+
+## V4.5.0 Order fix
+Run `langar_bar_v450_order_rpc_status_realtime_fix.sql` in Supabase SQL Editor. Customer app submits guest dine-in/pickup/delivery orders through RPC, saves an order token on the device for status tracking, and Admin Orders uses secure RPC plus 5-second polling/realtime and alarm sound.

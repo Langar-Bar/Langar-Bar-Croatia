@@ -614,9 +614,7 @@ async function syncCustomerOrderStatuses(){
   let changed=false;
   for(const o of track.slice(0,10)){
     try{
-      const {data,error}=await window.LangarOrderCloud.client.rpc('get_customer_order_by_token',{p_token:o.cloudOrderToken});
-      if(error) continue;
-      const row=Array.isArray(data)?data[0]:data;
+      const row = window.LangarOrderCloud.getOrderByToken ? await window.LangarOrderCloud.getOrderByToken(o.cloudOrderToken) : (await window.LangarOrderCloud.client.rpc('get_customer_order_by_token',{p_token:o.cloudOrderToken})).data?.[0];
       if(!row) continue;
       const old=o.status||'new';
       o.status=row.status||old; o.paid=!!row.paid; o.updatedAt=row.updated_at||o.updatedAt; o.completedAt=row.completed_at||o.completedAt; o.cloudOrderNumber=row.order_number||o.cloudOrderNumber;
@@ -627,9 +625,9 @@ async function syncCustomerOrderStatuses(){
 }
 function renderCustomerOrderStatus(){
   const box=document.getElementById('customerOrderStatus'); if(!box) return;
-  const orders=customerOrders().filter(o=>o.cloudId||o.cloudOrderToken).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,5);
+  const orders=customerOrders().filter(o=>o.cloudId||o.cloudOrderToken).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,8);
   if(!orders.length){ box.innerHTML=''; return; }
-  box.innerHTML=`<div class="my-orders-card"><h4>${state.lang==='hr'?'Moje zadnje narudžbe':'My recent orders'}</h4>${orders.map(o=>`<div class="my-order-line ${isTerminalOrder(o.status)?'terminal':''}"><div><b>${escapeHtml(o.cloudOrderNumber||o.id)}</b><small>${new Date(o.createdAt).toLocaleString()}${o.tableNumber?` · Table ${escapeHtml(o.tableNumber)}`:''}</small></div><span class="status-badge ${escapeHtml(o.status||'new')}">${orderStatusText(o.status||'new')}</span></div>`).join('')}<button type="button" class="secondary full" id="refreshMyOrders">${state.lang==='hr'?'Osvježi status':'Refresh status'}</button></div>`;
+  box.innerHTML=`<div class="my-orders-card"><h4>${state.lang==='hr'?'Moje zadnje narudžbe':'My recent orders'}</h4><p class="muted mini">${state.lang==='hr'?'Status je spremljen na ovom uređaju i osvježava se automatski.':'Status is saved on this device and refreshes automatically.'}</p>${orders.map(o=>`<div class="my-order-line ${isTerminalOrder(o.status)?'terminal':''}"><div><b>${escapeHtml(o.cloudOrderNumber||o.id)}</b><small>${new Date(o.createdAt).toLocaleString()}${o.tableNumber?` · Table ${escapeHtml(o.tableNumber)}`:''}${o.type?` · ${escapeHtml(o.type)}`:''}</small><small>${(o.items||[]).slice(0,2).map(i=>escapeHtml((i.qty||1)+' × '+(i.nameSnapshot||i.name||i.id))).join('<br>')}</small></div><span class="status-badge ${escapeHtml(o.status||'new')}">${orderStatusText(o.status||'new')}</span></div>`).join('')}<button type="button" class="secondary full" id="refreshMyOrders">${state.lang==='hr'?'Osvježi status':'Refresh status'}</button></div>`;
   const btn=document.getElementById('refreshMyOrders'); if(btn) btn.onclick=syncCustomerOrderStatuses;
 }
 
@@ -707,10 +705,10 @@ function setupEvents(){
       cloudError = 'Order Cloud module is not loaded.';
     }
     if(!cloudOk){
-      alert((state.lang==='hr'?'Narudžba nije poslana u Cloud/Admin tablet. Košarica je ostala spremljena za ponovni pokušaj. Greška: ':'Order was not sent to Cloud/Admin tablet. Cart stays available for retry. Error: ') + cloudError);
+      alert((state.lang==='hr'?'Narudžba nije poslana u Cloud/Admin tablet. Košarica je ostala spremljena za ponovni pokušaj. Greška: ':'Order was not sent to Cloud/Admin tablet. Cart stays available for retry. Run the latest V4.5.0 SQL if you still see a Cloud/RLS error. Error: ') + cloudError);
       return;
     }
-    state.cart=[]; renderCart(); renderCustomerOrderStatus(); addInbox({id:uid('msg'),type:'message',title:state.lang==='hr'?'Narudžba je poslana':'Order sent',body:state.lang==='hr'?`Vaša narudžba ${order.cloudOrderNumber||order.id} je poslana kafiću. Status možete pratiti u aplikaciji.`:`Your order ${order.cloudOrderNumber||order.id} was sent to the café. You can follow the status in the app.`,unread:true,createdAt:new Date().toISOString()});
+    state.cart=[]; renderCart(); renderCustomerOrderStatus(); syncCustomerOrderStatuses(); addInbox({id:uid('msg'),type:'message',title:state.lang==='hr'?'Narudžba je poslana':'Order sent',body:state.lang==='hr'?`Vaša narudžba ${order.cloudOrderNumber||order.id} je poslana kafiću. Status možete pratiti u aplikaciji.`:`Your order ${order.cloudOrderNumber||order.id} was sent to the café. You can follow the status in the app.`,unread:true,createdAt:new Date().toISOString()});
     if(order.type!=='dine_in') await requestOrderStatusNotifications(order);
     alert(state.lang==='hr'?'Narudžba je poslana kafiću i vidljiva je na admin tabletu. Status možete pratiti u aplikaciji.':'Order was sent to the café and is visible on the admin tablet. You can follow the status in the app.');
   };
