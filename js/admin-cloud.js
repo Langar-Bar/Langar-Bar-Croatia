@@ -661,7 +661,7 @@
 
 
 // =============================
-// V4.5.0 — Cloud customer orders: RPC admin panel + auto refresh + persistent alarm
+// V4.5.1 — Cloud customer orders: RPC admin panel + auto refresh + persistent alarm
 // =============================
 (function(){
   'use strict';
@@ -693,7 +693,7 @@
   async function requireAdmin(){
     const {data}=await client.auth.getSession();
     if(!data.session?.user) throw new Error('Login as Cloud Admin first. Use the Cloud Admin Login at the top of admin.html.');
-    // SQL V4.5.0 has RPC functions that verify admin_members server-side.
+    // SQL V4.5.1 has RPC functions that verify admin_members server-side.
     return data.session.user;
   }
 
@@ -778,7 +778,7 @@
       document.querySelectorAll('[data-order-status]').forEach(sel=>sel.onchange=()=>updateOrder(sel.dataset.orderStatus,{status:sel.value}));
       document.querySelectorAll('[data-order-paid]').forEach(ch=>ch.onchange=()=>updateOrder(ch.dataset.orderPaid,{paid:ch.checked}));
     }catch(err){
-      box.innerHTML = `<p style="color:#ffb1a8">Cloud orders error: ${safe(err.message||err)}</p><p class="muted">Run <b>langar_bar_v450_order_rpc_status_realtime_fix.sql</b> in Supabase SQL Editor. Then login with a user that exists in <b>admin_members</b>.</p><button id="refreshCloudOrders" class="secondary">Try again</button>`;
+      box.innerHTML = `<p style="color:#ffb1a8">Cloud orders error: ${safe(err.message||err)}</p><p class="muted">Run <b>langar_bar_v451_order_rpc_return_type_fix.sql</b> in Supabase SQL Editor. Then login with a user that exists in <b>admin_members</b>.</p><button id="refreshCloudOrders" class="secondary">Try again</button>`;
       $('#refreshCloudOrders')?.addEventListener('click',()=>renderCloudOrders(true));
     }
   }
@@ -796,7 +796,7 @@
   function setupRealtime(){
     if(realtimeChannel || !client.channel) return;
     try{
-      realtimeChannel = client.channel('langar-admin-orders-v450')
+      realtimeChannel = client.channel('langar-admin-orders-v451')
         .on('postgres_changes',{event:'INSERT',schema:'public',table:'customer_orders'}, payload=>{ renderCloudOrders(true); if(payload?.new) startOrderAlarm([payload.new]); })
         .on('postgres_changes',{event:'UPDATE',schema:'public',table:'customer_orders'}, ()=>renderCloudOrders(true))
         .subscribe();
