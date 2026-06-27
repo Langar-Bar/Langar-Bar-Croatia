@@ -1,0 +1,13 @@
+Langar Bar V4.4.4
+
+Changes:
+- Live total price inside breakfast item modal.
+- Add to order button shows updated total.
+- Order type now supports Dine-in, Pick-up and Delivery.
+- Dine-in requires table number. Delivery requires address.
+- Customer orders are submitted to Supabase customer_orders table when SQL is installed.
+- Admin Orders panel becomes a tablet-style order screen for dine-in/pick-up/delivery.
+- Staff can manually enter the order in Remaris, print from Remaris, and update status in this panel.
+
+Run once in Supabase SQL Editor:
+langar_bar_v444_customer_orders.sql

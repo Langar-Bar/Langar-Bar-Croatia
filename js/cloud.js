@@ -585,3 +585,38 @@
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
+
+
+// =============================
+// V4.4.4 — Customer orders to Cloud Admin tablet
+// =============================
+(function(){
+  'use strict';
+  const CONFIG = { supabaseUrl:'https://fkanccgigogbxodiljqt.supabase.co', supabaseKey:'sb_publishable_WbWIWgu9R2AKepJiRrygCw_1oWrdwG7' };
+  if(!window.supabase?.createClient) return;
+  const client = window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey, { auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:true, storageKey:'langar_bar_supabase_auth_v442' } });
+  const priceNum = p=>{ const m=String(p||'0').replace(',','.').match(/[0-9]+(\.[0-9]+)?/); return m?Number(m[0]):0; };
+  function cleanItem(it){ return { id:it.id, qty:+it.qty||1, name_en:it.nameSnapshot||it.name?.en||it.name||'', name_hr:it.nameSnapshotHr||it.name?.hr||it.nameSnapshot||it.name||'', price:priceNum(it.price), line_total:+(priceNum(it.price)*(+it.qty||1)).toFixed(2), note:it.note||'', category_id:it.categoryId||'' }; }
+  async function submitOrder(order){
+    const { data:sessionData } = await client.auth.getSession();
+    const user = sessionData?.session?.user || null;
+    const payload = {
+      user_id: user?.id || null,
+      fulfillment_type: order.type || 'dine_in',
+      table_number: order.tableNumber || null,
+      customer_name: order.name || null,
+      customer_phone: order.phone || null,
+      delivery_address: order.address || null,
+      note: order.note || null,
+      items: (order.items||[]).map(cleanItem),
+      total: Number(order.total || 0),
+      currency: 'EUR',
+      status: 'new',
+      paid: false
+    };
+    const { data, error } = await client.from('customer_orders').insert(payload).select('id,order_number').single();
+    if(error) throw error;
+    return { ok:true, id:data.id, order_number:data.order_number };
+  }
+  window.LangarOrderCloud = { submitOrder, client };
+})();

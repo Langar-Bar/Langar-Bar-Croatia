@@ -47,8 +47,8 @@ const T = {
   hr:{ tap:'Kliknite za sastojke', ingredients:'Sastojci', add:'Add', emptyCart:'Košarica je prazna.', orderSaved:'Narudžba je poslana u Admin Orders.', eligible:'Eligible for Langar Credit', alcoholic:'18+', unavailable:'Trenutno nedostupno', notOrderable:'Nije dostupno za online narudžbu', welcome:'Dobrodošli', join:'Učlani se', noProfile:'Još niste član Langar Cluba.'},
   en:{ tap:'Tap for ingredients', ingredients:'Ingredients', add:'Add', emptyCart:'Your cart is empty.', orderSaved:'Order was sent to Admin Orders.', eligible:'Eligible for Langar Credit', alcoholic:'18+', unavailable:'Currently unavailable', notOrderable:'Not available for online ordering', welcome:'Welcome', join:'Join now', noProfile:'You are not a Langar Club member yet.'}
 };
-let state = { lang: localStorage.langar_lang || 'hr', activeCat:'classic_coffee', activeOrderCat:'classic_coffee', menuMode:'grid', orderMode:'grid', cart:[], orderType:'pickup' };
-const MENU_STORAGE_KEY = 'langar_menu_v8';
+let state = { lang: localStorage.langar_lang || 'hr', activeCat:'classic_coffee', activeOrderCat:'classic_coffee', menuMode:'grid', orderMode:'grid', cart:[], orderType:'dine_in' };
+const MENU_STORAGE_KEY = 'langar_menu_v9';
 function textOf(value, lang=state.lang){
   if(value && typeof value === 'object') return value[lang] || value.en || value.hr || '';
   return value || '';
@@ -254,7 +254,7 @@ function renderBreakfastOptions(item, orderMode){
   const help=state.lang==='hr'?'Odaberite jedno uključeno piće i po želji dodajte priloge. Dodaci se obračunavaju na ukupnu cijenu.':'Choose one included drink and optional sides. Add-ons are added to the final price.';
   const drinkHtml=drinks.map((d,idx)=>`<label class="option-chip ${idx===0?'selected':''}"><input type="radio" name="breakfastDrink" value="${d.id}" ${idx===0?'checked':''}> <span>${escapeHtml(state.lang==='hr'?d.hr:d.en)}</span></label>`).join('');
   const addHtml=addOns.map(a=>`<label class="option-chip addon-chip"><input type="checkbox" name="breakfastAddon" value="${escapeHtml(a.id)}"> <span>${escapeHtml(itemName(a))}</span><b>${escapeHtml(a.price)}</b></label>`).join('');
-  return `<section class="breakfast-options"><h4>${drinkTitle}</h4><p class="muted">${help}</p><div class="option-grid drink-options">${drinkHtml}</div><h4>${addTitle}</h4><div class="option-grid addon-options">${addHtml||`<p class="muted">${state.lang==='hr'?'Dodaci trenutno nisu dostupni.':'Add-ons are not available right now.'}</p>`}</div>${orderMode?`<p class="muted breakfast-total-hint">${state.lang==='hr'?'Cijena će se ažurirati u košarici nakon odabira dodataka.':'The cart price will update after you choose add-ons.'}</p>`:''}</section>`;
+  return `<section class="breakfast-options" data-base-price="${priceNum(item.price).toFixed(2)}"><h4>${drinkTitle}</h4><p class="muted">${help}</p><div class="option-grid drink-options">${drinkHtml}</div><h4>${addTitle}</h4><div class="option-grid addon-options">${addHtml||`<p class="muted">${state.lang==='hr'?'Dodaci trenutno nisu dostupni.':'Add-ons are not available right now.'}</p>`}</div><div class="breakfast-live-total"><span>${state.lang==='hr'?'Ukupno':'Total'}</span><b>€${priceNum(item.price).toFixed(2)}</b></div></section>`;
 }
 function readBreakfastSelection(){
   const drinkId=$('#modalBody input[name="breakfastDrink"]:checked')?.value || 'OJ';
@@ -263,11 +263,23 @@ function readBreakfastSelection(){
   const all=breakfastAddOns();
   return {drink, addOns:ids.map(id=>all.find(a=>a.id===id)).filter(Boolean)};
 }
+function updateBreakfastLiveTotal(){
+  const box=$('#modalBody .breakfast-options'); if(!box) return;
+  const base=parseFloat(box.dataset.basePrice||'0')||0;
+  const sel=readBreakfastSelection();
+  const total=base+sel.addOns.reduce((sum,x)=>sum+priceNum(x.price),0);
+  const text=`€${total.toFixed(2)}`;
+  const totalBox=$('#modalBody .breakfast-live-total b'); if(totalBox) totalBox.textContent=text;
+  const btn=$('#modalBody .addFromModal');
+  if(btn) btn.textContent=(state.lang==='hr'?'Dodaj u narudžbu':'Add to order')+' — '+text;
+}
 function attachBreakfastOptionUX(){
   $$('#modalBody .option-chip input').forEach(input=>{ input.onchange=()=>{
     if(input.type==='radio'){ $$('#modalBody .drink-options .option-chip').forEach(l=>l.classList.toggle('selected', !!l.querySelector('input')?.checked)); }
     if(input.type==='checkbox'){ const label=input.closest('.option-chip'); if(label) label.classList.toggle('selected', input.checked); }
+    updateBreakfastLiveTotal();
   }; });
+  updateBreakfastLiveTotal();
 }
 function renderCategoryTabs(){ const tabs=$('#categoryTabs'); if(!tabs) return; tabs.innerHTML=''; tabs.classList.add('hidden'); }
 function menuCategories(){
@@ -300,7 +312,7 @@ function likesMap(){ return LS.get('langar_item_likes',{}); }
 function isLiked(id){ return !!likesMap()[id]; }
 function toggleLike(item){ const likes=likesMap(); likes[item.id]=!likes[item.id]; LS.set('langar_item_likes',likes); renderMenu(); renderOrderMenu(); renderHomeMarketing(); }
 function itemNode(item, orderMode=false){ const node=document.createElement('article'); node.className='menu-item'; const disabled=orderMode&&item.orderable===false; node.innerHTML=`<div class="item-main"><h4>${itemName(item)}</h4><p class="hint">${T[state.lang].tap}</p>${item.isAlcoholic?`<span class="tag">${T[state.lang].alcoholic}</span>`:''}${item.isNew?`<span class="tag">NEW</span>`:''}</div><div class="item-side"><button class="likeBtn ${isLiked(item.id)?'liked':''}" aria-label="Favorite">${isLiked(item.id)?'♥':'♡'}</button><div class="price">${item.price}</div>${orderMode&&!disabled?`<button class="secondary addBtn">${T[state.lang].add}</button>`:''}${disabled?`<p class="muted">${T[state.lang].notOrderable}</p>`:''}</div>`; node.onclick=e=>{ if(e.target.classList.contains('addBtn')){e.stopPropagation(); if(isBreakfastItem(item)) openDetails(item, orderMode); else addToCart(item); return;} if(e.target.classList.contains('likeBtn')){e.stopPropagation();toggleLike(item);return;} openDetails(item, orderMode); }; return node; }
-function openDetails(item, orderMode){ const name=itemName(item), desc=itemDesc(item), ingredients=itemIngredients(item); const breakfastOptions=renderBreakfastOptions(item, orderMode); $('#modalBody').innerHTML=`<div class="detail-row"><div><h2>${name}</h2><p class="price">${item.price}</p></div>${orderMode&&item.orderable!==false?`<button class="primary addFromModal">${T[state.lang].add}</button>`:''}</div>${desc?`<p class="muted detail-desc">${desc}</p>`:''}<div class="ingredients-box"><h4>${T[state.lang].ingredients}</h4><p>${ingredients}</p></div>${breakfastOptions}<p class="muted"><b>Allergens:</b> ${item.allergens||'Ask staff'}</p>${item.rewardEligible!==false?`<p class="tag">${T[state.lang].eligible}</p>`:''}${item.isAlcoholic?`<p class="tag">${state.lang==='hr'?'Samo za osobe 18+. Osoblje može zatražiti osobni dokument.':'18+ only. Staff may request ID.'}</p>`:''}`; attachBreakfastOptionUX(); const btn=$('#modalBody .addFromModal'); if(btn) btn.onclick=()=>{ if(isBreakfastItem(item)){ const sel=readBreakfastSelection(); addToCart(breakfastCustomizedItem(item, sel.drink, sel.addOns)); } else { addToCart(item); } $('#modal').classList.add('hidden')}; $('#modal').classList.remove('hidden'); }
+function openDetails(item, orderMode){ const name=itemName(item), desc=itemDesc(item), ingredients=itemIngredients(item); const breakfastOptions=renderBreakfastOptions(item, orderMode); $('#modalBody').innerHTML=`<div class="detail-row"><div><h2>${name}</h2><p class="price">${item.price}</p></div>${orderMode&&item.orderable!==false?`<button class="primary addFromModal">${T[state.lang].add}</button>`:''}</div>${desc?`<p class="muted detail-desc">${desc}</p>`:''}<div class="ingredients-box"><h4>${T[state.lang].ingredients}</h4><p>${ingredients}</p></div>${breakfastOptions}<p class="muted"><b>Allergens:</b> ${item.allergens||'Ask staff'}</p>${item.rewardEligible!==false?`<p class="tag">${T[state.lang].eligible}</p>`:''}${item.isAlcoholic?`<p class="tag">${state.lang==='hr'?'Samo za osobe 18+. Osoblje može zatražiti osobni dokument.':'18+ only. Staff may request ID.'}</p>`:''}`; attachBreakfastOptionUX(); const btn=$('#modalBody .addFromModal'); if(btn) btn.onclick=()=>{ if(isBreakfastItem(item)){ const sel=readBreakfastSelection(); addToCart(breakfastCustomizedItem(item, sel.drink, sel.addOns)); } else { addToCart(item); } $('#modal').classList.add('hidden')}; updateBreakfastLiveTotal(); $('#modal').classList.remove('hidden'); }
 function renderMenu(){
   const list=$('#menuList'); if(!list) return;
   if(state.menuMode!=='detail'){ renderMenuGrid(); return; }
@@ -540,12 +552,19 @@ function renderSushiPreorder(){
 function renderGallery(){ const g=$('#galleryView'); if(!g)return; const imgs=LS.get('langar_gallery',[{src:'assets/tacos_hero.jpeg',title:'Signature tacos',cat:'Tacos'},{src:'assets/prawn_tacos.jpeg',title:'Crunchy prawn tacos',cat:'Tacos'},{src:'assets/quesadilla_real.jpeg',title:'Quesadilla preview',cat:'Food'}]); g.innerHTML=imgs.map(i=>`<article><img src="${i.src}"><b>${i.title}</b><small>${i.cat}</small></article>`).join(''); }
 function renderPublicFeedback(){ const box=$('#publicFeedbackList'); if(!box) return; const publicItems=LS.get('langar_feedback',[]).filter(f=>+f.rating>=4); box.innerHTML=publicItems.length?publicItems.map(f=>`<article class="review-card"><b>${'★'.repeat(+f.rating)}</b><p>${f.message}</p><small>${f.name||'Langar guest'}${f.favorite?` · ${f.favorite}`:''}</small></article>`).join(''):`<p class="muted">${state.lang==='hr'?'Još nema javnih recenzija.':'No public reviews yet.'}</p>`; }
 function maybeGoogleReviewPrompt(rating){ if(+rating>=4){ const googleUrl=LS.get('langar_google_review_url','https://www.google.com/maps/search/?api=1&query=Langar+Bar+Dugo+Selo'); $('#modalBody').innerHTML=`<h2>${state.lang==='hr'?'Hvala na lijepoj ocjeni!':'Thank you for the kind rating!'}</h2><p>${state.lang==='hr'?'Vaša pozitivna recenzija može biti prikazana gostima u aplikaciji. Ako želite podržati Langar Bar i na Google Maps, otvorite Google recenziju.':'Your positive review may be shown to guests in the app. If you would like to support Langar Bar on Google Maps too, open Google review.'}</p><a class="primary full button-link" target="_blank" rel="noopener" href="${googleUrl}">${state.lang==='hr'?'Otvori Google Maps':'Open Google Maps'}</a><button class="secondary full" id="closeReviewPrompt">${state.lang==='hr'?'Kasnije':'Maybe later'}</button>`; $('#modal').classList.remove('hidden'); $('#closeReviewPrompt').onclick=()=>$('#modal').classList.add('hidden'); } else { alert(state.lang==='hr'?'Hvala. Vaša poruka je poslana adminu kako bismo je privatno riješili.':'Thank you. Your feedback was sent to admin so we can solve it privately.'); } }
-function renderAll(){ renderCategoryTabs(); renderMenu(); renderOrderCategoryTabs(); renderOrderMenu(); renderCart(); renderDashboard(); renderHomeMarketing(); renderPublicFeedback(); renderAppQr(); renderInboxBadge(); renderReservationCalendar(); renderEventCalendar(); renderSushiPreorder(); }
+function updateOrderTypeFields(){
+  const type=state.orderType;
+  const tableWrap=$('#orderTableWrap');
+  const addressWrap=$('#orderAddressWrap');
+  if(tableWrap) tableWrap.classList.toggle('hidden', type!=='dine_in');
+  if(addressWrap) addressWrap.classList.toggle('hidden', type!=='delivery');
+}
+function renderAll(){ renderCategoryTabs(); renderMenu(); renderOrderCategoryTabs(); renderOrderMenu(); renderCart(); renderDashboard(); renderHomeMarketing(); renderPublicFeedback(); renderAppQr(); renderInboxBadge(); renderReservationCalendar(); renderEventCalendar(); renderSushiPreorder(); updateOrderTypeFields(); }
 function setupEvents(){
   attachNav();
   const back=$('#backBtn'); if(back) back.onclick=goBack; const refInput=document.querySelector('[name="referralCode"]'); if(refInput && localStorage.langar_pending_referral && !refInput.value) refInput.value=localStorage.langar_pending_referral;
   $('#langBtn').onclick=()=>setLang(state.lang==='hr'?'en':'hr');
-  $$('.segmented [data-order-type]').forEach(b=>b.onclick=()=>{$$('.segmented button').forEach(x=>x.classList.remove('active')); b.classList.add('active'); state.orderType=b.dataset.orderType;});
+  $$('.segmented [data-order-type]').forEach(b=>b.onclick=()=>{$$('.segmented button').forEach(x=>x.classList.remove('active')); b.classList.add('active'); state.orderType=b.dataset.orderType; updateOrderTypeFields();}); updateOrderTypeFields();
   $('#closeModal').onclick=()=>$('#modal').classList.add('hidden');
   $('#modal').onclick=e=>{if(e.target.id==='modal')$('#modal').classList.add('hidden')};
   $('#inboxBtn').onclick=()=>{renderInbox(); markInboxAllRead(); renderInbox(); $('#inboxPanel').classList.remove('hidden')};
@@ -576,7 +595,23 @@ function setupEvents(){
   $('#reservationForm').onsubmit=e=>{e.preventDefault(); const data=Object.fromEntries(new FormData(e.target).entries()); if(!data.time){ alert(state.lang==='hr'?'Molimo odaberite slobodan zeleni termin.':'Please choose an available green time slot.'); return; } if(isReservationSlotBooked(data.date,data.time)){ alert(state.lang==='hr'?'Ovaj termin je već zauzet. Odaberite drugi zeleni termin.':'This time slot is already booked. Please choose another green slot.'); renderReservationCalendar(); return; } const res=LS.get('langar_reservations',[]); res.unshift({id:uid('RES'),status:'pending',createdAt:new Date().toISOString(),...data}); LS.set('langar_reservations',res); alert(state.lang==='hr'?'Rezervacija je poslana. Termin je sada zauzet dok ga admin ne otkaže.':'Reservation sent. This time slot is now blocked unless admin cancels it.'); e.target.reset(); $('#reservationTime').value=''; renderReservationCalendar();};
   const askForm=$('#askBaristaForm');
   if(askForm) askForm.onsubmit=e=>{ e.preventDefault(); const data=Object.fromEntries(new FormData(e.target).entries()); const list=LS.get('langar_barista_questions',[]); list.unshift({id:uid('BQ'),status:'new',createdAt:new Date().toISOString(),...data}); LS.set('langar_barista_questions',list); addInbox({id:uid('msg'),type:'message',title:state.lang==='hr'?'Pitanje je primljeno':'Question received',body:state.lang==='hr'?'Vaše pitanje za baristu je spremljeno. Odgovor ćete kasnije moći dobiti u Inboxu.':'Your question for the barista has been saved. You can receive the answer later in Inbox.',unread:true,createdAt:new Date().toISOString()}); e.target.reset(); renderInboxBadge(); alert(state.lang==='hr'?'Pitanje je poslano.':'Question sent.'); };
-  $('#submitOrder').onclick=()=>{ if(!state.cart.length)return alert(T[state.lang].emptyCart); const total=state.cart.reduce((s,it)=>s+priceNum(it.price)*it.qty,0); const orders=LS.get('langar_orders_v3',[]); orders.unshift({id:uid('ORD'),status:'new',paid:false,type:state.orderType,name:$('#orderName').value,phone:$('#orderPhone').value,address:$('#orderAddress').value,note:$('#orderNote').value,items:state.cart.map(it=>({...it, nameSnapshot:itemName(it,'en'), nameSnapshotHr:itemName(it,'hr')})),total:+total.toFixed(2),referredBy:profile()?.referredBy||null,createdAt:new Date().toISOString()}); LS.set('langar_orders_v3',orders); state.cart=[]; renderCart(); alert(T[state.lang].orderSaved);};
+  $('#submitOrder').onclick=async()=>{
+    if(!state.cart.length)return alert(T[state.lang].emptyCart);
+    if(state.orderType==='dine_in' && !$('#orderTable')?.value.trim()) return alert(state.lang==='hr'?'Unesite broj stola.':'Please enter table number.');
+    if(state.orderType==='delivery' && !$('#orderAddress')?.value.trim()) return alert(state.lang==='hr'?'Unesite adresu dostave.':'Please enter delivery address.');
+    const total=state.cart.reduce((sum,it)=>sum+priceNum(it.price)*it.qty,0);
+    const order={id:uid('ORD'),status:'new',paid:false,type:state.orderType,tableNumber:$('#orderTable')?.value.trim()||'',name:$('#orderName').value,phone:$('#orderPhone').value,address:$('#orderAddress').value,note:$('#orderNote').value,items:state.cart.map(it=>({...it, nameSnapshot:itemName(it,'en'), nameSnapshotHr:itemName(it,'hr')})),total:+total.toFixed(2),referredBy:profile()?.referredBy||null,createdAt:new Date().toISOString()};
+    const orders=LS.get('langar_orders_v3',[]); orders.unshift(order); LS.set('langar_orders_v3',orders);
+    let cloudOk=false;
+    if(window.LangarOrderCloud && typeof window.LangarOrderCloud.submitOrder==='function'){
+      const btn=$('#submitOrder'); const oldText=btn.textContent; btn.disabled=true; btn.textContent=state.lang==='hr'?'Šaljem narudžbu...':'Sending order...';
+      try{ const res=await window.LangarOrderCloud.submitOrder(order); cloudOk=!!res?.ok; if(res?.order_number) order.cloudOrderNumber=res.order_number; }
+      catch(err){ console.warn('Cloud order submit failed', err); }
+      btn.disabled=false; btn.textContent=oldText;
+    }
+    state.cart=[]; renderCart();
+    alert(cloudOk ? (state.lang==='hr'?'Narudžba je poslana kafiću.':'Order was sent to the café.') : (state.lang==='hr'?'Narudžba je spremljena lokalno. Ako nije vidljiva na admin tabletu, provjerite Cloud SQL.':'Order saved locally. If it is not visible on the admin tablet, check Cloud SQL.'));
+  };
   if(!localStorage.langar_popup_closed) setTimeout(()=>$('#welcomePopup').classList.remove('hidden'),800);
   updateBackButton();
 }

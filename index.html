@@ -72,15 +72,16 @@
   </main>
 
   <main id="order" class="view">
-    <section class="section-head compact-head"><h2 data-hr="Online narudžba" data-en="Online Order">Online narudžba</h2><p data-hr="Odaberite Delivery ili Pick-up, zatim kategoriju." data-en="Choose Delivery or Pick-up, then choose a category.">Odaberite Delivery ili Pick-up, zatim kategoriju.</p></section>
-    <div class="segmented"><button class="active" data-order-type="pickup">Pick-up</button><button data-order-type="delivery">Delivery</button></div>
+    <section class="section-head compact-head"><h2 data-hr="Narudžba" data-en="Order">Narudžba</h2><p data-hr="Odaberite narudžbu za stol, pick-up ili delivery, zatim kategoriju." data-en="Choose dine-in table order, pick-up or delivery, then choose a category.">Odaberite narudžbu za stol, pick-up ili delivery, zatim kategoriju.</p></section>
+    <div class="segmented"><button class="active" data-order-type="dine_in">Dine-in</button><button data-order-type="pickup">Pick-up</button><button data-order-type="delivery">Delivery</button></div>
     <div class="swipe-hint" data-hr="Povucite kategorije lijevo/desno" data-en="Swipe categories left/right">Povucite kategorije lijevo/desno</div><div id="orderCategoryTabs" class="h-tabs"></div>
     <div class="order-layout">
       <section><div id="orderMenu"></div></section>
       <aside class="cart"><h3 data-hr="Košarica" data-en="Cart">Košarica</h3><div id="cartItems" class="muted"></div><div class="cart-total"><span>Total</span><b id="cartTotal">€0.00</b></div>
+        <label id="orderTableWrap"><span data-hr="Broj stola" data-en="Table number">Broj stola</span><input id="orderTable" placeholder="Table 1 / Stol 1"></label>
         <label><span data-hr="Ime" data-en="Name">Ime</span><input id="orderName" placeholder="Name"></label>
         <label><span data-hr="Telefon" data-en="Phone">Telefon</span><input id="orderPhone" placeholder="+385..."></label>
-        <label><span data-hr="Adresa za dostavu" data-en="Delivery address">Adresa za dostavu</span><input id="orderAddress" placeholder="Address"></label>
+        <label id="orderAddressWrap" class="hidden"><span data-hr="Adresa za dostavu" data-en="Delivery address">Adresa za dostavu</span><input id="orderAddress" placeholder="Address"></label>
         <label><span data-hr="Napomena" data-en="Note">Napomena</span><textarea id="orderNote" placeholder="No onion, sauce separate..."></textarea></label>
         <button id="submitOrder" class="primary full" data-hr="Pošalji narudžbu" data-en="Submit order">Pošalji narudžbu</button>
         <p class="legal mini" data-hr="Kredit i referral nagrade dodaju se tek nakon plaćene i završene narudžbe s fiskaliziranim računom." data-en="Credit and referral rewards are added only after a paid completed order with fiscalized receipt.">Kredit i referral nagrade dodaju se tek nakon plaćene i završene narudžbe s fiskaliziranim računom.</p>
