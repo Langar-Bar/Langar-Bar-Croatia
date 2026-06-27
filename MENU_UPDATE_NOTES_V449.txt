@@ -1,0 +1,11 @@
+Langar Bar V4.4.9 — Public Order RPC + RLS Fix
+
+Fixes:
+- Guest/mobile orders no longer fail with: new row violates row-level security policy for table customer_orders | 42501.
+- Customer app now submits orders through submit_customer_order() RPC first.
+- Direct insert remains only as fallback if the new SQL has not been run.
+- Dine-in orders still do not require registration.
+- Pickup/delivery orders keep order status tracking by order_token.
+
+Required SQL:
+- Run langar_bar_v449_public_order_rpc_rls_fix.sql once in Supabase SQL Editor.

@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  const CLOUD_VERSION = 'V4.4.8 Club Auth + Order Status + Notifications';
+  const CLOUD_VERSION = 'V4.4.9 Public Order RPC + RLS Fix';
   const CONFIG = {
     supabaseUrl: 'https://fkanccgigogbxodiljqt.supabase.co',
     supabaseKey: 'sb_publishable_WbWIWgu9R2AKepJiRrygCw_1oWrdwG7',
@@ -643,9 +643,28 @@
       status: 'new',
       paid: false
     };
-    const { data, error } = await client.from('customer_orders').insert(payload).select('id,order_number,order_token,status,created_at').single();
+    // V4.4.9: Use a SECURITY DEFINER RPC for public/guest orders. This avoids browser RLS edge cases
+    // while still keeping admin/customer reads protected by the table policies.
+    const rpcPayload = {
+      p_user_id: payload.user_id,
+      p_fulfillment_type: payload.fulfillment_type,
+      p_table_number: payload.table_number,
+      p_customer_name: payload.customer_name,
+      p_customer_phone: payload.customer_phone,
+      p_delivery_address: payload.delivery_address,
+      p_note: payload.note,
+      p_items: payload.items,
+      p_total: payload.total
+    };
+    let { data, error } = await client.rpc('submit_customer_order', rpcPayload);
+    if(error && String(error.message||'').toLowerCase().includes('function public.submit_customer_order')){
+      // Fallback for sites where the new SQL was not executed yet.
+      const direct = await client.from('customer_orders').insert(payload).select('id,order_number,order_token,status,created_at').single();
+      data = direct.data; error = direct.error;
+    }
     if(error){ const msg = [error.message, error.details, error.hint, error.code].filter(Boolean).join(' | '); throw new Error(msg || 'Unknown Supabase order insert error'); }
-    return { ok:true, id:data.id, order_number:data.order_number, order_token:data.order_token, status:data.status || 'new', created_at:data.created_at };
+    const row = Array.isArray(data) ? data[0] : data;
+    return { ok:true, id:row.id, order_number:row.order_number, order_token:row.order_token, status:row.status || 'new', created_at:row.created_at };
   }
   window.LangarOrderCloud = { submitOrder, client };
 })();
