@@ -1,0 +1,12 @@
+Langar Bar Croatia V4.4.6 — Admin Orders Session Fix
+
+Fixes:
+- Admin Orders panel now uses the same Supabase auth session as the main Cloud Admin Login.
+- Fixes the issue where orders were saved in customer_orders but Admin > Orders showed: “Login as Cloud Admin first.”
+- No new SQL is required if langar_bar_v445_club_orders_fix.sql was already executed.
+- Service worker cache updated to v446.
+
+Operational workflow:
+- Customer order is saved in customer_orders.
+- Admin tablet opens Admin > Orders after Cloud Admin Login.
+- Staff manually enter order into Remaris and tick Paid / entered in Remaris.

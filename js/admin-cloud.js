@@ -660,13 +660,13 @@
 
 
 // =============================
-// V4.4.5 — Cloud customer orders panel for tablet workflow
+// V4.4.6 — Cloud customer orders panel session fix
 // =============================
 (function(){
   'use strict';
   const CONFIG = { supabaseUrl:'https://fkanccgigogbxodiljqt.supabase.co', supabaseKey:'sb_publishable_WbWIWgu9R2AKepJiRrygCw_1oWrdwG7' };
   if(!window.supabase?.createClient) return;
-  const client = window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey, { auth:{ persistSession:true, autoRefreshToken:true, storageKey:'langar_bar_supabase_auth_v442' } });
+  const client = window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey, { auth:{ persistSession:true, autoRefreshToken:true } });
   const $ = s=>document.querySelector(s);
   const safe = v=>String(v||'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
   const euro = n=>'€'+Number(n||0).toFixed(2);
@@ -677,7 +677,7 @@
   function typeLabel(t){ return t==='dine_in'?'Dine-in':(t==='delivery'?'Delivery':'Pick-up'); }
   async function requireAdmin(){
     const {data}=await client.auth.getSession();
-    if(!data.session?.user) throw new Error('Login as Cloud Admin first.');
+    if(!data.session?.user) throw new Error('Login as Cloud Admin first. Admin Orders now uses the same admin session as the main Admin Login.');
     const {data:admin,error}=await client.from('admin_members').select('role,active').eq('user_id',data.session.user.id).eq('active',true).maybeSingle();
     if(error) throw error; if(!admin) throw new Error('This user is not active in admin_members.');
     return data.session.user;
@@ -698,13 +698,13 @@
         (rows.length?`<div class="cloud-orders-list">${rows.map(o=>{
           const items=normalizeItems(o.items);
           return `<article class="cloud-order-card ${o.status==='new'?'new':''}"><div class="cloud-order-head"><div><h3>${safe(o.order_number||o.id.slice(0,8))} <span class="order-source-badge">${typeLabel(o.fulfillment_type)}</span></h3><div class="cloud-order-meta">${new Date(o.created_at).toLocaleString()}${o.table_number?` · Table: <b>${safe(o.table_number)}</b>`:''}${o.customer_name?` · ${safe(o.customer_name)}`:''}${o.customer_phone?` · ${safe(o.customer_phone)}`:''}</div>${o.delivery_address?`<div class="cloud-order-meta">Address: ${safe(o.delivery_address)}</div>`:''}</div><div><b>${euro(o.total)}</b><br><small>${safe(statusLabels[o.status]||o.status)}</small></div></div><div class="cloud-order-items">${items.map(i=>`<div><span>${safe(i.qty||1)} × ${safe(i.name_hr||i.name_en||i.name||'Item')}</span><b>${euro(i.line_total ?? ((i.qty||1)*(i.price||0)))}</b></div>`).join('')||'<p class="muted">No items</p>'}</div>${o.note?`<p class="muted"><b>Note:</b> ${safe(o.note)}</p>`:''}<div class="cloud-order-actions"><select data-order-status="${o.id}">${statuses.map(st=>`<option value="${st}" ${o.status===st?'selected':''}>${statusLabels[st]}</option>`).join('')}</select><label class="checkline"><input type="checkbox" data-order-paid="${o.id}" ${o.paid?'checked':''}> Paid / entered in Remaris</label></div></article>`;
-        }).join('')}</div>`:'<p class="muted">Connected to Cloud. No orders yet. Submit a new customer test order after uploading V4.4.5.</p><div class="legal-block"><b>Tablet workflow</b><p>Customer orders appear here. Staff enter the same order manually in Remaris and then update status here.</p></div>');
+        }).join('')}</div>`:'<p class="muted">Connected to Cloud. No orders yet. Submit a new customer test order after uploading V4.4.6.</p><div class="legal-block"><b>Tablet workflow</b><p>Customer orders appear here. Staff enter the same order manually in Remaris and then update status here.</p></div>');
       $('#refreshCloudOrders')?.addEventListener('click', renderCloudOrders);
       document.querySelectorAll('[data-order-status]').forEach(sel=>sel.onchange=()=>updateOrder(sel.dataset.orderStatus,{status:sel.value}));
       document.querySelectorAll('[data-order-paid]').forEach(ch=>ch.onchange=()=>updateOrder(ch.dataset.orderPaid,{paid:ch.checked}));
     }catch(err){
       const local=JSON.parse(localStorage.getItem('langar_orders_v3')||'[]');
-      box.innerHTML = `<p style="color:#ffb1a8">Cloud orders error: ${safe(err.message||err)}</p><p class="muted">Run langar_bar_v445_club_orders_fix.sql, then submit a new test order. Local orders on this admin device: ${local.length}</p>`;
+      box.innerHTML = `<p style="color:#ffb1a8">Cloud orders error: ${safe(err.message||err)}</p><p class="muted">Admin orders cannot read Cloud right now. Check that you are logged in through the Cloud Admin Login screen and that this email exists in admin_members. Local orders on this admin device: ${local.length}</p>`;
     }
   }
   async function updateOrder(id, patch){
