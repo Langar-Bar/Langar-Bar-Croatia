@@ -660,8 +660,9 @@
 
 
 
+
 // =============================
-// V4.5.2 — Cloud customer orders: customer ETA + progressive loud alarm
+// V4.5.3 — Cloud customer orders: health check, custom ETA, archive/date filters, test cleanup
 // =============================
 (function(){
   'use strict';
@@ -674,26 +675,36 @@
   const statusLabels = {new:'New',accepted:'Accepted',preparing:'Preparing',ready:'Ready',completed:'Completed',cancelled:'Cancelled',rejected:'Rejected'};
   const statuses = ['new','accepted','preparing','ready','completed','cancelled','rejected'];
   const terminalStatuses = ['completed','cancelled','rejected'];
+  const standardEtaMinutes = [10,15,20,30,45,60,90];
   let pollTimer=null, realtimeChannel=null, alarmTimer=null, alarmCtx=null;
   let alarmUnlocked=false, alarmStartedAt=0;
   let lastRenderedSignature='';
   let orderFilter = localStorage.langar_admin_order_filter || 'live';
+  let customDateFilter = localStorage.langar_admin_order_date_filter || localDateKey(new Date());
   let lastBrowserNotifyKey='';
+  let healthCache=null, healthFetchedAt=0;
 
+  function cssEscape(v){ return window.CSS?.escape ? CSS.escape(v) : String(v).replace(/[^a-zA-Z0-9_-]/g, '\\$&'); }
   function ackedOrders(){ try{return JSON.parse(localStorage.langar_admin_order_ack_ids||'{}')}catch{return {}} }
   function saveAckedOrders(map){ localStorage.langar_admin_order_ack_ids = JSON.stringify(map||{}); }
   function currentNewUnacked(allRows){ const ack=ackedOrders(); return (allRows||[]).filter(o=>String(o.status||'new')==='new' && !ack[o.id]); }
   function ackOrderIds(ids){ const ack=ackedOrders(); (ids||[]).forEach(id=>{ if(id) ack[id]=new Date().toISOString(); }); saveAckedOrders(ack); stopOrderAlarm(); }
   function terminalStatus(st){ return terminalStatuses.includes(String(st||'').toLowerCase()); }
+  function liveStatus(st){ return !terminalStatus(st); }
   function typeLabel(t){ return t==='dine_in'?'Dine-in':(t==='delivery'?'Delivery':'Pick-up'); }
   function normalizeItems(items){ if(Array.isArray(items)) return items; try{return JSON.parse(items||'[]')}catch{return []} }
-  function todayKey(d){ const x=new Date(d); x.setMinutes(x.getMinutes()-x.getTimezoneOffset()); return x.toISOString().slice(0,10); }
-  function localToday(){ const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
+  function localDateKey(value){
+    const d = value instanceof Date ? new Date(value) : new Date(value);
+    if(Number.isNaN(d.getTime())) return '';
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+  function offsetDateKey(days){ const d=new Date(); d.setDate(d.getDate()+days); return localDateKey(d); }
+  function sameLocalDate(value,key){ return localDateKey(value)===key; }
   function etaText(o){
     const mins=o.estimated_minutes; const ready=o.estimated_ready_at; const note=o.admin_customer_note||'';
     let out='';
     if(mins) out='Customer time: about '+mins+' min';
-    if(ready){ try{ const t=new Date(ready).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); out += out ? ' · '+t : 'Customer time: '+t; }catch(e){} }
+    if(ready){ try{ const t=new Date(ready).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); out += out ? ' · Ready around '+t : 'Customer time: '+t; }catch(e){} }
     if(note) out += out ? ' · '+note : note;
     return out;
   }
@@ -701,8 +712,21 @@
   async function requireAdmin(){
     const {data}=await client.auth.getSession();
     if(!data.session?.user) throw new Error('Login as Cloud Admin first. Use the Cloud Admin Login at the top of admin.html.');
-    // SQL V4.5.1 has RPC functions that verify admin_members server-side.
     return data.session.user;
+  }
+
+  async function getCloudHealth(force=false){
+    if(!force && healthCache && Date.now()-healthFetchedAt < 45000) return healthCache;
+    try{
+      const {data,error}=await client.rpc('admin_cloud_health');
+      if(error) throw error;
+      healthCache=data||[]; healthFetchedAt=Date.now();
+      return healthCache;
+    }catch(e){ return [{check_name:'Cloud health', ok:false, count_value:0, last_at:null, message:e.message||String(e)}]; }
+  }
+  function renderHealthBlock(rows){
+    const items=(rows||[]).map(r=>`<span class="health-pill ${r.ok?'ok':'bad'}"><b>${r.ok?'✓':'!'}</b> ${safe(r.check_name)}: ${safe(r.count_value??'—')}${r.last_at?` <small>${new Date(r.last_at).toLocaleString()}</small>`:''}</span>`).join('');
+    return `<div class="cloud-health-box"><div><b>☁️ Cloud Health Check</b><small>Admin only · profiles, rewards, inbox and orders are checked in Supabase.</small></div><div class="cloud-health-pills">${items||'<span class="health-pill bad">No health data</span>'}</div><button class="secondary" id="refreshCloudHealth">Check now</button></div>`;
   }
 
   async function unlockAlarmSound(){
@@ -718,14 +742,14 @@
   }
   function currentAlarmGain(){
     const elapsed = alarmStartedAt ? (Date.now()-alarmStartedAt)/1000 : 0;
-    return Math.min(0.95, 0.34 + elapsed*0.025); // grows to maximum after roughly 25 seconds
+    return Math.min(0.98, 0.42 + elapsed*0.03);
   }
-  function beepOnce(freq=1200, dur=0.48, gainValue=null){
+  function beepOnce(freq=1250, dur=0.50, gainValue=null){
     try{
       if(!alarmCtx || alarmCtx.state==='suspended') return;
       const osc=alarmCtx.createOscillator(); const gain=alarmCtx.createGain();
       osc.type='square'; osc.frequency.setValueAtTime(freq, alarmCtx.currentTime);
-      const g=Math.max(0.05, Math.min(0.98, gainValue ?? currentAlarmGain()));
+      const g=Math.max(0.07, Math.min(0.98, gainValue ?? currentAlarmGain()));
       gain.gain.setValueAtTime(0.0001, alarmCtx.currentTime);
       gain.gain.exponentialRampToValueAtTime(g, alarmCtx.currentTime+0.025);
       gain.gain.exponentialRampToValueAtTime(0.0001, alarmCtx.currentTime+dur);
@@ -734,9 +758,10 @@
   }
   function beepPattern(){
     const g=currentAlarmGain();
-    beepOnce(1250,.34,g);
-    setTimeout(()=>beepOnce(1720,.34,Math.min(.98,g+.05)),260);
-    setTimeout(()=>beepOnce(980,.42,Math.min(.98,g+.10)),560);
+    beepOnce(1200,.34,g);
+    setTimeout(()=>beepOnce(1780,.34,Math.min(.98,g+.08)),240);
+    setTimeout(()=>beepOnce(980,.44,Math.min(.98,g+.14)),520);
+    setTimeout(()=>beepOnce(2050,.24,Math.min(.98,g+.18)),900);
   }
   function browserNotifyNewOrders(unacked){
     if(!unacked?.length) return;
@@ -757,55 +782,96 @@
     if(!alarmStartedAt) alarmStartedAt=Date.now();
     if(alarmTimer) return;
     beepPattern();
-    alarmTimer=setInterval(beepPattern, 1250);
+    alarmTimer=setInterval(beepPattern, 1150);
   }
   function stopOrderAlarm(){ if(alarmTimer){ clearInterval(alarmTimer); alarmTimer=null; } alarmStartedAt=0; }
 
   async function fetchOrders(){
     await requireAdmin();
-    const {data,error}=await client.rpc('admin_get_customer_orders',{p_limit:120});
+    const {data,error}=await client.rpc('admin_get_customer_orders',{p_limit:500});
     if(error) throw error;
     return data||[];
+  }
+
+  function buildOrderRows(allRows){
+    const today=offsetDateKey(0), yesterday=offsetDateKey(-1);
+    const realRows=(allRows||[]).filter(o=>!o.is_test);
+    const live=realRows.filter(o=>liveStatus(o.status) && !o.archived_at);
+    const todayRows=realRows.filter(o=>sameLocalDate(o.created_at,today));
+    const yesterdayRows=realRows.filter(o=>sameLocalDate(o.created_at,yesterday));
+    const archive=realRows.filter(o=>terminalStatus(o.status) || !!o.archived_at || (!sameLocalDate(o.created_at,today) && !sameLocalDate(o.created_at,yesterday)));
+    const dateRows=realRows.filter(o=>sameLocalDate(o.created_at,customDateFilter));
+    const testRows=(allRows||[]).filter(o=>o.is_test);
+    let rows=realRows;
+    if(orderFilter==='live') rows=live;
+    else if(orderFilter==='today') rows=todayRows;
+    else if(orderFilter==='yesterday') rows=yesterdayRows;
+    else if(orderFilter==='archive') rows=archive;
+    else if(orderFilter==='date') rows=dateRows;
+    else if(orderFilter==='test') rows=testRows;
+    else if(orderFilter==='all') rows=realRows;
+    return {rows, live, todayRows, yesterdayRows, archive, testRows, dateRows};
+  }
+
+  function cardForOrder(o){
+    const items=normalizeItems(o.items);
+    const eta=etaText(o);
+    const selMinutes=Number(o.estimated_minutes||0);
+    const selectSelected=standardEtaMinutes.includes(selMinutes) ? selMinutes : '';
+    const customEta=selMinutes && !standardEtaMinutes.includes(selMinutes) ? selMinutes : '';
+    return `<article class="cloud-order-card ${o.status==='new'?'new':''} ${terminalStatus(o.status)?'terminal':''} ${o.is_test?'is-test':''}">
+      <div class="cloud-order-head"><div><h3>${safe(o.order_number||String(o.id).slice(0,8))} <span class="order-source-badge">${typeLabel(o.fulfillment_type)}</span>${o.is_test?` <span class="order-source-badge test">TEST</span>`:''}</h3>
+        <div class="cloud-order-meta">${new Date(o.created_at).toLocaleString()}${o.table_number?` · Table: <b>${safe(o.table_number)}</b>`:''}${o.customer_name?` · ${safe(o.customer_name)}`:''}${o.customer_phone?` · ${safe(o.customer_phone)}`:''}</div>
+        ${o.delivery_address?`<div class="cloud-order-meta">Address: ${safe(o.delivery_address)}</div>`:''}${eta?`<div class="order-eta-admin">${safe(eta)}</div>`:''}</div>
+        <div class="cloud-order-total"><b>${euro(o.total)}</b><br><small>${safe(statusLabels[o.status]||o.status)}</small></div></div>
+      <div class="cloud-order-items enhanced-items">${items.map(i=>`<div><span><b class="order-line-name">${safe(i.qty||1)} × ${safe(i.name_hr||i.name_en||i.name||'Item')}</b>${i.addOns?.length?`<small>${safe(i.addOns.map(a=>a.name||a.id).join(', '))}</small>`:''}</span><b>${euro(i.line_total ?? ((i.qty||1)*(i.price||0)))}</b></div>`).join('')||'<p class="muted">No items</p>'}</div>
+      ${o.note?`<p class="muted"><b>Note:</b> ${safe(o.note)}</p>`:''}
+      <div class="cloud-order-actions"><select data-order-status="${safe(o.id)}">${statuses.map(st=>`<option value="${st}" ${o.status===st?'selected':''}>${statusLabels[st]}</option>`).join('')}</select><label class="checkline"><input type="checkbox" data-order-paid="${safe(o.id)}" ${o.paid?'checked':''}> Paid / entered in Remaris</label></div>
+      <div class="order-eta-controls v453"><label>Tell customer ready time</label><select data-order-eta-minutes="${safe(o.id)}"><option value="">Preset</option>${standardEtaMinutes.map(m=>`<option value="${m}" ${selectSelected===m?'selected':''}>${m<60?m+' min':(m===60?'1 hour':'1.5 hours')}</option>`).join('')}</select><input type="number" min="1" max="240" step="1" inputmode="numeric" data-order-eta-custom="${safe(o.id)}" placeholder="Custom min" value="${safe(customEta)}"><input data-order-customer-note="${safe(o.id)}" placeholder="Optional message to customer" value="${safe(o.admin_customer_note||'')}"><button class="secondary" data-order-save-eta="${safe(o.id)}">Send time</button></div>
+      <div class="order-admin-maintenance"><label class="checkline"><input type="checkbox" data-order-test="${safe(o.id)}" ${o.is_test?'checked':''}> Mark as test order</label>${o.is_test?`<button class="danger subtle" data-order-delete-test="${safe(o.id)}">Delete test order</button>`:''}</div>
+    </article>`;
   }
 
   async function renderCloudOrders(force=false){
     const box=$('#ordersAdmin'); if(!box) return;
     try{
-      const allRows=await fetchOrders();
-      const signature=JSON.stringify(allRows.map(o=>[o.id,o.status,o.paid,o.estimated_minutes,o.estimated_ready_at,o.admin_customer_note,o.updated_at,o.created_at]));
-      const live=allRows.filter(o=>!terminalStatus(o.status));
-      const today=allRows.filter(o=>todayKey(o.created_at)===localToday());
-      const archive=allRows.filter(o=>terminalStatus(o.status) || todayKey(o.created_at)!==localToday());
-      let rows=allRows;
-      if(orderFilter==='live') rows=live; else if(orderFilter==='today') rows=today; else if(orderFilter==='archive') rows=archive;
-      const unacked=currentNewUnacked(allRows);
+      const [allRows, healthRows] = await Promise.all([fetchOrders(), getCloudHealth(force)]);
+      const signature=JSON.stringify([orderFilter, customDateFilter, allRows.map(o=>[o.id,o.status,o.paid,o.is_test,o.estimated_minutes,o.estimated_ready_at,o.admin_customer_note,o.updated_at,o.created_at,o.archived_at])]);
+      const groups=buildOrderRows(allRows);
+      const {rows, live, todayRows, yesterdayRows, archive, testRows, dateRows}=groups;
+      const unacked=currentNewUnacked(allRows.filter(o=>!o.is_test));
       startOrderAlarm(unacked);
       if(!force && signature===lastRenderedSignature && !unacked.length) return;
       lastRenderedSignature=signature;
       const alarmBanner = unacked.length
-        ? `<div class="order-alarm-banner"><div><b>🔔 ${unacked.length} NEW ORDER${unacked.length>1?'S':''}</b><small>Keep tablet volume high. Alarm gets louder until staff checks or accepts the order.</small></div><button id="enableOrderAlarm" class="primary">${alarmUnlocked?'Alarm enabled':'Enable alarm sound'}</button><button id="ackOrderAlarm" class="secondary">I checked / stop alarm</button></div>`
+        ? `<div class="order-alarm-banner"><div><b>🔔 ${unacked.length} NEW ORDER${unacked.length>1?'S':''}</b><small>Alarm gets louder until staff checks or accepts the order.</small></div><button id="enableOrderAlarm" class="primary">${alarmUnlocked?'Alarm enabled':'Enable alarm sound'}</button><button id="ackOrderAlarm" class="secondary">I checked / stop alarm</button></div>`
         : `<div class="order-alarm-quiet"><span>✓ No unchecked new orders</span><button id="enableOrderAlarm" class="secondary">${alarmUnlocked?'Alarm enabled':'Enable alarm sound'}</button></div>`;
-      box.innerHTML = `${alarmBanner}<div class="cloud-orders-toolbar ${unacked.length?'order-alert-flash':''}"><span class="order-pill">Open: ${live.length}</span><span class="order-pill">New: ${allRows.filter(o=>o.status==='new').length}</span><span class="order-pill">Today total: ${euro(today.reduce((s,o)=>s+Number(o.total||0),0))}</span><span class="order-pill">Auto-refresh: ON</span><button id="refreshCloudOrders" class="secondary">Refresh now</button></div><div class="order-filter-tabs"><button data-order-filter="live" class="secondary ${orderFilter==='live'?'active':''}">Live Queue</button><button data-order-filter="today" class="secondary ${orderFilter==='today'?'active':''}">Today</button><button data-order-filter="archive" class="secondary ${orderFilter==='archive'?'active':''}">Archive</button><button data-order-filter="all" class="secondary ${orderFilter==='all'?'active':''}">All 120</button></div>` +
-        (rows.length?`<div class="cloud-orders-list">${rows.map(o=>{
-          const items=normalizeItems(o.items);
-          const eta=etaText(o);
-          return `<article class="cloud-order-card ${o.status==='new'?'new':''} ${terminalStatus(o.status)?'terminal':''}"><div class="cloud-order-head"><div><h3>${safe(o.order_number||String(o.id).slice(0,8))} <span class="order-source-badge">${typeLabel(o.fulfillment_type)}</span></h3><div class="cloud-order-meta">${new Date(o.created_at).toLocaleString()}${o.table_number?` · Table: <b>${safe(o.table_number)}</b>`:''}${o.customer_name?` · ${safe(o.customer_name)}`:''}${o.customer_phone?` · ${safe(o.customer_phone)}`:''}</div>${o.delivery_address?`<div class="cloud-order-meta">Address: ${safe(o.delivery_address)}</div>`:''}${eta?`<div class="order-eta-admin">${safe(eta)}</div>`:''}</div><div><b>${euro(o.total)}</b><br><small>${safe(statusLabels[o.status]||o.status)}</small></div></div><div class="cloud-order-items">${items.map(i=>`<div><span>${safe(i.qty||1)} × ${safe(i.name_hr||i.name_en||i.name||'Item')}</span><b>${euro(i.line_total ?? ((i.qty||1)*(i.price||0)))}</b></div>`).join('')||'<p class="muted">No items</p>'}</div>${o.note?`<p class="muted"><b>Note:</b> ${safe(o.note)}</p>`:''}<div class="cloud-order-actions"><select data-order-status="${safe(o.id)}">${statuses.map(st=>`<option value="${st}" ${o.status===st?'selected':''}>${statusLabels[st]}</option>`).join('')}</select><label class="checkline"><input type="checkbox" data-order-paid="${safe(o.id)}" ${o.paid?'checked':''}> Paid / entered in Remaris</label></div><div class="order-eta-controls"><label>Tell customer ready time</label><select data-order-eta-minutes="${safe(o.id)}"><option value="">Choose time</option><option value="10">10 min</option><option value="15">15 min</option><option value="20">20 min</option><option value="30">30 min</option><option value="45">45 min</option><option value="60">1 hour</option><option value="90">1.5 hours</option></select><input data-order-customer-note="${safe(o.id)}" placeholder="Optional message to customer" value="${safe(o.admin_customer_note||'')}"><button class="secondary" data-order-save-eta="${safe(o.id)}">Send time</button></div></article>`;
-        }).join('')}</div>`:`<p class="muted">Connected to Cloud. No orders in this filter yet.</p><div class="legal-block"><b>Tablet workflow</b><p>Keep this panel open. Orders auto-refresh every 5 seconds and also use Realtime when available. Click “Enable alarm sound” once after opening the tablet.</p></div>`);
+      const dateInput = `<span class="date-filter-wrap"><input id="orderCustomDate" type="date" value="${safe(customDateFilter)}"><button id="applyOrderDate" class="secondary">Open date</button></span>`;
+      box.innerHTML = `${alarmBanner}${renderHealthBlock(healthRows)}<div class="cloud-orders-toolbar ${unacked.length?'order-alert-flash':''}"><span class="order-pill">Live: ${live.length}</span><span class="order-pill">New: ${allRows.filter(o=>o.status==='new' && !o.is_test).length}</span><span class="order-pill">Today total: ${euro(todayRows.reduce((s,o)=>s+Number(o.total||0),0))}</span><span class="order-pill">Auto-refresh: ON</span><button id="refreshCloudOrders" class="secondary">Refresh now</button>${testRows.length?`<button id="deleteAllTestOrders" class="danger subtle">Delete ${testRows.length} test order(s)</button>`:''}</div><div class="order-filter-tabs"><button data-order-filter="live" class="secondary ${orderFilter==='live'?'active':''}">Live Queue</button><button data-order-filter="today" class="secondary ${orderFilter==='today'?'active':''}">Today</button><button data-order-filter="yesterday" class="secondary ${orderFilter==='yesterday'?'active':''}">Yesterday</button><button data-order-filter="archive" class="secondary ${orderFilter==='archive'?'active':''}">Archive</button><button data-order-filter="date" class="secondary ${orderFilter==='date'?'active':''}">By date</button><button data-order-filter="test" class="secondary ${orderFilter==='test'?'active':''}">Test</button><button data-order-filter="all" class="secondary ${orderFilter==='all'?'active':''}">All 500</button>${dateInput}</div>` +
+        (rows.length?`<div class="cloud-orders-list">${rows.map(cardForOrder).join('')}</div>`:`<p class="muted">Connected to Cloud. No orders in this filter yet.</p><div class="legal-block"><b>Tablet workflow</b><p>Keep this panel open. Orders auto-refresh every 5 seconds and also use Realtime when available. Click “Enable alarm sound” once after opening the tablet.</p></div>`);
       $('#refreshCloudOrders')?.addEventListener('click',()=>renderCloudOrders(true));
+      $('#refreshCloudHealth')?.addEventListener('click',async()=>{ healthFetchedAt=0; await renderCloudOrders(true); });
       $('#enableOrderAlarm')?.addEventListener('click',async()=>{ await unlockAlarmSound(); renderCloudOrders(true); });
       $('#ackOrderAlarm')?.addEventListener('click',()=>{ ackOrderIds(unacked.map(o=>o.id)); renderCloudOrders(true); });
+      $('#applyOrderDate')?.addEventListener('click',()=>{ const v=$('#orderCustomDate')?.value || localDateKey(new Date()); customDateFilter=v; localStorage.langar_admin_order_date_filter=v; orderFilter='date'; localStorage.langar_admin_order_filter=orderFilter; renderCloudOrders(true); });
+      $('#deleteAllTestOrders')?.addEventListener('click',()=>deleteAllTestOrders());
       document.querySelectorAll('[data-order-filter]').forEach(btn=>btn.onclick=()=>{ orderFilter=btn.dataset.orderFilter; localStorage.langar_admin_order_filter=orderFilter; renderCloudOrders(true); });
       document.querySelectorAll('[data-order-status]').forEach(sel=>sel.onchange=()=>updateOrder(sel.dataset.orderStatus,{status:sel.value}));
       document.querySelectorAll('[data-order-paid]').forEach(ch=>ch.onchange=()=>updateOrder(ch.dataset.orderPaid,{paid:ch.checked}));
+      document.querySelectorAll('[data-order-test]').forEach(ch=>ch.onchange=()=>updateOrder(ch.dataset.orderTest,{isTest:ch.checked}));
+      document.querySelectorAll('[data-order-delete-test]').forEach(btn=>btn.onclick=()=>deleteTestOrder(btn.dataset.orderDeleteTest));
       document.querySelectorAll('[data-order-save-eta]').forEach(btn=>btn.onclick=()=>{
         const id=btn.dataset.orderSaveEta;
-        const minutes=document.querySelector(`[data-order-eta-minutes="${CSS.escape(id)}"]`)?.value || '';
-        const note=document.querySelector(`[data-order-customer-note="${CSS.escape(id)}"]`)?.value || '';
-        if(!minutes && !note.trim()){ alert('Choose a time or write a customer message first.'); return; }
-        updateOrder(id,{etaMinutes:minutes?Number(minutes):null, customerNote:note.trim()});
+        const custom=document.querySelector(`[data-order-eta-custom="${cssEscape(id)}"]`)?.value || '';
+        const preset=document.querySelector(`[data-order-eta-minutes="${cssEscape(id)}"]`)?.value || '';
+        const note=document.querySelector(`[data-order-customer-note="${cssEscape(id)}"]`)?.value || '';
+        const minutes=custom ? Number(custom) : (preset ? Number(preset) : null);
+        if(minutes!==null && (minutes<1 || minutes>240)){ alert('Custom time must be between 1 and 240 minutes.'); return; }
+        if(minutes===null && !note.trim()){ alert('Choose a time, enter custom minutes, or write a customer message first.'); return; }
+        updateOrder(id,{etaMinutes:minutes, customerNote:note.trim()});
       });
     }catch(err){
-      box.innerHTML = `<p style="color:#ffb1a8">Cloud orders error: ${safe(err.message||err)}</p><p class="muted">Run <b>langar_bar_v452_order_eta_alarm_fix.sql</b> in Supabase SQL Editor. Then login with a user that exists in <b>admin_members</b>.</p><button id="refreshCloudOrders" class="secondary">Try again</button>`;
+      box.innerHTML = `<p style="color:#ffb1a8">Cloud orders error: ${safe(err.message||err)}</p><p class="muted">Run <b>langar_bar_v453_admin_cloud_health_order_refinements.sql</b> in Supabase SQL Editor. Then login with a user that exists in <b>admin_members</b>.</p><button id="refreshCloudOrders" class="secondary">Try again</button>`;
       $('#refreshCloudOrders')?.addEventListener('click',()=>renderCloudOrders(true));
     }
   }
@@ -816,8 +882,10 @@
         p_order_id:id,
         p_status:Object.prototype.hasOwnProperty.call(patch,'status')?patch.status:null,
         p_paid:Object.prototype.hasOwnProperty.call(patch,'paid')?patch.paid:null,
+        p_fiscal_receipt_number:null,
         p_estimated_minutes:Object.prototype.hasOwnProperty.call(patch,'etaMinutes')?patch.etaMinutes:null,
-        p_admin_customer_note:Object.prototype.hasOwnProperty.call(patch,'customerNote')?patch.customerNote:null
+        p_admin_customer_note:Object.prototype.hasOwnProperty.call(patch,'customerNote')?patch.customerNote:null,
+        p_is_test:Object.prototype.hasOwnProperty.call(patch,'isTest')?patch.isTest:null
       };
       const {error}=await client.rpc('admin_update_customer_order', args);
       if(error) throw error;
@@ -826,21 +894,40 @@
     }catch(err){ alert('Order update error: '+(err.message||err)); }
   }
 
+  async function deleteTestOrder(id){
+    if(!confirm('Delete this TEST order from Supabase? Real orders cannot be deleted with this button.')) return;
+    try{
+      const {error}=await client.rpc('admin_delete_test_order',{p_order_id:id});
+      if(error) throw error;
+      await renderCloudOrders(true);
+    }catch(err){ alert('Delete test order error: '+(err.message||err)); }
+  }
+  async function deleteAllTestOrders(){
+    if(!confirm('Delete ALL orders marked as TEST from Supabase? This is only for test cleanup.')) return;
+    try{
+      const {data,error}=await client.rpc('admin_delete_test_orders');
+      if(error) throw error;
+      alert(`Deleted ${data||0} test order(s).`);
+      await renderCloudOrders(true);
+    }catch(err){ alert('Delete test orders error: '+(err.message||err)); }
+  }
+
   function setupRealtime(){
     if(realtimeChannel || !client.channel) return;
     try{
-      realtimeChannel = client.channel('langar-admin-orders-v452')
+      realtimeChannel = client.channel('langar-admin-orders-v453')
         .on('postgres_changes',{event:'INSERT',schema:'public',table:'customer_orders'}, payload=>{ renderCloudOrders(true); if(payload?.new) startOrderAlarm([payload.new]); })
         .on('postgres_changes',{event:'UPDATE',schema:'public',table:'customer_orders'}, ()=>renderCloudOrders(true))
+        .on('postgres_changes',{event:'DELETE',schema:'public',table:'customer_orders'}, ()=>renderCloudOrders(true))
         .subscribe();
     }catch(e){ console.warn('Realtime setup failed; polling remains active.', e); }
   }
 
   function install(){
-    if(window.__langarCloudOrdersInstalledV452) return; window.__langarCloudOrdersInstalledV452=true;
+    if(window.__langarCloudOrdersInstalledV453) return; window.__langarCloudOrdersInstalledV453=true;
     if(typeof window.renderOrders === 'function') window.renderOrders = ()=>renderCloudOrders(true);
     const oldRenderAll = window.renderAll;
-    if(typeof oldRenderAll === 'function' && !oldRenderAll.__cloudOrdersV452){ window.renderAll=function(){ oldRenderAll(); renderCloudOrders(true); }; window.renderAll.__cloudOrdersV452=true; }
+    if(typeof oldRenderAll === 'function' && !oldRenderAll.__cloudOrdersV453){ window.renderAll=function(){ oldRenderAll(); renderCloudOrders(true); }; window.renderAll.__cloudOrdersV453=true; }
     setupRealtime();
     renderCloudOrders(true);
     if(pollTimer) clearInterval(pollTimer);

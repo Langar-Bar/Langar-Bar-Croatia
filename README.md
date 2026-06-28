@@ -20,3 +20,8 @@ Run `langar_bar_v451_order_rpc_return_type_fix.sql` in Supabase SQL Editor. Cust
 
 ## V4.5.2 Order ETA + stronger alarm
 Run `langar_bar_v452_order_eta_alarm_fix.sql` in Supabase SQL Editor after upload. Admin Orders can send an estimated ready time/message to customers. Customer order tracking shows status + ETA on the same device. The tablet alarm uses a louder progressive Web Audio pattern after staff taps Enable alarm sound.
+
+
+## V4.5.3 Order Countdown + Admin Cloud Health
+
+Run `langar_bar_v453_admin_cloud_health_order_refinements.sql` in Supabase SQL Editor after upload. This version adds Admin Cloud Health Check, custom ETA minutes, customer countdown timer, improved order filters, and test-order cleanup.
