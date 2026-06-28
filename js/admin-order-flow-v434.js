@@ -1,4 +1,4 @@
-// Langar Admin V4.3.4 — order ETA, payment method, Remaris flag and action feedback
+// Langar Admin V4.3.5 — stable orders delivery ETA
 (function(){
   const LS = window.LS || {get:(k,d)=>{try{return JSON.parse(localStorage.getItem(k)) ?? d}catch{return d}},set:(k,v)=>localStorage.setItem(k,JSON.stringify(v))};
   const $ = (s)=>document.querySelector(s);
