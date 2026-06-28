@@ -1,0 +1,18 @@
+Langar Bar V4.5.7 — Customer Push + Account Order Sync Fix
+
+Changes:
+- Customer order status/inbox notifications improved for all order types, including dine-in.
+- Added customer-side Enable order alerts action in My recent orders.
+- Added OneSignal worker files for proper Web Push setup on PWA/GitHub Pages path.
+- Customer inbox now syncs periodically and can show a browser/PWA notification when a new order status inbox message arrives.
+- My recent orders now claims local order tokens into the logged-in Langar Club account and syncs account orders across devices.
+- submit_customer_order_payload SQL now attaches authenticated orders to auth.uid automatically.
+- Added claim_customer_order_tokens() RPC and improved get_my_customer_orders() RPC.
+- Service Worker cache bumped to v457.
+
+SQL to run:
+langar_bar_v457_customer_push_account_sync_fix.sql
+
+Important:
+- True push notifications while the app is completely closed require OneSignal web push to be fully configured for the production domain and the user to opt in.
+- On iPhone, customers usually need to install the PWA to Home Screen before web push is available.

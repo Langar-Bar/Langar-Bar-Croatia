@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  const CLOUD_VERSION = 'V4.5.6 ETA Draft Overdue Alarm';
+  const CLOUD_VERSION = 'V4.5.7 Customer Push + Account Sync Fix';
   const CONFIG = {
     supabaseUrl: 'https://fkanccgigogbxodiljqt.supabase.co',
     supabaseKey: 'sb_publishable_WbWIWgu9R2AKepJiRrygCw_1oWrdwG7',
@@ -34,7 +34,9 @@
     initOneSignal,
     deleteCloudMessage,
     markCloudMessageRead,
-    cloudStatus
+    cloudStatus,
+    requestCustomerPushPermission,
+    showCloudBrowserNotification
   };
 
   function e164(raw){
@@ -137,16 +139,60 @@
     try{
       if(!window.OneSignalDeferred) return;
       window.OneSignalDeferred.push(async function(OneSignal){
-        await OneSignal.init({ appId: CONFIG.oneSignalAppId, allowLocalhostAsSecureOrigin: true });
+        await OneSignal.init({
+          appId: CONFIG.oneSignalAppId,
+          allowLocalhostAsSecureOrigin: true,
+          serviceWorkerPath: 'OneSignalSDKWorker.js',
+          serviceWorkerUpdaterPath: 'OneSignalSDKUpdaterWorker.js',
+          serviceWorkerParam: { scope: './' }
+        });
         if(userId && OneSignal.login) await OneSignal.login(userId);
-        if(OneSignal.User && OneSignal.User.addTags){ await OneSignal.User.addTags({ app_language: lang(), app: 'langar_bar' }); }
+        if(OneSignal.User && OneSignal.User.addTags){ await OneSignal.User.addTags({ app_language: lang(), app: 'langar_bar', customer_role:'member' }); }
       });
     }catch(err){ console.warn('OneSignal init failed', err); }
+  }
+
+  async function requestCustomerPushPermission(){
+    try{
+      const session = await getSession();
+      if(session?.user?.id) await initOneSignal(session.user.id);
+      if('Notification' in window && Notification.permission === 'default'){
+        await Notification.requestPermission();
+      }
+      if(window.OneSignalDeferred){
+        window.OneSignalDeferred.push(async function(OneSignal){
+          try{
+            if(session?.user?.id && OneSignal.login) await OneSignal.login(session.user.id);
+            if(OneSignal.Notifications?.requestPermission) await OneSignal.Notifications.requestPermission();
+            if(OneSignal.User?.addTags) await OneSignal.User.addTags({ order_alerts:'enabled', app_language:lang() });
+          }catch(e){ console.warn('OneSignal permission request failed', e); }
+        });
+      }
+      return { ok:true, permission: ('Notification' in window ? Notification.permission : 'unsupported') };
+    }catch(err){ return { ok:false, error: err }; }
+  }
+
+  async function showCloudBrowserNotification(title, body, tag){
+    try{
+      if(!('Notification' in window)) return false;
+      if(Notification.permission === 'default') await Notification.requestPermission();
+      if(Notification.permission !== 'granted') return false;
+      const opts={ body: body || '', tag: tag || 'langar-customer-message', icon:'assets/icon-192.png', badge:'assets/icon-192.png' };
+      if(navigator.serviceWorker?.ready){
+        const reg=await navigator.serviceWorker.ready;
+        await reg.showNotification(title || 'Langar Bar', opts);
+      } else {
+        new Notification(title || 'Langar Bar', opts);
+      }
+      return true;
+    }catch(e){ console.warn('Customer browser notification failed', e); return false; }
   }
 
   async function syncInbox(){
     const session = await getSession();
     if(!session) return { ok:false, reason:'not_logged_in' };
+    const before = readLS('langar_inbox', []) || [];
+    const known = new Set(before.filter(x=>x.cloudId).map(x=>String(x.cloudId)));
     const { data, error } = await client
       .from('inbox_messages')
       .select('id,type,title_en,body_en,title_hr,body_hr,is_read,is_deleted,created_at,data')
@@ -165,10 +211,16 @@
       createdAt: row.created_at,
       cloudData: row.data || {}
     }));
-    const local = readLS('langar_inbox', []).filter(x=>!String(x.id||'').startsWith('cloud-'));
+    const local = before.filter(x=>!String(x.id||'').startsWith('cloud-'));
     writeLS('langar_inbox', [...mapped, ...local].slice(0,120));
     if(typeof window.renderInboxBadge === 'function') window.renderInboxBadge();
-    return { ok:true, count:mapped.length };
+    const newUnread = mapped.filter(m=>m.unread && !known.has(String(m.cloudId)));
+    for(const msg of newUnread.slice(0,3)){
+      if(String(msg.type||'').includes('order') || String(msg.title+' '+msg.body).toLowerCase().includes('order') || String(msg.title+' '+msg.body).toLowerCase().includes('narudž')){
+        await showCloudBrowserNotification(msg.title || 'Langar Bar', msg.body || '', 'langar-inbox-'+msg.cloudId);
+      }
+    }
+    return { ok:true, count:mapped.length, newUnread:newUnread.length };
   }
 
   async function markCloudMessageRead(cloudId){ if(cloudId) await client.from('inbox_messages').update({ is_read:true, read_at:new Date().toISOString() }).eq('id', cloudId); }
@@ -624,11 +676,18 @@
   const CONFIG = { supabaseUrl:'https://fkanccgigogbxodiljqt.supabase.co', supabaseKey:'sb_publishable_WbWIWgu9R2AKepJiRrygCw_1oWrdwG7' };
   if(!window.supabase?.createClient) return;
   const client = window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey, { auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:true, storageKey:'langar_bar_supabase_auth_v442' } });
+  function activeClient(){ return window.LangarCloud?.client || client; }
+  async function activeSession(){
+    try{ if(window.LangarCloud?.getSession) return await window.LangarCloud.getSession(); }catch(e){}
+    const { data } = await activeClient().auth.getSession();
+    return data?.session || null;
+  }
   const priceNum = p=>{ const m=String(p||'0').replace(',','.').match(/[0-9]+(\.[0-9]+)?/); return m?Number(m[0]):0; };
   function cleanItem(it){ return { id:it.id, qty:+it.qty||1, name_en:it.nameSnapshot||it.name?.en||it.name||'', name_hr:it.nameSnapshotHr||it.name?.hr||it.nameSnapshot||it.name||'', price:priceNum(it.price), line_total:+(priceNum(it.price)*(+it.qty||1)).toFixed(2), note:it.note||'', category_id:it.categoryId||'' }; }
   async function submitOrder(order){
-    const { data:sessionData } = await client.auth.getSession();
-    const user = sessionData?.session?.user || null;
+    const c = activeClient();
+    const session = await activeSession();
+    const user = session?.user || null;
     const payload = {
       user_id: user?.id || null,
       fulfillment_type: order.type || 'dine_in',
@@ -642,18 +701,18 @@
       currency: 'EUR',
       status: 'new',
       paid: false,
-      app_version: 'v456'
+      app_version: 'v457'
     };
 
     // V4.5.4: submit through a single JSON RPC. This is the reliable path for guest orders.
     // Do not silently fallback to direct table insert, because that can hit RLS and confuse staff.
     let data=null, error=null;
-    let r = await client.rpc('submit_customer_order_payload', { p_order: payload });
+    let r = await c.rpc('submit_customer_order_payload', { p_order: payload });
     data = r.data; error = r.error;
 
     // Compatibility path only for projects that already installed V4.4.9 SQL but not V4.5.4 yet.
     if(error && String(error.message||'').toLowerCase().includes('submit_customer_order_payload')){
-      r = await client.rpc('submit_customer_order', {
+      r = await c.rpc('submit_customer_order', {
         p_user_id: payload.user_id,
         p_fulfillment_type: payload.fulfillment_type,
         p_table_number: payload.table_number,
@@ -680,7 +739,8 @@
   }
   async function getOrderByToken(token){
     if(!token) return null;
-    const {data,error}=await client.rpc('get_customer_order_by_token',{p_token:token});
+    const c = activeClient();
+    const {data,error}=await c.rpc('get_customer_order_by_token',{p_token:token});
     if(error) throw error;
     return Array.isArray(data)?data[0]:data;
   }
@@ -727,11 +787,23 @@
   }
   function readOrders(){ try{ return JSON.parse(localStorage.getItem('langar_orders_v3')) || []; }catch{return [];} }
   function writeOrders(v){ localStorage.setItem('langar_orders_v3', JSON.stringify(v||[])); }
+  async function claimLocalOrderTokens(){
+    const session = await activeSession();
+    if(!session?.user) return { ok:false, reason:'not_logged_in' };
+    const tokens = [...new Set(readOrders().map(o=>o.cloudOrderToken).filter(Boolean))].slice(0,120);
+    if(!tokens.length) return { ok:true, count:0 };
+    const c = activeClient();
+    const { data, error } = await c.rpc('claim_customer_order_tokens', { p_tokens: tokens });
+    if(error) throw error;
+    return { ok:true, count: Array.isArray(data) ? data.length : 0 };
+  }
   async function syncAccountOrders(limit=80){
-    const { data:sessionData } = await client.auth.getSession();
-    const user = sessionData?.session?.user || null;
+    const session = await activeSession();
+    const user = session?.user || null;
     if(!user) return { ok:false, reason:'not_logged_in', changed:false };
-    const {data,error}=await client.rpc('get_my_customer_orders', { p_limit:limit });
+    try{ await claimLocalOrderTokens(); }catch(e){ console.warn('Claim local order tokens failed', e.message||e); }
+    const c = activeClient();
+    const {data,error}=await c.rpc('get_my_customer_orders', { p_limit:limit });
     if(error) throw error;
     const rows = Array.isArray(data) ? data : [];
     const local = readOrders();
@@ -749,11 +821,12 @@
   }
   async function requestOrderCancellation(token, reason=''){
     if(!token) throw new Error('Missing order tracking token.');
-    const {data,error}=await client.rpc('request_order_cancellation_by_token',{p_token:token, p_reason:reason||null});
+    const c = activeClient();
+    const {data,error}=await c.rpc('request_order_cancellation_by_token',{p_token:token, p_reason:reason||null});
     if(error) throw error;
     return Array.isArray(data)?data[0]:data;
   }
-  window.LangarOrderCloud = { submitOrder, getOrderByToken, syncAccountOrders, requestOrderCancellation, client };
+  window.LangarOrderCloud = { submitOrder, getOrderByToken, syncAccountOrders, claimLocalOrderTokens, requestOrderCancellation, requestCustomerPushPermission:()=>window.LangarCloud?.requestCustomerPushPermission?.(), client: activeClient() };
   // After a logged-in member opens the app on a second device, pull their Cloud orders into local view.
   setTimeout(()=>syncAccountOrders().then(r=>{ if(r?.changed && typeof window.renderCustomerOrderStatus==='function') window.renderCustomerOrderStatus(); }).catch(()=>{}), 1500);
 })();

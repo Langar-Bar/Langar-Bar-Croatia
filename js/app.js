@@ -556,7 +556,7 @@ function renderPublicFeedback(){ const box=$('#publicFeedbackList'); if(!box) re
 function maybeGoogleReviewPrompt(rating){ if(+rating>=4){ const googleUrl=LS.get('langar_google_review_url','https://www.google.com/maps/search/?api=1&query=Langar+Bar+Dugo+Selo'); $('#modalBody').innerHTML=`<h2>${state.lang==='hr'?'Hvala na lijepoj ocjeni!':'Thank you for the kind rating!'}</h2><p>${state.lang==='hr'?'Vaša pozitivna recenzija može biti prikazana gostima u aplikaciji. Ako želite podržati Langar Bar i na Google Maps, otvorite Google recenziju.':'Your positive review may be shown to guests in the app. If you would like to support Langar Bar on Google Maps too, open Google review.'}</p><a class="primary full button-link" target="_blank" rel="noopener" href="${googleUrl}">${state.lang==='hr'?'Otvori Google Maps':'Open Google Maps'}</a><button class="secondary full" id="closeReviewPrompt">${state.lang==='hr'?'Kasnije':'Maybe later'}</button>`; $('#modal').classList.remove('hidden'); $('#closeReviewPrompt').onclick=()=>$('#modal').classList.add('hidden'); } else { alert(state.lang==='hr'?'Hvala. Vaša poruka je poslana adminu kako bismo je privatno riješili.':'Thank you. Your feedback was sent to admin so we can solve it privately.'); } }
 
 // =============================
-// V4.5.6 — Customer order status tracker, countdown and stronger local notifications
+// V4.5.7 — Customer order status tracker, countdown and stronger local notifications
 // =============================
 const orderStatusLabels = {
   new:{hr:'Poslana', en:'Sent'},
@@ -618,17 +618,16 @@ function orderEtaUpdateMessage(o){
 
 async function requestOrderStatusNotifications(order){
   try{
-    if(!('Notification' in window)) return;
-    if((order?.type||'')==='dine_in') return;
-    if(Notification.permission==='default'){
+    if(window.LangarCloud?.requestCustomerPushPermission){ await window.LangarCloud.requestCustomerPushPermission(); }
+    else if(window.LangarOrderCloud?.requestCustomerPushPermission){ await window.LangarOrderCloud.requestCustomerPushPermission(); }
+    else if('Notification' in window && Notification.permission==='default'){
       await Notification.requestPermission();
     }
-  }catch(e){}
+  }catch(e){ console.warn('Order notification permission failed', e); }
 }
 function showOrderBrowserNotification(order, newStatus){
   try{
     if(!('Notification' in window) || Notification.permission!=='granted') return;
-    if((order?.type||'')==='dine_in') return;
     const title = state.lang==='hr' ? 'Langar Bar — status narudžbe' : 'Langar Bar — order status';
     const body = orderMessageForStatus(order, newStatus);
     const opts = { body, tag:'langar-order-'+(order.cloudId||order.id||'status'), badge:'assets/icon-192.png', icon:'assets/icon-192.png' };
@@ -658,7 +657,7 @@ function notifyOrderEtaIfNeeded(order){
   const body=orderEtaUpdateMessage(order);
   addInbox({id:uid('msg'),type:'message',title:state.lang==='hr'?'Vrijeme narudžbe':'Order time update',body,unread:true,createdAt:new Date().toISOString()});
   try{
-    if('Notification' in window && Notification.permission==='granted' && (order?.type||'')!=='dine_in'){
+    if('Notification' in window && Notification.permission==='granted'){
       const title=state.lang==='hr'?'Langar Bar — vrijeme narudžbe':'Langar Bar — order time';
       const opts={ body, tag:'langar-order-eta-'+(order.cloudId||order.id), badge:'assets/icon-192.png', icon:'assets/icon-192.png' };
       if(navigator.serviceWorker?.ready){ navigator.serviceWorker.ready.then(reg=>reg.showNotification(title, opts)).catch(()=>new Notification(title, opts)); }
@@ -716,6 +715,15 @@ async function syncCustomerOrderStatuses(){
       }
     }
   }catch(e){ console.warn('Account order cloud sync failed', e.message||e); }
+  try{
+    if(window.LangarCloud?.syncInbox){
+      const now=Date.now();
+      if(now-(window.__langarLastInboxSync||0)>12000){
+        window.__langarLastInboxSync=now;
+        await window.LangarCloud.syncInbox();
+      }
+    }
+  }catch(e){ console.warn('Cloud inbox sync failed', e.message||e); }
   const orders=customerOrders();
   const track=orders.filter(o=>o.cloudOrderToken && !String(o.status||'new').match(/^(completed|cancelled|rejected)$/));
   if(!track.length || !window.LangarOrderCloud?.client){ if(accountMergeChanged){ renderCustomerOrderStatus(); renderInboxBadge(); } return; }
@@ -743,8 +751,11 @@ function renderCustomerOrderStatus(){
   const box=document.getElementById('customerOrderStatus'); if(!box) return;
   const orders=customerOrders().filter(o=>o.cloudId||o.cloudOrderToken).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,8);
   if(!orders.length){ box.innerHTML=''; return; }
-  box.innerHTML=`<div class="my-orders-card enhanced-orders"><h4>${state.lang==='hr'?'Moje zadnje narudžbe':'My recent orders'}</h4><p class="muted mini">${state.lang==='hr'?'Status i vrijeme automatski se sinkroniziraju na svim uređajima kada ste prijavljeni.':'Status and time sync automatically across devices when you are logged in.'}</p>${orders.map(o=>{ const eta=formatOrderEta(o); const c=orderCountdownInfo(o); const visibleItems=(o.items||[]).slice(0,3).map(i=>escapeHtml((i.qty||1)+' × '+(i.nameSnapshot||i.name||i.id))).join('<br>'); const cancelText=orderCancelText(o); return `<div class="my-order-line enhanced ${isTerminalOrder(o.status)?'terminal':''}"><div class="my-order-main"><b class="my-order-number">${escapeHtml(o.cloudOrderNumber||o.id)}</b><small>${new Date(o.createdAt).toLocaleString()}${o.tableNumber?` · Table ${escapeHtml(o.tableNumber)}`:''}${o.type?` · ${escapeHtml(o.type)}`:''}</small>${visibleItems?`<small class="my-order-items">${visibleItems}</small>`:''}${eta?`<small class="order-eta-line">${escapeHtml(eta)}</small>`:''}${c?`<div class="order-countdown ${c.expired?'expired':''}">⏱ ${escapeHtml(c.text)}</div>`:''}${cancelText?`<small class="order-cancel-line ${escapeHtml(o.cancelStatus||'requested')}">${escapeHtml(cancelText)}</small>`:''}${canRequestCancel(o)?`<button type="button" class="secondary subtle order-cancel-btn" data-request-cancel="${escapeHtml(o.id)}">${state.lang==='hr'?'Zatraži otkazivanje':'Request cancellation'}</button>`:''}</div><span class="status-badge ${escapeHtml(o.status||'new')}">${orderStatusText(o.status||'new')}</span></div>`; }).join('')}<button type="button" class="secondary full" id="refreshMyOrders">${state.lang==='hr'?'Osvježi status':'Refresh status'}</button></div>`;
-  const btn=document.getElementById('refreshMyOrders'); if(btn) btn.onclick=syncCustomerOrderStatuses;
+  const notifState = ('Notification' in window) ? Notification.permission : 'unsupported';
+  const notifLabel = notifState==='granted' ? (state.lang==='hr'?'Order alerts enabled':'Order alerts enabled') : (state.lang==='hr'?'Enable order alerts':'Enable order alerts');
+  box.innerHTML=`<div class="my-orders-card enhanced-orders"><h4>${state.lang==='hr'?'Moje zadnje narudžbe':'My recent orders'}</h4><p class="muted mini">${state.lang==='hr'?'Kada ste prijavljeni, Cloud narudžbe se sinkroniziraju na svim uređajima. Guest narudžbe ostaju samo na uređaju na kojem su poslane.':'When you are logged in, Cloud orders sync across all devices. Guest orders stay only on the device that placed them.'}</p><div class="order-status-actions"><button type="button" class="secondary" id="enableOrderAlerts">${notifLabel}</button></div>${orders.map(o=>{ const eta=formatOrderEta(o); const c=orderCountdownInfo(o); const visibleItems=(o.items||[]).slice(0,3).map(i=>escapeHtml((i.qty||1)+' × '+(i.nameSnapshot||i.name||i.id))).join('<br>'); const cancelText=orderCancelText(o); return `<div class="my-order-line enhanced ${isTerminalOrder(o.status)?'terminal':''}"><div class="my-order-main"><b class="my-order-number">${escapeHtml(o.cloudOrderNumber||o.id)}</b><small>${new Date(o.createdAt).toLocaleString()}${o.tableNumber?` · Table ${escapeHtml(o.tableNumber)}`:''}${o.type?` · ${escapeHtml(o.type)}`:''}</small>${visibleItems?`<small class="my-order-items">${visibleItems}</small>`:''}${eta?`<small class="order-eta-line">${escapeHtml(eta)}</small>`:''}${c?`<div class="order-countdown ${c.expired?'expired':''}">⏱ ${escapeHtml(c.text)}</div>`:''}${cancelText?`<small class="order-cancel-line ${escapeHtml(o.cancelStatus||'requested')}">${escapeHtml(cancelText)}</small>`:''}${canRequestCancel(o)?`<button type="button" class="secondary subtle order-cancel-btn" data-request-cancel="${escapeHtml(o.id)}">${state.lang==='hr'?'Zatraži otkazivanje':'Request cancellation'}</button>`:''}</div><span class="status-badge ${escapeHtml(o.status||'new')}">${orderStatusText(o.status||'new')}</span></div>`; }).join('')}<button type="button" class="secondary full" id="refreshMyOrders">${state.lang==='hr'?'Osvježi status':'Refresh status'}</button></div>`;
+  const btn=document.getElementById('refreshMyOrders'); if(btn) btn.onclick=async()=>{ await syncCustomerOrderStatuses(); alert(state.lang==='hr'?'Status je osvježen.':'Status refreshed.'); };
+  const alertBtn=document.getElementById('enableOrderAlerts'); if(alertBtn) alertBtn.onclick=async()=>{ await requestOrderStatusNotifications({}); renderCustomerOrderStatus(); alert(state.lang==='hr'?'Ako je dozvola uključena, obavijesti za narudžbu su aktivne na ovom uređaju.':'If permission is enabled, order alerts are active on this device.'); };
   document.querySelectorAll('[data-request-cancel]').forEach(b=>b.onclick=()=>requestOrderCancellation(b.dataset.requestCancel));
 }
 
@@ -826,10 +837,11 @@ function setupEvents(){
       return;
     }
     state.cart=[]; renderCart(); renderCustomerOrderStatus(); syncCustomerOrderStatuses(); addInbox({id:uid('msg'),type:'message',title:state.lang==='hr'?'Narudžba je poslana':'Order sent',body:state.lang==='hr'?`Vaša narudžba ${order.cloudOrderNumber||order.id} je poslana kafiću. Status možete pratiti u aplikaciji.`:`Your order ${order.cloudOrderNumber||order.id} was sent to the café. You can follow the status in the app.`,unread:true,createdAt:new Date().toISOString()});
-    if(order.type!=='dine_in') await requestOrderStatusNotifications(order);
+    await requestOrderStatusNotifications(order);
+    if(window.LangarOrderCloud?.syncAccountOrders) window.LangarOrderCloud.syncAccountOrders().then(()=>renderCustomerOrderStatus()).catch(()=>{});
     alert(state.lang==='hr'?'Narudžba je poslana kafiću i vidljiva je na admin tabletu. Status možete pratiti u aplikaciji.':'Order was sent to the café and is visible on the admin tablet. You can follow the status in the app.');
   };
   if(!localStorage.langar_popup_closed) setTimeout(()=>$('#welcomePopup').classList.remove('hidden'),800);
   updateBackButton();
 }
-const urlRef=new URLSearchParams(location.search).get('ref'); if(urlRef) localStorage.langar_pending_referral=urlRef; ensureWelcomeInbox(); setupEvents(); setLang(state.lang); setInterval(syncCustomerOrderStatuses, 20000); setInterval(()=>{ if(hasActiveOrderCountdown()) renderCustomerOrderStatus(); }, 1000); setTimeout(syncCustomerOrderStatuses, 1200); if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(()=>{})); }
+const urlRef=new URLSearchParams(location.search).get('ref'); if(urlRef) localStorage.langar_pending_referral=urlRef; ensureWelcomeInbox(); setupEvents(); setLang(state.lang); setInterval(syncCustomerOrderStatuses, 10000); setInterval(()=>{ if(hasActiveOrderCountdown()) renderCustomerOrderStatus(); }, 1000); setTimeout(syncCustomerOrderStatuses, 1200); if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(()=>{})); }

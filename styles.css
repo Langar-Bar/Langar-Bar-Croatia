@@ -155,3 +155,7 @@
 .eta-overdue-box{margin-top:10px;padding:12px;border-radius:16px;border:1px solid rgba(255,91,91,.38);background:rgba(255,91,91,.10);display:flex;flex-direction:column;gap:5px}
 .eta-overdue-box b{color:#ffcc9a}.eta-overdue-box small{color:var(--muted)}.eta-overdue-box select{border:1px solid var(--line);background:#08140f;color:var(--cream);border-radius:14px;padding:10px}
 @media(max-width:800px){.order-eta-controls.v456{grid-template-columns:1fr}.eta-overdue-box .toolbar.mini{display:grid;grid-template-columns:1fr;gap:8px}.eta-overdue-box .toolbar.mini button,.eta-overdue-box .toolbar.mini select{width:100%}}
+
+/* V4.5.7 — customer order alerts and sync polish */
+.order-status-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px}.order-status-actions .secondary{border-color:rgba(238,211,139,.36)}
+.my-orders-card .muted.mini{line-height:1.45}.status-badge.ready{box-shadow:0 0 0 3px rgba(55,196,125,.14)}
