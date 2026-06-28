@@ -1,0 +1,7 @@
+Langar Bar V4.5.5 — Account Order Sync
+
+- My Recent Orders now syncs Cloud orders across devices when the same Langar Club account is logged in.
+- Orders submitted while logged in are linked to the Supabase user_id and can be loaded on phone, tablet, or computer.
+- Guest dine-in orders still remain device-only for the customer, but remain visible to Admin.
+- Added SQL RPC: get_my_customer_orders(p_limit integer).
+- Service worker cache bumped to v455.

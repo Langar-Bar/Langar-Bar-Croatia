@@ -29,3 +29,6 @@ Run `langar_bar_v453_admin_cloud_health_order_refinements.sql` in Supabase SQL E
 
 ## V4.5.4 ETA preset, cancellation request and refresh feedback
 Run `langar_bar_v454_eta_cancel_refresh_fix.sql` in Supabase SQL Editor after upload. This version fixes preset ready-time sending, adds visible Admin Check/Refresh feedback, adds customer cancellation requests that require staff approval, and keeps the countdown/status tracker stable.
+
+## V4.5.6 ETA draft + overdue alarm
+No new SQL is required if V4.5.4/V4.5.5 SQL was already run. This version keeps preset/custom ETA selections stable before accepting orders, sends ETA together when Accept/Preparing is selected, adds ETA overdue alarms on the admin tablet, adds quick delay messages and +5/+10 minute buttons, and improves local/browser notifications when the app/PWA is still running. Real push notifications when the app is fully closed still require OneSignal/FCM integration later.

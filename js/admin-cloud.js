@@ -662,7 +662,7 @@
 
 
 // =============================
-// V4.5.4 — ETA preset fix, refresh feedback, cancellation requests
+// V4.5.6 — ETA draft+accept, overdue alarm, quick delay messages
 // =============================
 (function(){
   'use strict';
@@ -684,6 +684,15 @@
   let customDateFilter = localStorage.langar_admin_order_date_filter || localDateKey(new Date());
   let lastBrowserNotifyKey='';
   let healthCache=null, healthFetchedAt=0;
+  let overdueBrowserNotifyKey='';
+  const delayReasonOptions = [
+    {label:'No extra message', value:''},
+    {label:'Busy kitchen', value:'We are a little busy right now. Thank you for your patience.'},
+    {label:'Fresh preparation', value:'Your order needs a few extra minutes so we can prepare it fresh.'},
+    {label:'Almost ready', value:'Your order is almost ready. Thank you for waiting.'},
+    {label:'Sorry for delay', value:'Sorry for the short delay. We are preparing your order now.'}
+  ];
+  let etaDrafts = readEtaDrafts();
 
   function cssEscape(v){ return window.CSS?.escape ? CSS.escape(v) : String(v).replace(/[^a-zA-Z0-9_-]/g, '\\$&'); }
   function ackedOrders(){ try{return JSON.parse(localStorage.langar_admin_order_ack_ids||'{}')}catch{return {}} }
@@ -733,6 +742,42 @@
   function adminStatus(text){ adminStatusMessage = text || ''; }
   function renderAdminStatus(){ return adminStatusMessage ? `<div class="admin-action-status">${safe(adminStatusMessage)}</div>` : ''; }
 
+  function readEtaDrafts(){ try{return JSON.parse(localStorage.langar_admin_eta_drafts||'{}')}catch{return {}} }
+  function writeEtaDrafts(){ localStorage.langar_admin_eta_drafts = JSON.stringify(etaDrafts||{}); }
+  function getEtaDraft(o){
+    const id=String(o.id);
+    const base={preset:'', custom:'', note:o.admin_customer_note||''};
+    const mins=Number(o.estimated_minutes||0);
+    if(mins){ if(standardEtaMinutes.includes(mins)) base.preset=String(mins); else base.custom=String(mins); }
+    return {...base, ...(etaDrafts[id]||{})};
+  }
+  function saveEtaDraft(id, patch){
+    id=String(id);
+    etaDrafts[id]={...(etaDrafts[id]||{}), ...patch, touchedAt:new Date().toISOString()};
+    writeEtaDrafts();
+  }
+  function clearEtaDraft(id){ delete etaDrafts[String(id)]; writeEtaDrafts(); }
+  function collectEtaDraft(id){
+    const draft=etaDrafts[String(id)]||{};
+    const custom=String(draft.custom||'').trim();
+    const preset=String(draft.preset||'').trim();
+    const note=String(draft.note||'').trim();
+    const minutes=custom!=='' ? Number(custom) : (preset!=='' ? Number(preset) : null);
+    const hasDraft = custom!=='' || preset!=='' || note!=='';
+    return {minutes, note, hasDraft};
+  }
+  function isOrderOverdue(o){
+    if(!o || o.is_test) return false;
+    const st=String(o.status||'new').toLowerCase();
+    if(['ready','completed','cancelled','rejected'].includes(st)) return false;
+    if(!o.estimated_ready_at) return false;
+    const t=new Date(o.estimated_ready_at).getTime();
+    return Number.isFinite(t) && t <= Date.now();
+  }
+  function delayReasonSelect(id){
+    return `<select data-order-delay-message="${safe(id)}">${delayReasonOptions.map(o=>`<option value="${safe(o.value)}">${safe(o.label)}</option>`).join('')}</select>`;
+  }
+
   async function unlockAlarmSound(){
     try{
       alarmCtx = alarmCtx || new (window.AudioContext||window.webkitAudioContext)();
@@ -779,9 +824,23 @@
       }
     }catch(e){}
   }
-  function startOrderAlarm(unacked){
-    if(!unacked?.length){ stopOrderAlarm(); return; }
-    browserNotifyNewOrders(unacked);
+  function browserNotifyOverdue(overdue){
+    if(!overdue?.length) return;
+    const key=overdue.map(o=>o.id+'_'+(o.estimated_ready_at||'')).sort().join('|');
+    if(key===overdueBrowserNotifyKey) return;
+    overdueBrowserNotifyKey=key;
+    try{
+      if('Notification' in window && Notification.permission==='granted'){
+        const first=overdue[0];
+        new Notification('Langar Bar — ETA overdue', { body:`${overdue.length} order(s) reached estimated time. First: ${first.order_number||String(first.id).slice(0,8)}. Mark Ready or add more time.`, icon:'assets/admin-icon-192.png', badge:'assets/admin-icon-192.png', tag:'langar-admin-overdue-order' });
+      }
+    }catch(e){}
+  }
+  function startOrderAlarm(unacked, overdue){
+    const hasNew=!!unacked?.length, hasOverdue=!!overdue?.length;
+    if(!hasNew && !hasOverdue){ stopOrderAlarm(); return; }
+    browserNotifyNewOrders(unacked||[]);
+    browserNotifyOverdue(overdue||[]);
     if(!alarmUnlocked) return;
     if(!alarmStartedAt) alarmStartedAt=Date.now();
     if(alarmTimer) return;
@@ -820,10 +879,10 @@
   function cardForOrder(o){
     const items=normalizeItems(o.items);
     const eta=etaText(o);
-    const selMinutes=Number(o.estimated_minutes||0);
-    const selectSelected=standardEtaMinutes.includes(selMinutes) ? selMinutes : '';
-    const customEta=selMinutes && !standardEtaMinutes.includes(selMinutes) ? selMinutes : '';
-    return `<article class="cloud-order-card ${o.status==='new'?'new':''} ${terminalStatus(o.status)?'terminal':''} ${o.is_test?'is-test':''}">
+    const draft=getEtaDraft(o);
+    const overdue=isOrderOverdue(o);
+    const delayControls = overdue ? `<div class="eta-overdue-box"><b>⏰ Estimated time reached</b><small>Mark Ready or add a few more minutes. Alarm continues until this is resolved.</small><div class="toolbar mini"><button class="primary" data-order-ready="${safe(o.id)}">Mark Ready</button><button class="secondary" data-order-extend="${safe(o.id)}" data-minutes="5">+5 min</button><button class="secondary" data-order-extend="${safe(o.id)}" data-minutes="10">+10 min</button>${delayReasonSelect(o.id)}</div></div>` : '';
+    return `<article class="cloud-order-card ${o.status==='new'?'new':''} ${terminalStatus(o.status)?'terminal':''} ${o.is_test?'is-test':''} ${overdue?'eta-overdue':''}">
       <div class="cloud-order-head"><div><h3>${safe(o.order_number||String(o.id).slice(0,8))} <span class="order-source-badge">${typeLabel(o.fulfillment_type)}</span>${o.is_test?` <span class="order-source-badge test">TEST</span>`:''}</h3>
         <div class="cloud-order-meta">${new Date(o.created_at).toLocaleString()}${o.table_number?` · Table: <b>${safe(o.table_number)}</b>`:''}${o.customer_name?` · ${safe(o.customer_name)}`:''}${o.customer_phone?` · ${safe(o.customer_phone)}`:''}</div>
         ${o.delivery_address?`<div class="cloud-order-meta">Address: ${safe(o.delivery_address)}</div>`:''}${eta?`<div class="order-eta-admin">${safe(eta)}</div>`:''}</div>
@@ -831,8 +890,9 @@
       <div class="cloud-order-items enhanced-items">${items.map(i=>`<div><span><b class="order-line-name">${safe(i.qty||1)} × ${safe(i.name_hr||i.name_en||i.name||'Item')}</b>${i.addOns?.length?`<small>${safe(i.addOns.map(a=>a.name||a.id).join(', '))}</small>`:''}</span><b>${euro(i.line_total ?? ((i.qty||1)*(i.price||0)))}</b></div>`).join('')||'<p class="muted">No items</p>'}</div>
       ${o.note?`<p class="muted"><b>Note:</b> ${safe(o.note)}</p>`:''}
       ${o.cancel_requested_at?`<div class="cancel-request-box ${o.cancel_status==='rejected'?'rejected':(o.cancel_status==='approved'?'approved':'pending')}"><b>Customer cancellation request</b><small>${new Date(o.cancel_requested_at).toLocaleString()}${o.cancel_reason?` · ${safe(o.cancel_reason)}`:''}</small><span>Status: ${safe(o.cancel_status||'requested')}</span>${(!terminalStatus(o.status) && (!o.cancel_status || o.cancel_status==='requested'))?`<div class="toolbar mini"><button class="danger subtle" data-cancel-approve="${safe(o.id)}">Approve cancel</button><button class="secondary" data-cancel-reject="${safe(o.id)}">Reject request</button></div>`:''}</div>`:''}
-      <div class="cloud-order-actions"><select data-order-status="${safe(o.id)}">${statuses.map(st=>`<option value="${st}" ${o.status===st?'selected':''}>${statusLabels[st]}</option>`).join('')}</select><label class="checkline"><input type="checkbox" data-order-paid="${safe(o.id)}" ${o.paid?'checked':''}> Paid / entered in Remaris</label></div>
-      <div class="order-eta-controls v454"><label>Tell customer ready time</label><select data-order-eta-minutes="${safe(o.id)}"><option value="">Preset</option>${standardEtaMinutes.map(m=>`<option value="${m}" ${selectSelected===m?'selected':''}>${m<60?m+' min':(m===60?'1 hour':'1.5 hours')}</option>`).join('')}</select><input type="number" min="1" max="240" step="1" inputmode="numeric" data-order-eta-custom="${safe(o.id)}" placeholder="Custom min" value="${safe(customEta)}"><input data-order-customer-note="${safe(o.id)}" placeholder="Optional message to customer" value="${safe(o.admin_customer_note||'')}"><button class="secondary" data-order-save-eta="${safe(o.id)}">Send time</button></div>
+      <div class="cloud-order-actions"><select data-order-status="${safe(o.id)}"><option value="new" ${o.status==='new'?'selected':''}>New</option><option value="accepted" ${o.status==='accepted'?'selected':''}>Accept order${(draft.preset||draft.custom)?' + send time':''}</option><option value="preparing" ${o.status==='preparing'?'selected':''}>Preparing${(draft.preset||draft.custom)?' + send time':''}</option><option value="ready" ${o.status==='ready'?'selected':''}>Ready</option><option value="completed" ${o.status==='completed'?'selected':''}>Completed</option><option value="cancelled" ${o.status==='cancelled'?'selected':''}>Cancelled</option><option value="rejected" ${o.status==='rejected'?'selected':''}>Rejected</option></select><label class="checkline"><input type="checkbox" data-order-paid="${safe(o.id)}" ${o.paid?'checked':''}> Paid / entered in Remaris</label></div>
+      <div class="order-eta-controls v456"><label>Set time before accepting</label><select data-order-eta-minutes="${safe(o.id)}"><option value="">Preset</option>${standardEtaMinutes.map(m=>`<option value="${m}" ${String(draft.preset)===String(m)?'selected':''}>${m<60?m+' min':(m===60?'1 hour':'1.5 hours')}</option>`).join('')}</select><input type="number" min="1" max="240" step="1" inputmode="numeric" data-order-eta-custom="${safe(o.id)}" placeholder="Custom min" value="${safe(draft.custom||'')}"><input data-order-customer-note="${safe(o.id)}" placeholder="Optional message to customer" value="${safe(draft.note||'')}"><button class="secondary" data-order-save-eta="${safe(o.id)}">Send time only</button></div>
+      ${delayControls}
       <div class="order-admin-maintenance"><label class="checkline"><input type="checkbox" data-order-test="${safe(o.id)}" ${o.is_test?'checked':''}> Mark as test order</label>${o.is_test?`<button class="danger subtle" data-order-delete-test="${safe(o.id)}">Delete test order</button>`:''}</div>
     </article>`;
   }
@@ -845,14 +905,15 @@
       const groups=buildOrderRows(allRows);
       const {rows, live, todayRows, yesterdayRows, archive, testRows, dateRows}=groups;
       const unacked=currentNewUnacked(allRows.filter(o=>!o.is_test));
-      startOrderAlarm(unacked);
-      if(!force && signature===lastRenderedSignature && !unacked.length) return;
+      const overdueOrders=allRows.filter(o=>isOrderOverdue(o));
+      startOrderAlarm(unacked, overdueOrders);
+      if(!force && signature===lastRenderedSignature && !unacked.length && !overdueOrders.length) return;
       lastRenderedSignature=signature;
-      const alarmBanner = unacked.length
-        ? `<div class="order-alarm-banner"><div><b>🔔 ${unacked.length} NEW ORDER${unacked.length>1?'S':''}</b><small>Alarm gets louder until staff checks or accepts the order.</small></div><button id="enableOrderAlarm" class="primary">${alarmUnlocked?'Alarm enabled':'Enable alarm sound'}</button><button id="ackOrderAlarm" class="secondary">I checked / stop alarm</button></div>`
-        : `<div class="order-alarm-quiet"><span>✓ No unchecked new orders</span><button id="enableOrderAlarm" class="secondary">${alarmUnlocked?'Alarm enabled':'Enable alarm sound'}</button></div>`;
+      const alarmBanner = (unacked.length || overdueOrders.length)
+        ? `<div class="order-alarm-banner"><div><b>${unacked.length?'🔔 '+unacked.length+' NEW ORDER'+(unacked.length>1?'S':''):''}${unacked.length&&overdueOrders.length?' · ':''}${overdueOrders.length?'⏰ '+overdueOrders.length+' ETA OVERDUE':''}</b><small>Alarm gets louder until new orders are checked and overdue orders are marked Ready or extended.</small></div><button id="enableOrderAlarm" class="primary">${alarmUnlocked?'Alarm enabled':'Enable alarm sound'}</button>${unacked.length?`<button id="ackOrderAlarm" class="secondary">I checked new order(s)</button>`:''}</div>`
+        : `<div class="order-alarm-quiet"><span>✓ No unchecked new orders or overdue ETA</span><button id="enableOrderAlarm" class="secondary">${alarmUnlocked?'Alarm enabled':'Enable alarm sound'}</button></div>`;
       const dateInput = `<span class="date-filter-wrap"><input id="orderCustomDate" type="date" value="${safe(customDateFilter)}"><button id="applyOrderDate" class="secondary">Open date</button></span>`;
-      box.innerHTML = `${alarmBanner}${renderHealthBlock(healthRows)}${renderAdminStatus()}<div class="cloud-orders-toolbar ${unacked.length?'order-alert-flash':''}"><span class="order-pill">Live: ${live.length}</span><span class="order-pill">New: ${allRows.filter(o=>o.status==='new' && !o.is_test).length}</span><span class="order-pill">Today total: ${euro(todayRows.reduce((s,o)=>s+Number(o.total||0),0))}</span><span class="order-pill">Auto-refresh: ON</span><button id="refreshCloudOrders" class="secondary">Refresh now</button>${testRows.length?`<button id="deleteAllTestOrders" class="danger subtle">Delete ${testRows.length} test order(s)</button>`:''}</div><div class="order-filter-tabs"><button data-order-filter="live" class="secondary ${orderFilter==='live'?'active':''}">Live Queue</button><button data-order-filter="today" class="secondary ${orderFilter==='today'?'active':''}">Today</button><button data-order-filter="yesterday" class="secondary ${orderFilter==='yesterday'?'active':''}">Yesterday</button><button data-order-filter="archive" class="secondary ${orderFilter==='archive'?'active':''}">Archive</button><button data-order-filter="date" class="secondary ${orderFilter==='date'?'active':''}">By date</button><button data-order-filter="test" class="secondary ${orderFilter==='test'?'active':''}">Test</button><button data-order-filter="all" class="secondary ${orderFilter==='all'?'active':''}">All 500</button>${dateInput}</div>` +
+      box.innerHTML = `${alarmBanner}${renderHealthBlock(healthRows)}${renderAdminStatus()}<div class="cloud-orders-toolbar ${unacked.length?'order-alert-flash':''}"><span class="order-pill">Live: ${live.length}</span><span class="order-pill">New: ${allRows.filter(o=>o.status==='new' && !o.is_test).length}</span><span class="order-pill">Today total: ${euro(todayRows.reduce((s,o)=>s+Number(o.total||0),0))}</span><span class="order-pill">Overdue: ${overdueOrders.length}</span><span class="order-pill">Auto-refresh: ON</span><button id="refreshCloudOrders" class="secondary">Refresh now</button>${testRows.length?`<button id="deleteAllTestOrders" class="danger subtle">Delete ${testRows.length} test order(s)</button>`:''}</div><div class="order-filter-tabs"><button data-order-filter="live" class="secondary ${orderFilter==='live'?'active':''}">Live Queue</button><button data-order-filter="today" class="secondary ${orderFilter==='today'?'active':''}">Today</button><button data-order-filter="yesterday" class="secondary ${orderFilter==='yesterday'?'active':''}">Yesterday</button><button data-order-filter="archive" class="secondary ${orderFilter==='archive'?'active':''}">Archive</button><button data-order-filter="date" class="secondary ${orderFilter==='date'?'active':''}">By date</button><button data-order-filter="test" class="secondary ${orderFilter==='test'?'active':''}">Test</button><button data-order-filter="all" class="secondary ${orderFilter==='all'?'active':''}">All 500</button>${dateInput}</div>` +
         (rows.length?`<div class="cloud-orders-list">${rows.map(cardForOrder).join('')}</div>`:`<p class="muted">Connected to Cloud. No orders in this filter yet.</p><div class="legal-block"><b>Tablet workflow</b><p>Keep this panel open. Orders auto-refresh every 5 seconds and also use Realtime when available. Click “Enable alarm sound” once after opening the tablet.</p></div>`);
       $('#refreshCloudOrders')?.addEventListener('click',async()=>{ adminStatus('Refreshing orders now...'); lastRenderedSignature=''; await renderCloudOrders(true); adminStatus('Orders refreshed at '+new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'})); setTimeout(()=>renderCloudOrders(true),350); });
       $('#refreshCloudHealth')?.addEventListener('click',async()=>{ adminStatus('Checking Cloud Health now...'); healthFetchedAt=0; healthCache=null; lastRenderedSignature=''; await renderCloudOrders(true); adminStatus('Cloud Health checked at '+new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'})); setTimeout(()=>renderCloudOrders(true),350); });
@@ -861,23 +922,25 @@
       $('#applyOrderDate')?.addEventListener('click',()=>{ const v=$('#orderCustomDate')?.value || localDateKey(new Date()); customDateFilter=v; localStorage.langar_admin_order_date_filter=v; orderFilter='date'; localStorage.langar_admin_order_filter=orderFilter; renderCloudOrders(true); });
       $('#deleteAllTestOrders')?.addEventListener('click',()=>deleteAllTestOrders());
       document.querySelectorAll('[data-order-filter]').forEach(btn=>btn.onclick=()=>{ orderFilter=btn.dataset.orderFilter; localStorage.langar_admin_order_filter=orderFilter; renderCloudOrders(true); });
-      document.querySelectorAll('[data-order-status]').forEach(sel=>sel.onchange=()=>updateOrder(sel.dataset.orderStatus,{status:sel.value}));
+      document.querySelectorAll('[data-order-status]').forEach(sel=>sel.onchange=()=>updateOrderWithCurrentDraft(sel.dataset.orderStatus, sel.value));
       document.querySelectorAll('[data-order-paid]').forEach(ch=>ch.onchange=()=>updateOrder(ch.dataset.orderPaid,{paid:ch.checked}));
       document.querySelectorAll('[data-order-test]').forEach(ch=>ch.onchange=()=>updateOrder(ch.dataset.orderTest,{isTest:ch.checked}));
       document.querySelectorAll('[data-order-delete-test]').forEach(btn=>btn.onclick=()=>deleteTestOrder(btn.dataset.orderDeleteTest));
       document.querySelectorAll('[data-cancel-approve]').forEach(btn=>btn.onclick=()=>decideCancellation(btn.dataset.cancelApprove,'approved'));
       document.querySelectorAll('[data-cancel-reject]').forEach(btn=>btn.onclick=()=>decideCancellation(btn.dataset.cancelReject,'rejected'));
-      document.querySelectorAll('[data-order-eta-minutes]').forEach(sel=>sel.onchange=()=>{ const id=sel.dataset.orderEtaMinutes; const input=document.querySelector(`[data-order-eta-custom="${cssEscape(id)}"]`); if(input && sel.value) input.value=''; });
+      document.querySelectorAll('[data-order-eta-minutes]').forEach(sel=>sel.onchange=()=>{ const id=sel.dataset.orderEtaMinutes; const input=document.querySelector(`[data-order-eta-custom="${cssEscape(id)}"]`); if(input && sel.value) input.value=''; saveEtaDraft(id,{preset:sel.value||'', custom: sel.value ? '' : (input?.value||'')}); });
+      document.querySelectorAll('[data-order-eta-custom]').forEach(inp=>inp.oninput=()=>{ const id=inp.dataset.orderEtaCustom; const sel=document.querySelector(`[data-order-eta-minutes="${cssEscape(id)}"]`); if(inp.value.trim() && sel) sel.value=''; saveEtaDraft(id,{custom:inp.value.trim(), preset: inp.value.trim()? '' : (sel?.value||'')}); });
+      document.querySelectorAll('[data-order-customer-note]').forEach(inp=>inp.oninput=()=>saveEtaDraft(inp.dataset.orderCustomerNote,{note:inp.value||''}));
+      document.querySelectorAll('[data-order-delay-message]').forEach(sel=>sel.onchange=()=>{ const id=sel.dataset.orderDelayMessage; const note=document.querySelector(`[data-order-customer-note="${cssEscape(id)}"]`); if(note && sel.value){ note.value=sel.value; saveEtaDraft(id,{note:sel.value}); } });
+      document.querySelectorAll('[data-order-ready]').forEach(btn=>btn.onclick=()=>updateOrder(btn.dataset.orderReady,{status:'ready'}));
+      document.querySelectorAll('[data-order-extend]').forEach(btn=>btn.onclick=()=>{ const id=btn.dataset.orderExtend; const reason=document.querySelector(`[data-order-delay-message="${cssEscape(id)}"]`)?.value || 'Sorry for the short delay. We are preparing your order now.'; setOrderEta(id, Number(btn.dataset.minutes||5), reason); });
       document.querySelectorAll('[data-order-save-eta]').forEach(btn=>btn.onclick=async()=>{
         const id=btn.dataset.orderSaveEta;
-        const custom=(document.querySelector(`[data-order-eta-custom="${cssEscape(id)}"]`)?.value || '').trim();
-        const preset=(document.querySelector(`[data-order-eta-minutes="${cssEscape(id)}"]`)?.value || '').trim();
-        const note=document.querySelector(`[data-order-customer-note="${cssEscape(id)}"]`)?.value || '';
-        const minutes=custom!=='' ? Number(custom) : (preset!=='' ? Number(preset) : null);
-        if(minutes!==null && (!Number.isFinite(minutes) || minutes<1 || minutes>240)){ alert('Time must be between 1 and 240 minutes.'); return; }
-        if(minutes===null && !note.trim()){ alert('Choose a preset time, enter custom minutes, or write a customer message first.'); return; }
+        const draft=collectEtaDraft(id);
+        if(draft.minutes!==null && (!Number.isFinite(draft.minutes) || draft.minutes<1 || draft.minutes>240)){ alert('Time must be between 1 and 240 minutes.'); return; }
+        if(draft.minutes===null && !draft.note){ alert('Choose a preset time, enter custom minutes, or write a customer message first.'); return; }
         btn.disabled=true; const old=btn.textContent; btn.textContent='Sending...';
-        await setOrderEta(id, minutes, note.trim());
+        await setOrderEta(id, draft.minutes, draft.note);
         btn.disabled=false; btn.textContent=old;
       });
     }catch(err){
@@ -891,6 +954,7 @@
       const {error}=await client.rpc('admin_set_order_eta', { p_order_id:id, p_estimated_minutes:minutes, p_admin_customer_note:note || null });
       if(error) throw error;
       adminStatus(`Ready time sent to customer at ${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'})}.`);
+      clearEtaDraft(id);
       lastRenderedSignature='';
       await renderCloudOrders(true);
     }catch(err){
@@ -912,6 +976,19 @@
     }catch(err){ alert('Cancellation decision error: '+(err.message||err)); }
   }
 
+  async function updateOrderWithCurrentDraft(id, status){
+    const patch={status};
+    const draft=collectEtaDraft(id);
+    if(status && status!=='new' && status!=='ready' && status!=='completed' && status!=='cancelled' && status!=='rejected' && draft.hasDraft){
+      if(draft.minutes!==null){
+        if(!Number.isFinite(draft.minutes) || draft.minutes<1 || draft.minutes>240){ alert('Time must be between 1 and 240 minutes.'); return; }
+        patch.etaMinutes=draft.minutes;
+      }
+      if(draft.note) patch.customerNote=draft.note;
+    }
+    await updateOrder(id, patch);
+  }
+
   async function updateOrder(id, patch){
     try{
       const args={
@@ -926,6 +1003,7 @@
       const {error}=await client.rpc('admin_update_customer_order', args);
       if(error) throw error;
       if(patch.status && patch.status!=='new') ackOrderIds([id]);
+      if(patch.etaMinutes || patch.customerNote) clearEtaDraft(id);
       await renderCloudOrders(true);
     }catch(err){ alert('Order update error: '+(err.message||err)); }
   }
@@ -951,7 +1029,7 @@
   function setupRealtime(){
     if(realtimeChannel || !client.channel) return;
     try{
-      realtimeChannel = client.channel('langar-admin-orders-v454')
+      realtimeChannel = client.channel('langar-admin-orders-v456')
         .on('postgres_changes',{event:'INSERT',schema:'public',table:'customer_orders'}, payload=>{ renderCloudOrders(true); if(payload?.new) startOrderAlarm([payload.new]); })
         .on('postgres_changes',{event:'UPDATE',schema:'public',table:'customer_orders'}, ()=>renderCloudOrders(true))
         .on('postgres_changes',{event:'DELETE',schema:'public',table:'customer_orders'}, ()=>renderCloudOrders(true))
@@ -960,7 +1038,7 @@
   }
 
   function install(){
-    if(window.__langarCloudOrdersInstalledV453) return; window.__langarCloudOrdersInstalledV453=true;
+    if(window.__langarCloudOrdersInstalledV456) return; window.__langarCloudOrdersInstalledV456=true;
     if(typeof window.renderOrders === 'function') window.renderOrders = ()=>renderCloudOrders(true);
     const oldRenderAll = window.renderAll;
     if(typeof oldRenderAll === 'function' && !oldRenderAll.__cloudOrdersV453){ window.renderAll=function(){ oldRenderAll(); renderCloudOrders(true); }; window.renderAll.__cloudOrdersV453=true; }

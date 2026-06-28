@@ -556,7 +556,7 @@ function renderPublicFeedback(){ const box=$('#publicFeedbackList'); if(!box) re
 function maybeGoogleReviewPrompt(rating){ if(+rating>=4){ const googleUrl=LS.get('langar_google_review_url','https://www.google.com/maps/search/?api=1&query=Langar+Bar+Dugo+Selo'); $('#modalBody').innerHTML=`<h2>${state.lang==='hr'?'Hvala na lijepoj ocjeni!':'Thank you for the kind rating!'}</h2><p>${state.lang==='hr'?'Vaša pozitivna recenzija može biti prikazana gostima u aplikaciji. Ako želite podržati Langar Bar i na Google Maps, otvorite Google recenziju.':'Your positive review may be shown to guests in the app. If you would like to support Langar Bar on Google Maps too, open Google review.'}</p><a class="primary full button-link" target="_blank" rel="noopener" href="${googleUrl}">${state.lang==='hr'?'Otvori Google Maps':'Open Google Maps'}</a><button class="secondary full" id="closeReviewPrompt">${state.lang==='hr'?'Kasnije':'Maybe later'}</button>`; $('#modal').classList.remove('hidden'); $('#closeReviewPrompt').onclick=()=>$('#modal').classList.add('hidden'); } else { alert(state.lang==='hr'?'Hvala. Vaša poruka je poslana adminu kako bismo je privatno riješili.':'Thank you. Your feedback was sent to admin so we can solve it privately.'); } }
 
 // =============================
-// V4.5.4 — Customer order status tracker, countdown and cancel request
+// V4.5.6 — Customer order status tracker, countdown and stronger local notifications
 // =============================
 const orderStatusLabels = {
   new:{hr:'Poslana', en:'Sent'},
@@ -631,7 +631,9 @@ function showOrderBrowserNotification(order, newStatus){
     if((order?.type||'')==='dine_in') return;
     const title = state.lang==='hr' ? 'Langar Bar — status narudžbe' : 'Langar Bar — order status';
     const body = orderMessageForStatus(order, newStatus);
-    new Notification(title, { body, tag:'langar-order-'+(order.cloudId||order.id||'status'), badge:'assets/icon-192.png', icon:'assets/icon-192.png' });
+    const opts = { body, tag:'langar-order-'+(order.cloudId||order.id||'status'), badge:'assets/icon-192.png', icon:'assets/icon-192.png' };
+    if(navigator.serviceWorker?.ready){ navigator.serviceWorker.ready.then(reg=>reg.showNotification(title, opts)).catch(()=>new Notification(title, opts)); }
+    else new Notification(title, opts);
   }catch(e){}
 }
 function notifyOrderStatusIfNeeded(order, newStatus){
@@ -657,7 +659,10 @@ function notifyOrderEtaIfNeeded(order){
   addInbox({id:uid('msg'),type:'message',title:state.lang==='hr'?'Vrijeme narudžbe':'Order time update',body,unread:true,createdAt:new Date().toISOString()});
   try{
     if('Notification' in window && Notification.permission==='granted' && (order?.type||'')!=='dine_in'){
-      new Notification(state.lang==='hr'?'Langar Bar — vrijeme narudžbe':'Langar Bar — order time', { body, tag:'langar-order-eta-'+(order.cloudId||order.id), badge:'assets/icon-192.png', icon:'assets/icon-192.png' });
+      const title=state.lang==='hr'?'Langar Bar — vrijeme narudžbe':'Langar Bar — order time';
+      const opts={ body, tag:'langar-order-eta-'+(order.cloudId||order.id), badge:'assets/icon-192.png', icon:'assets/icon-192.png' };
+      if(navigator.serviceWorker?.ready){ navigator.serviceWorker.ready.then(reg=>reg.showNotification(title, opts)).catch(()=>new Notification(title, opts)); }
+      else new Notification(title, opts);
     }
   }catch(e){}
 }
@@ -700,10 +705,21 @@ async function requestOrderCancellation(orderId){
 }
 
 async function syncCustomerOrderStatuses(){
+  let accountMergeChanged=false;
+  try{
+    if(window.LangarOrderCloud?.syncAccountOrders){
+      const now=Date.now();
+      if(now-(window.__langarLastAccountOrderSync||0)>10000){
+        window.__langarLastAccountOrderSync=now;
+        const result=await window.LangarOrderCloud.syncAccountOrders();
+        accountMergeChanged=!!result?.changed;
+      }
+    }
+  }catch(e){ console.warn('Account order cloud sync failed', e.message||e); }
   const orders=customerOrders();
   const track=orders.filter(o=>o.cloudOrderToken && !String(o.status||'new').match(/^(completed|cancelled|rejected)$/));
-  if(!track.length || !window.LangarOrderCloud?.client) return;
-  let changed=false;
+  if(!track.length || !window.LangarOrderCloud?.client){ if(accountMergeChanged){ renderCustomerOrderStatus(); renderInboxBadge(); } return; }
+  let changed=accountMergeChanged;
   for(const o of track.slice(0,10)){
     try{
       const row = window.LangarOrderCloud.getOrderByToken ? await window.LangarOrderCloud.getOrderByToken(o.cloudOrderToken) : (await window.LangarOrderCloud.client.rpc('get_customer_order_by_token',{p_token:o.cloudOrderToken})).data?.[0];
@@ -727,7 +743,7 @@ function renderCustomerOrderStatus(){
   const box=document.getElementById('customerOrderStatus'); if(!box) return;
   const orders=customerOrders().filter(o=>o.cloudId||o.cloudOrderToken).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,8);
   if(!orders.length){ box.innerHTML=''; return; }
-  box.innerHTML=`<div class="my-orders-card enhanced-orders"><h4>${state.lang==='hr'?'Moje zadnje narudžbe':'My recent orders'}</h4><p class="muted mini">${state.lang==='hr'?'Status i vrijeme osvježavaju se automatski na ovom uređaju.':'Status and time update automatically on this device.'}</p>${orders.map(o=>{ const eta=formatOrderEta(o); const c=orderCountdownInfo(o); const visibleItems=(o.items||[]).slice(0,3).map(i=>escapeHtml((i.qty||1)+' × '+(i.nameSnapshot||i.name||i.id))).join('<br>'); const cancelText=orderCancelText(o); return `<div class="my-order-line enhanced ${isTerminalOrder(o.status)?'terminal':''}"><div class="my-order-main"><b class="my-order-number">${escapeHtml(o.cloudOrderNumber||o.id)}</b><small>${new Date(o.createdAt).toLocaleString()}${o.tableNumber?` · Table ${escapeHtml(o.tableNumber)}`:''}${o.type?` · ${escapeHtml(o.type)}`:''}</small>${visibleItems?`<small class="my-order-items">${visibleItems}</small>`:''}${eta?`<small class="order-eta-line">${escapeHtml(eta)}</small>`:''}${c?`<div class="order-countdown ${c.expired?'expired':''}">⏱ ${escapeHtml(c.text)}</div>`:''}${cancelText?`<small class="order-cancel-line ${escapeHtml(o.cancelStatus||'requested')}">${escapeHtml(cancelText)}</small>`:''}${canRequestCancel(o)?`<button type="button" class="secondary subtle order-cancel-btn" data-request-cancel="${escapeHtml(o.id)}">${state.lang==='hr'?'Zatraži otkazivanje':'Request cancellation'}</button>`:''}</div><span class="status-badge ${escapeHtml(o.status||'new')}">${orderStatusText(o.status||'new')}</span></div>`; }).join('')}<button type="button" class="secondary full" id="refreshMyOrders">${state.lang==='hr'?'Osvježi status':'Refresh status'}</button></div>`;
+  box.innerHTML=`<div class="my-orders-card enhanced-orders"><h4>${state.lang==='hr'?'Moje zadnje narudžbe':'My recent orders'}</h4><p class="muted mini">${state.lang==='hr'?'Status i vrijeme automatski se sinkroniziraju na svim uređajima kada ste prijavljeni.':'Status and time sync automatically across devices when you are logged in.'}</p>${orders.map(o=>{ const eta=formatOrderEta(o); const c=orderCountdownInfo(o); const visibleItems=(o.items||[]).slice(0,3).map(i=>escapeHtml((i.qty||1)+' × '+(i.nameSnapshot||i.name||i.id))).join('<br>'); const cancelText=orderCancelText(o); return `<div class="my-order-line enhanced ${isTerminalOrder(o.status)?'terminal':''}"><div class="my-order-main"><b class="my-order-number">${escapeHtml(o.cloudOrderNumber||o.id)}</b><small>${new Date(o.createdAt).toLocaleString()}${o.tableNumber?` · Table ${escapeHtml(o.tableNumber)}`:''}${o.type?` · ${escapeHtml(o.type)}`:''}</small>${visibleItems?`<small class="my-order-items">${visibleItems}</small>`:''}${eta?`<small class="order-eta-line">${escapeHtml(eta)}</small>`:''}${c?`<div class="order-countdown ${c.expired?'expired':''}">⏱ ${escapeHtml(c.text)}</div>`:''}${cancelText?`<small class="order-cancel-line ${escapeHtml(o.cancelStatus||'requested')}">${escapeHtml(cancelText)}</small>`:''}${canRequestCancel(o)?`<button type="button" class="secondary subtle order-cancel-btn" data-request-cancel="${escapeHtml(o.id)}">${state.lang==='hr'?'Zatraži otkazivanje':'Request cancellation'}</button>`:''}</div><span class="status-badge ${escapeHtml(o.status||'new')}">${orderStatusText(o.status||'new')}</span></div>`; }).join('')}<button type="button" class="secondary full" id="refreshMyOrders">${state.lang==='hr'?'Osvježi status':'Refresh status'}</button></div>`;
   const btn=document.getElementById('refreshMyOrders'); if(btn) btn.onclick=syncCustomerOrderStatuses;
   document.querySelectorAll('[data-request-cancel]').forEach(b=>b.onclick=()=>requestOrderCancellation(b.dataset.requestCancel));
 }

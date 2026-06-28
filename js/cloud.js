@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  const CLOUD_VERSION = 'V4.5.4 ETA + Cancellation Fix';
+  const CLOUD_VERSION = 'V4.5.6 ETA Draft Overdue Alarm';
   const CONFIG = {
     supabaseUrl: 'https://fkanccgigogbxodiljqt.supabase.co',
     supabaseKey: 'sb_publishable_WbWIWgu9R2AKepJiRrygCw_1oWrdwG7',
@@ -642,7 +642,7 @@
       currency: 'EUR',
       status: 'new',
       paid: false,
-      app_version: 'v454'
+      app_version: 'v456'
     };
 
     // V4.5.4: submit through a single JSON RPC. This is the reliable path for guest orders.
@@ -684,11 +684,76 @@
     if(error) throw error;
     return Array.isArray(data)?data[0]:data;
   }
+  function mapCloudOrderRow(row){
+    const items = Array.isArray(row.items) ? row.items : [];
+    return {
+      id:'cloud-' + row.id,
+      cloudId:row.id,
+      cloudOrderNumber:row.order_number || String(row.id||'').slice(0,8).toUpperCase(),
+      cloudOrderToken:row.order_token || '',
+      status:row.status || 'new',
+      paid:!!row.paid,
+      type:row.fulfillment_type || 'dine_in',
+      tableNumber:row.table_number || '',
+      name:row.customer_name || '',
+      phone:row.customer_phone || '',
+      address:row.delivery_address || '',
+      note:row.note || '',
+      items:items.map(it=>({
+        id:it.id || it.item_id || '',
+        qty:+it.qty || +it.quantity || 1,
+        nameSnapshot:it.name_en || it.name || it.nameSnapshot || '',
+        nameSnapshotHr:it.name_hr || it.name_hrv || it.nameSnapshotHr || it.name_en || it.name || '',
+        price:'€' + Number(it.price || it.unit_price || 0).toFixed(2),
+        lineTotal:+(it.line_total || ((+it.price || 0)*(+it.qty || +it.quantity || 1)) || 0).toFixed(2),
+        note:it.note || '',
+        categoryId:it.category_id || ''
+      })),
+      total:+Number(row.total || 0).toFixed(2),
+      currency:row.currency || 'EUR',
+      createdAt:row.created_at || new Date().toISOString(),
+      updatedAt:row.updated_at || row.created_at || new Date().toISOString(),
+      completedAt:row.completed_at || null,
+      estimatedMinutes:row.estimated_minutes ?? null,
+      estimatedReadyAt:row.estimated_ready_at || null,
+      adminCustomerNote:row.admin_customer_note || '',
+      cancelRequestedAt:row.cancel_requested_at || null,
+      cancelReason:row.cancel_reason || '',
+      cancelStatus:row.cancel_status || '',
+      cancelDecidedAt:row.cancel_decided_at || null,
+      cancelAdminNote:row.cancel_admin_note || '',
+      syncedFromAccount:true
+    };
+  }
+  function readOrders(){ try{ return JSON.parse(localStorage.getItem('langar_orders_v3')) || []; }catch{return [];} }
+  function writeOrders(v){ localStorage.setItem('langar_orders_v3', JSON.stringify(v||[])); }
+  async function syncAccountOrders(limit=80){
+    const { data:sessionData } = await client.auth.getSession();
+    const user = sessionData?.session?.user || null;
+    if(!user) return { ok:false, reason:'not_logged_in', changed:false };
+    const {data,error}=await client.rpc('get_my_customer_orders', { p_limit:limit });
+    if(error) throw error;
+    const rows = Array.isArray(data) ? data : [];
+    const local = readOrders();
+    const before = JSON.stringify(local.map(o=>({id:o.id, cloudId:o.cloudId, token:o.cloudOrderToken, status:o.status, eta:o.estimatedReadyAt, updated:o.updatedAt, cancel:o.cancelStatus, cancelAt:o.cancelRequestedAt})));
+    for(const row of rows){
+      const mapped = mapCloudOrderRow(row);
+      const idx = local.findIndex(o => (mapped.cloudId && o.cloudId===mapped.cloudId) || (mapped.cloudOrderToken && o.cloudOrderToken===mapped.cloudOrderToken));
+      if(idx>=0){ local[idx] = { ...local[idx], ...mapped, id:local[idx].id || mapped.id }; }
+      else local.push(mapped);
+    }
+    local.sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
+    writeOrders(local.slice(0,160));
+    const after = JSON.stringify(local.map(o=>({id:o.id, cloudId:o.cloudId, token:o.cloudOrderToken, status:o.status, eta:o.estimatedReadyAt, updated:o.updatedAt, cancel:o.cancelStatus, cancelAt:o.cancelRequestedAt})));
+    return { ok:true, count:rows.length, changed:before!==after };
+  }
   async function requestOrderCancellation(token, reason=''){
     if(!token) throw new Error('Missing order tracking token.');
     const {data,error}=await client.rpc('request_order_cancellation_by_token',{p_token:token, p_reason:reason||null});
     if(error) throw error;
     return Array.isArray(data)?data[0]:data;
   }
-  window.LangarOrderCloud = { submitOrder, getOrderByToken, requestOrderCancellation, client };
+  window.LangarOrderCloud = { submitOrder, getOrderByToken, syncAccountOrders, requestOrderCancellation, client };
+  // After a logged-in member opens the app on a second device, pull their Cloud orders into local view.
+  setTimeout(()=>syncAccountOrders().then(r=>{ if(r?.changed && typeof window.renderCustomerOrderStatus==='function') window.renderCustomerOrderStatus(); }).catch(()=>{}), 1500);
 })();
