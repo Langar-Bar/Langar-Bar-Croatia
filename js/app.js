@@ -556,7 +556,7 @@ function renderPublicFeedback(){ const box=$('#publicFeedbackList'); if(!box) re
 function maybeGoogleReviewPrompt(rating){ if(+rating>=4){ const googleUrl=LS.get('langar_google_review_url','https://www.google.com/maps/search/?api=1&query=Langar+Bar+Dugo+Selo'); $('#modalBody').innerHTML=`<h2>${state.lang==='hr'?'Hvala na lijepoj ocjeni!':'Thank you for the kind rating!'}</h2><p>${state.lang==='hr'?'Vaša pozitivna recenzija može biti prikazana gostima u aplikaciji. Ako želite podržati Langar Bar i na Google Maps, otvorite Google recenziju.':'Your positive review may be shown to guests in the app. If you would like to support Langar Bar on Google Maps too, open Google review.'}</p><a class="primary full button-link" target="_blank" rel="noopener" href="${googleUrl}">${state.lang==='hr'?'Otvori Google Maps':'Open Google Maps'}</a><button class="secondary full" id="closeReviewPrompt">${state.lang==='hr'?'Kasnije':'Maybe later'}</button>`; $('#modal').classList.remove('hidden'); $('#closeReviewPrompt').onclick=()=>$('#modal').classList.add('hidden'); } else { alert(state.lang==='hr'?'Hvala. Vaša poruka je poslana adminu kako bismo je privatno riješili.':'Thank you. Your feedback was sent to admin so we can solve it privately.'); } }
 
 // =============================
-// V4.5.3 — Customer order status tracker + estimated time countdown
+// V4.5.4 — Customer order status tracker, countdown and cancel request
 // =============================
 const orderStatusLabels = {
   new:{hr:'Poslana', en:'Sent'},
@@ -661,6 +661,44 @@ function notifyOrderEtaIfNeeded(order){
     }
   }catch(e){}
 }
+function orderCancelText(order){
+  const st=String(order.cancelStatus||'').toLowerCase();
+  if(st==='approved') return state.lang==='hr'?'Otkazivanje je odobreno.':'Cancellation approved.';
+  if(st==='rejected') return state.lang==='hr'?'Otkazivanje nije moguće bez dogovora s osobljem.':'Cancellation is not available without staff approval.';
+  if(order.cancelRequestedAt) return state.lang==='hr'?'Zahtjev za otkazivanje je poslan osoblju.':'Cancellation request sent to staff.';
+  return '';
+}
+function canRequestCancel(order){
+  if(!order?.cloudOrderToken || isTerminalOrder(order.status) || order.cancelRequestedAt) return false;
+  return ['new','accepted','preparing'].includes(String(order.status||'new').toLowerCase());
+}
+function notifyCancellationUpdateIfNeeded(order){
+  const key='order_cancel_'+(order.cloudId||order.id)+'_'+(order.cancelStatus||'requested')+'_'+(order.cancelRequestedAt||'');
+  const sent=LS.get('langar_order_status_notified',{});
+  if(sent[key]) return;
+  sent[key]=new Date().toISOString(); LS.set('langar_order_status_notified',sent);
+  const body=orderCancelText(order);
+  if(body) addInbox({id:uid('msg'),type:'message',title:state.lang==='hr'?'Otkazivanje narudžbe':'Order cancellation',body,unread:true,createdAt:new Date().toISOString()});
+}
+async function requestOrderCancellation(orderId){
+  const orders=customerOrders();
+  const order=orders.find(o=>o.id===orderId || o.cloudId===orderId);
+  if(!order || !order.cloudOrderToken) return alert(state.lang==='hr'?'Narudžba se ne može pronaći.':'Order cannot be found.');
+  const ageMin=(Date.now()-new Date(order.createdAt).getTime())/60000;
+  const defaultMsg = ageMin<=3
+    ? (state.lang==='hr'?'Želim otkazati narudžbu.':'I would like to cancel my order.')
+    : (state.lang==='hr'?'Želim provjeriti može li se narudžba otkazati.':'I would like to check if this order can still be cancelled.');
+  const reason=prompt(state.lang==='hr'?'Napišite razlog otkazivanja. Osoblje mora potvrditi otkazivanje.':'Write the cancellation reason. Staff must approve cancellation.', defaultMsg);
+  if(reason===null) return;
+  try{
+    if(!window.LangarOrderCloud?.requestOrderCancellation) throw new Error('Cancellation cloud function is not loaded.');
+    await window.LangarOrderCloud.requestOrderCancellation(order.cloudOrderToken, reason.trim());
+    order.cancelRequestedAt=new Date().toISOString(); order.cancelReason=reason.trim(); order.cancelStatus='requested';
+    saveCustomerOrders(orders); renderCustomerOrderStatus();
+    alert(state.lang==='hr'?'Zahtjev za otkazivanje je poslan. Osoblje će ga potvrditi ili odbiti.':'Cancellation request sent. Staff will approve or reject it.');
+  }catch(err){ alert((state.lang==='hr'?'Greška pri slanju zahtjeva: ':'Cancellation request error: ')+(err.message||err)); }
+}
+
 async function syncCustomerOrderStatuses(){
   const orders=customerOrders();
   const track=orders.filter(o=>o.cloudOrderToken && !String(o.status||'new').match(/^(completed|cancelled|rejected)$/));
@@ -672,11 +710,15 @@ async function syncCustomerOrderStatuses(){
       if(!row) continue;
       const old=o.status||'new';
       const oldEta=(o.estimatedReadyAt||'')+'|'+(o.estimatedMinutes||'')+'|'+(o.adminCustomerNote||'');
+      const oldCancel=(o.cancelStatus||'')+'|'+(o.cancelRequestedAt||'')+'|'+(o.cancelAdminNote||'');
       o.status=row.status||old; o.paid=!!row.paid; o.updatedAt=row.updated_at||o.updatedAt; o.completedAt=row.completed_at||o.completedAt; o.cloudOrderNumber=row.order_number||o.cloudOrderNumber;
-      o.estimatedMinutes=row.estimated_minutes||o.estimatedMinutes||null; o.estimatedReadyAt=row.estimated_ready_at||o.estimatedReadyAt||null; o.adminCustomerNote=row.admin_customer_note||o.adminCustomerNote||'';
+      o.estimatedMinutes=(row.estimated_minutes ?? o.estimatedMinutes ?? null); o.estimatedReadyAt=(row.estimated_ready_at ?? o.estimatedReadyAt ?? null); o.adminCustomerNote=(row.admin_customer_note ?? o.adminCustomerNote ?? '');
+      o.cancelRequestedAt=row.cancel_requested_at||o.cancelRequestedAt||null; o.cancelReason=row.cancel_reason||o.cancelReason||''; o.cancelStatus=row.cancel_status||o.cancelStatus||''; o.cancelDecidedAt=row.cancel_decided_at||o.cancelDecidedAt||null; o.cancelAdminNote=row.cancel_admin_note||o.cancelAdminNote||'';
       const newEta=(o.estimatedReadyAt||'')+'|'+(o.estimatedMinutes||'')+'|'+(o.adminCustomerNote||'');
+      const newCancel=(o.cancelStatus||'')+'|'+(o.cancelRequestedAt||'')+'|'+(o.cancelAdminNote||'');
       if(o.status!==old){ notifyOrderStatusIfNeeded(o,o.status); changed=true; }
       else if(newEta!==oldEta && (o.estimatedReadyAt||o.estimatedMinutes||o.adminCustomerNote)){ notifyOrderEtaIfNeeded(o); changed=true; }
+      if(newCancel!==oldCancel && (o.cancelRequestedAt||o.cancelStatus)){ notifyCancellationUpdateIfNeeded(o); changed=true; }
     }catch(e){ console.warn('Order status sync failed', e.message||e); }
   }
   if(changed){ saveCustomerOrders(orders); renderCustomerOrderStatus(); renderInboxBadge(); }
@@ -685,8 +727,9 @@ function renderCustomerOrderStatus(){
   const box=document.getElementById('customerOrderStatus'); if(!box) return;
   const orders=customerOrders().filter(o=>o.cloudId||o.cloudOrderToken).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,8);
   if(!orders.length){ box.innerHTML=''; return; }
-  box.innerHTML=`<div class="my-orders-card enhanced-orders"><h4>${state.lang==='hr'?'Moje zadnje narudžbe':'My recent orders'}</h4><p class="muted mini">${state.lang==='hr'?'Status i vrijeme osvježavaju se automatski na ovom uređaju.':'Status and time update automatically on this device.'}</p>${orders.map(o=>{ const eta=formatOrderEta(o); const c=orderCountdownInfo(o); const visibleItems=(o.items||[]).slice(0,3).map(i=>escapeHtml((i.qty||1)+' × '+(i.nameSnapshot||i.name||i.id))).join('<br>'); return `<div class="my-order-line enhanced ${isTerminalOrder(o.status)?'terminal':''}"><div class="my-order-main"><b class="my-order-number">${escapeHtml(o.cloudOrderNumber||o.id)}</b><small>${new Date(o.createdAt).toLocaleString()}${o.tableNumber?` · Table ${escapeHtml(o.tableNumber)}`:''}${o.type?` · ${escapeHtml(o.type)}`:''}</small>${visibleItems?`<small class="my-order-items">${visibleItems}</small>`:''}${eta?`<small class="order-eta-line">${escapeHtml(eta)}</small>`:''}${c?`<div class="order-countdown ${c.expired?'expired':''}">⏱ ${escapeHtml(c.text)}</div>`:''}</div><span class="status-badge ${escapeHtml(o.status||'new')}">${orderStatusText(o.status||'new')}</span></div>`; }).join('')}<button type="button" class="secondary full" id="refreshMyOrders">${state.lang==='hr'?'Osvježi status':'Refresh status'}</button></div>`;
+  box.innerHTML=`<div class="my-orders-card enhanced-orders"><h4>${state.lang==='hr'?'Moje zadnje narudžbe':'My recent orders'}</h4><p class="muted mini">${state.lang==='hr'?'Status i vrijeme osvježavaju se automatski na ovom uređaju.':'Status and time update automatically on this device.'}</p>${orders.map(o=>{ const eta=formatOrderEta(o); const c=orderCountdownInfo(o); const visibleItems=(o.items||[]).slice(0,3).map(i=>escapeHtml((i.qty||1)+' × '+(i.nameSnapshot||i.name||i.id))).join('<br>'); const cancelText=orderCancelText(o); return `<div class="my-order-line enhanced ${isTerminalOrder(o.status)?'terminal':''}"><div class="my-order-main"><b class="my-order-number">${escapeHtml(o.cloudOrderNumber||o.id)}</b><small>${new Date(o.createdAt).toLocaleString()}${o.tableNumber?` · Table ${escapeHtml(o.tableNumber)}`:''}${o.type?` · ${escapeHtml(o.type)}`:''}</small>${visibleItems?`<small class="my-order-items">${visibleItems}</small>`:''}${eta?`<small class="order-eta-line">${escapeHtml(eta)}</small>`:''}${c?`<div class="order-countdown ${c.expired?'expired':''}">⏱ ${escapeHtml(c.text)}</div>`:''}${cancelText?`<small class="order-cancel-line ${escapeHtml(o.cancelStatus||'requested')}">${escapeHtml(cancelText)}</small>`:''}${canRequestCancel(o)?`<button type="button" class="secondary subtle order-cancel-btn" data-request-cancel="${escapeHtml(o.id)}">${state.lang==='hr'?'Zatraži otkazivanje':'Request cancellation'}</button>`:''}</div><span class="status-badge ${escapeHtml(o.status||'new')}">${orderStatusText(o.status||'new')}</span></div>`; }).join('')}<button type="button" class="secondary full" id="refreshMyOrders">${state.lang==='hr'?'Osvježi status':'Refresh status'}</button></div>`;
   const btn=document.getElementById('refreshMyOrders'); if(btn) btn.onclick=syncCustomerOrderStatuses;
+  document.querySelectorAll('[data-request-cancel]').forEach(b=>b.onclick=()=>requestOrderCancellation(b.dataset.requestCancel));
 }
 
 function updateOrderTypeFields(){

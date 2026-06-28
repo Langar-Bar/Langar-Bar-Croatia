@@ -1,4 +1,4 @@
-const CACHE_NAME = 'langar-bar-v453-order-countdown-admin-cleanup';
+const CACHE_NAME = 'langar-bar-v454-eta-cancel-refresh-fix';
 const ASSETS = ['./','./index.html','./admin.html','./styles.css','./manifest.webmanifest','./admin-manifest.webmanifest','./js/menu-data.js','./js/app.js','./js/cloud.js','./js/admin.js','./js/admin-cloud.js','./js/admin-stable-v433.js','./assets/logo.jpeg','./assets/icon-192.png','./assets/icon-512.png','./assets/admin-icon-192.png','./assets/admin-icon-512.png'];
 self.addEventListener('install', event => { event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)).then(()=>self.skipWaiting())); });
 self.addEventListener('activate', event => { event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE_NAME).map(k=>caches.delete(k)))).then(()=>self.clients.claim())); });

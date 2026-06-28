@@ -1,0 +1,7 @@
+
+# V4.5.4 Notes
+- Fixed preset ETA send path using dedicated `admin_set_order_eta` RPC.
+- Customer countdown uses `estimated_ready_at` returned by token lookup.
+- Admin Check Now / Refresh Now now show visible status feedback.
+- Customers can request cancellation; staff must approve/reject from Admin.
+- Added SQL: `langar_bar_v454_eta_cancel_refresh_fix.sql`.

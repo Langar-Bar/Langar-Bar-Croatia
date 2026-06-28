@@ -25,3 +25,7 @@ Run `langar_bar_v452_order_eta_alarm_fix.sql` in Supabase SQL Editor after uploa
 ## V4.5.3 Order Countdown + Admin Cloud Health
 
 Run `langar_bar_v453_admin_cloud_health_order_refinements.sql` in Supabase SQL Editor after upload. This version adds Admin Cloud Health Check, custom ETA minutes, customer countdown timer, improved order filters, and test-order cleanup.
+
+
+## V4.5.4 ETA preset, cancellation request and refresh feedback
+Run `langar_bar_v454_eta_cancel_refresh_fix.sql` in Supabase SQL Editor after upload. This version fixes preset ready-time sending, adds visible Admin Check/Refresh feedback, adds customer cancellation requests that require staff approval, and keeps the countdown/status tracker stable.
