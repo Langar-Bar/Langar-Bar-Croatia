@@ -661,7 +661,7 @@
 
 
 // =============================
-// V4.5.1 — Cloud customer orders: RPC admin panel + auto refresh + persistent alarm
+// V4.5.2 — Cloud customer orders: customer ETA + progressive loud alarm
 // =============================
 (function(){
   'use strict';
@@ -675,7 +675,7 @@
   const statuses = ['new','accepted','preparing','ready','completed','cancelled','rejected'];
   const terminalStatuses = ['completed','cancelled','rejected'];
   let pollTimer=null, realtimeChannel=null, alarmTimer=null, alarmCtx=null;
-  let alarmUnlocked=false;
+  let alarmUnlocked=false, alarmStartedAt=0;
   let lastRenderedSignature='';
   let orderFilter = localStorage.langar_admin_order_filter || 'live';
   let lastBrowserNotifyKey='';
@@ -689,6 +689,14 @@
   function normalizeItems(items){ if(Array.isArray(items)) return items; try{return JSON.parse(items||'[]')}catch{return []} }
   function todayKey(d){ const x=new Date(d); x.setMinutes(x.getMinutes()-x.getTimezoneOffset()); return x.toISOString().slice(0,10); }
   function localToday(){ const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
+  function etaText(o){
+    const mins=o.estimated_minutes; const ready=o.estimated_ready_at; const note=o.admin_customer_note||'';
+    let out='';
+    if(mins) out='Customer time: about '+mins+' min';
+    if(ready){ try{ const t=new Date(ready).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); out += out ? ' · '+t : 'Customer time: '+t; }catch(e){} }
+    if(note) out += out ? ' · '+note : note;
+    return out;
+  }
 
   async function requireAdmin(){
     const {data}=await client.auth.getSession();
@@ -708,18 +716,28 @@
       return true;
     }catch(e){ alert('Alarm sound could not be enabled: '+(e.message||e)); return false; }
   }
-  function beepOnce(freq=920, dur=0.38){
+  function currentAlarmGain(){
+    const elapsed = alarmStartedAt ? (Date.now()-alarmStartedAt)/1000 : 0;
+    return Math.min(0.95, 0.34 + elapsed*0.025); // grows to maximum after roughly 25 seconds
+  }
+  function beepOnce(freq=1200, dur=0.48, gainValue=null){
     try{
       if(!alarmCtx || alarmCtx.state==='suspended') return;
       const osc=alarmCtx.createOscillator(); const gain=alarmCtx.createGain();
-      osc.type='sine'; osc.frequency.setValueAtTime(freq, alarmCtx.currentTime);
+      osc.type='square'; osc.frequency.setValueAtTime(freq, alarmCtx.currentTime);
+      const g=Math.max(0.05, Math.min(0.98, gainValue ?? currentAlarmGain()));
       gain.gain.setValueAtTime(0.0001, alarmCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.22, alarmCtx.currentTime+0.03);
+      gain.gain.exponentialRampToValueAtTime(g, alarmCtx.currentTime+0.025);
       gain.gain.exponentialRampToValueAtTime(0.0001, alarmCtx.currentTime+dur);
-      osc.connect(gain); gain.connect(alarmCtx.destination); osc.start(); osc.stop(alarmCtx.currentTime+dur+0.02);
+      osc.connect(gain); gain.connect(alarmCtx.destination); osc.start(); osc.stop(alarmCtx.currentTime+dur+0.03);
     }catch(e){}
   }
-  function beepPattern(){ beepOnce(880,.28); setTimeout(()=>beepOnce(1180,.32),360); }
+  function beepPattern(){
+    const g=currentAlarmGain();
+    beepOnce(1250,.34,g);
+    setTimeout(()=>beepOnce(1720,.34,Math.min(.98,g+.05)),260);
+    setTimeout(()=>beepOnce(980,.42,Math.min(.98,g+.10)),560);
+  }
   function browserNotifyNewOrders(unacked){
     if(!unacked?.length) return;
     const key=unacked.map(o=>o.id).sort().join('|');
@@ -736,11 +754,12 @@
     if(!unacked?.length){ stopOrderAlarm(); return; }
     browserNotifyNewOrders(unacked);
     if(!alarmUnlocked) return;
+    if(!alarmStartedAt) alarmStartedAt=Date.now();
     if(alarmTimer) return;
     beepPattern();
-    alarmTimer=setInterval(beepPattern, 1600);
+    alarmTimer=setInterval(beepPattern, 1250);
   }
-  function stopOrderAlarm(){ if(alarmTimer){ clearInterval(alarmTimer); alarmTimer=null; } }
+  function stopOrderAlarm(){ if(alarmTimer){ clearInterval(alarmTimer); alarmTimer=null; } alarmStartedAt=0; }
 
   async function fetchOrders(){
     await requireAdmin();
@@ -753,7 +772,7 @@
     const box=$('#ordersAdmin'); if(!box) return;
     try{
       const allRows=await fetchOrders();
-      const signature=JSON.stringify(allRows.map(o=>[o.id,o.status,o.paid,o.updated_at,o.created_at]));
+      const signature=JSON.stringify(allRows.map(o=>[o.id,o.status,o.paid,o.estimated_minutes,o.estimated_ready_at,o.admin_customer_note,o.updated_at,o.created_at]));
       const live=allRows.filter(o=>!terminalStatus(o.status));
       const today=allRows.filter(o=>todayKey(o.created_at)===localToday());
       const archive=allRows.filter(o=>terminalStatus(o.status) || todayKey(o.created_at)!==localToday());
@@ -764,12 +783,13 @@
       if(!force && signature===lastRenderedSignature && !unacked.length) return;
       lastRenderedSignature=signature;
       const alarmBanner = unacked.length
-        ? `<div class="order-alarm-banner"><div><b>🔔 ${unacked.length} NEW ORDER${unacked.length>1?'S':''}</b><small>Leave this page open on the tablet. Alarm continues until staff checks or accepts the order.</small></div><button id="enableOrderAlarm" class="primary">${alarmUnlocked?'Alarm enabled':'Enable alarm sound'}</button><button id="ackOrderAlarm" class="secondary">I checked / stop alarm</button></div>`
+        ? `<div class="order-alarm-banner"><div><b>🔔 ${unacked.length} NEW ORDER${unacked.length>1?'S':''}</b><small>Keep tablet volume high. Alarm gets louder until staff checks or accepts the order.</small></div><button id="enableOrderAlarm" class="primary">${alarmUnlocked?'Alarm enabled':'Enable alarm sound'}</button><button id="ackOrderAlarm" class="secondary">I checked / stop alarm</button></div>`
         : `<div class="order-alarm-quiet"><span>✓ No unchecked new orders</span><button id="enableOrderAlarm" class="secondary">${alarmUnlocked?'Alarm enabled':'Enable alarm sound'}</button></div>`;
       box.innerHTML = `${alarmBanner}<div class="cloud-orders-toolbar ${unacked.length?'order-alert-flash':''}"><span class="order-pill">Open: ${live.length}</span><span class="order-pill">New: ${allRows.filter(o=>o.status==='new').length}</span><span class="order-pill">Today total: ${euro(today.reduce((s,o)=>s+Number(o.total||0),0))}</span><span class="order-pill">Auto-refresh: ON</span><button id="refreshCloudOrders" class="secondary">Refresh now</button></div><div class="order-filter-tabs"><button data-order-filter="live" class="secondary ${orderFilter==='live'?'active':''}">Live Queue</button><button data-order-filter="today" class="secondary ${orderFilter==='today'?'active':''}">Today</button><button data-order-filter="archive" class="secondary ${orderFilter==='archive'?'active':''}">Archive</button><button data-order-filter="all" class="secondary ${orderFilter==='all'?'active':''}">All 120</button></div>` +
         (rows.length?`<div class="cloud-orders-list">${rows.map(o=>{
           const items=normalizeItems(o.items);
-          return `<article class="cloud-order-card ${o.status==='new'?'new':''} ${terminalStatus(o.status)?'terminal':''}"><div class="cloud-order-head"><div><h3>${safe(o.order_number||String(o.id).slice(0,8))} <span class="order-source-badge">${typeLabel(o.fulfillment_type)}</span></h3><div class="cloud-order-meta">${new Date(o.created_at).toLocaleString()}${o.table_number?` · Table: <b>${safe(o.table_number)}</b>`:''}${o.customer_name?` · ${safe(o.customer_name)}`:''}${o.customer_phone?` · ${safe(o.customer_phone)}`:''}</div>${o.delivery_address?`<div class="cloud-order-meta">Address: ${safe(o.delivery_address)}</div>`:''}</div><div><b>${euro(o.total)}</b><br><small>${safe(statusLabels[o.status]||o.status)}</small></div></div><div class="cloud-order-items">${items.map(i=>`<div><span>${safe(i.qty||1)} × ${safe(i.name_hr||i.name_en||i.name||'Item')}</span><b>${euro(i.line_total ?? ((i.qty||1)*(i.price||0)))}</b></div>`).join('')||'<p class="muted">No items</p>'}</div>${o.note?`<p class="muted"><b>Note:</b> ${safe(o.note)}</p>`:''}<div class="cloud-order-actions"><select data-order-status="${safe(o.id)}">${statuses.map(st=>`<option value="${st}" ${o.status===st?'selected':''}>${statusLabels[st]}</option>`).join('')}</select><label class="checkline"><input type="checkbox" data-order-paid="${safe(o.id)}" ${o.paid?'checked':''}> Paid / entered in Remaris</label></div></article>`;
+          const eta=etaText(o);
+          return `<article class="cloud-order-card ${o.status==='new'?'new':''} ${terminalStatus(o.status)?'terminal':''}"><div class="cloud-order-head"><div><h3>${safe(o.order_number||String(o.id).slice(0,8))} <span class="order-source-badge">${typeLabel(o.fulfillment_type)}</span></h3><div class="cloud-order-meta">${new Date(o.created_at).toLocaleString()}${o.table_number?` · Table: <b>${safe(o.table_number)}</b>`:''}${o.customer_name?` · ${safe(o.customer_name)}`:''}${o.customer_phone?` · ${safe(o.customer_phone)}`:''}</div>${o.delivery_address?`<div class="cloud-order-meta">Address: ${safe(o.delivery_address)}</div>`:''}${eta?`<div class="order-eta-admin">${safe(eta)}</div>`:''}</div><div><b>${euro(o.total)}</b><br><small>${safe(statusLabels[o.status]||o.status)}</small></div></div><div class="cloud-order-items">${items.map(i=>`<div><span>${safe(i.qty||1)} × ${safe(i.name_hr||i.name_en||i.name||'Item')}</span><b>${euro(i.line_total ?? ((i.qty||1)*(i.price||0)))}</b></div>`).join('')||'<p class="muted">No items</p>'}</div>${o.note?`<p class="muted"><b>Note:</b> ${safe(o.note)}</p>`:''}<div class="cloud-order-actions"><select data-order-status="${safe(o.id)}">${statuses.map(st=>`<option value="${st}" ${o.status===st?'selected':''}>${statusLabels[st]}</option>`).join('')}</select><label class="checkline"><input type="checkbox" data-order-paid="${safe(o.id)}" ${o.paid?'checked':''}> Paid / entered in Remaris</label></div><div class="order-eta-controls"><label>Tell customer ready time</label><select data-order-eta-minutes="${safe(o.id)}"><option value="">Choose time</option><option value="10">10 min</option><option value="15">15 min</option><option value="20">20 min</option><option value="30">30 min</option><option value="45">45 min</option><option value="60">1 hour</option><option value="90">1.5 hours</option></select><input data-order-customer-note="${safe(o.id)}" placeholder="Optional message to customer" value="${safe(o.admin_customer_note||'')}"><button class="secondary" data-order-save-eta="${safe(o.id)}">Send time</button></div></article>`;
         }).join('')}</div>`:`<p class="muted">Connected to Cloud. No orders in this filter yet.</p><div class="legal-block"><b>Tablet workflow</b><p>Keep this panel open. Orders auto-refresh every 5 seconds and also use Realtime when available. Click “Enable alarm sound” once after opening the tablet.</p></div>`);
       $('#refreshCloudOrders')?.addEventListener('click',()=>renderCloudOrders(true));
       $('#enableOrderAlarm')?.addEventListener('click',async()=>{ await unlockAlarmSound(); renderCloudOrders(true); });
@@ -777,15 +797,28 @@
       document.querySelectorAll('[data-order-filter]').forEach(btn=>btn.onclick=()=>{ orderFilter=btn.dataset.orderFilter; localStorage.langar_admin_order_filter=orderFilter; renderCloudOrders(true); });
       document.querySelectorAll('[data-order-status]').forEach(sel=>sel.onchange=()=>updateOrder(sel.dataset.orderStatus,{status:sel.value}));
       document.querySelectorAll('[data-order-paid]').forEach(ch=>ch.onchange=()=>updateOrder(ch.dataset.orderPaid,{paid:ch.checked}));
+      document.querySelectorAll('[data-order-save-eta]').forEach(btn=>btn.onclick=()=>{
+        const id=btn.dataset.orderSaveEta;
+        const minutes=document.querySelector(`[data-order-eta-minutes="${CSS.escape(id)}"]`)?.value || '';
+        const note=document.querySelector(`[data-order-customer-note="${CSS.escape(id)}"]`)?.value || '';
+        if(!minutes && !note.trim()){ alert('Choose a time or write a customer message first.'); return; }
+        updateOrder(id,{etaMinutes:minutes?Number(minutes):null, customerNote:note.trim()});
+      });
     }catch(err){
-      box.innerHTML = `<p style="color:#ffb1a8">Cloud orders error: ${safe(err.message||err)}</p><p class="muted">Run <b>langar_bar_v451_order_rpc_return_type_fix.sql</b> in Supabase SQL Editor. Then login with a user that exists in <b>admin_members</b>.</p><button id="refreshCloudOrders" class="secondary">Try again</button>`;
+      box.innerHTML = `<p style="color:#ffb1a8">Cloud orders error: ${safe(err.message||err)}</p><p class="muted">Run <b>langar_bar_v452_order_eta_alarm_fix.sql</b> in Supabase SQL Editor. Then login with a user that exists in <b>admin_members</b>.</p><button id="refreshCloudOrders" class="secondary">Try again</button>`;
       $('#refreshCloudOrders')?.addEventListener('click',()=>renderCloudOrders(true));
     }
   }
 
   async function updateOrder(id, patch){
     try{
-      const args={p_order_id:id, p_status:Object.prototype.hasOwnProperty.call(patch,'status')?patch.status:null, p_paid:Object.prototype.hasOwnProperty.call(patch,'paid')?patch.paid:null};
+      const args={
+        p_order_id:id,
+        p_status:Object.prototype.hasOwnProperty.call(patch,'status')?patch.status:null,
+        p_paid:Object.prototype.hasOwnProperty.call(patch,'paid')?patch.paid:null,
+        p_estimated_minutes:Object.prototype.hasOwnProperty.call(patch,'etaMinutes')?patch.etaMinutes:null,
+        p_admin_customer_note:Object.prototype.hasOwnProperty.call(patch,'customerNote')?patch.customerNote:null
+      };
       const {error}=await client.rpc('admin_update_customer_order', args);
       if(error) throw error;
       if(patch.status && patch.status!=='new') ackOrderIds([id]);
@@ -796,7 +829,7 @@
   function setupRealtime(){
     if(realtimeChannel || !client.channel) return;
     try{
-      realtimeChannel = client.channel('langar-admin-orders-v451')
+      realtimeChannel = client.channel('langar-admin-orders-v452')
         .on('postgres_changes',{event:'INSERT',schema:'public',table:'customer_orders'}, payload=>{ renderCloudOrders(true); if(payload?.new) startOrderAlarm([payload.new]); })
         .on('postgres_changes',{event:'UPDATE',schema:'public',table:'customer_orders'}, ()=>renderCloudOrders(true))
         .subscribe();
@@ -804,10 +837,10 @@
   }
 
   function install(){
-    if(window.__langarCloudOrdersInstalledV450) return; window.__langarCloudOrdersInstalledV450=true;
+    if(window.__langarCloudOrdersInstalledV452) return; window.__langarCloudOrdersInstalledV452=true;
     if(typeof window.renderOrders === 'function') window.renderOrders = ()=>renderCloudOrders(true);
     const oldRenderAll = window.renderAll;
-    if(typeof oldRenderAll === 'function' && !oldRenderAll.__cloudOrdersV450){ window.renderAll=function(){ oldRenderAll(); renderCloudOrders(true); }; window.renderAll.__cloudOrdersV450=true; }
+    if(typeof oldRenderAll === 'function' && !oldRenderAll.__cloudOrdersV452){ window.renderAll=function(){ oldRenderAll(); renderCloudOrders(true); }; window.renderAll.__cloudOrdersV452=true; }
     setupRealtime();
     renderCloudOrders(true);
     if(pollTimer) clearInterval(pollTimer);

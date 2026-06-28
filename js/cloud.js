@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  const CLOUD_VERSION = 'V4.5.1 Order RPC + Customer Tracking Fix';
+  const CLOUD_VERSION = 'V4.5.2 Order ETA + Alarm Fix';
   const CONFIG = {
     supabaseUrl: 'https://fkanccgigogbxodiljqt.supabase.co',
     supabaseKey: 'sb_publishable_WbWIWgu9R2AKepJiRrygCw_1oWrdwG7',
@@ -642,16 +642,16 @@
       currency: 'EUR',
       status: 'new',
       paid: false,
-      app_version: 'v451'
+      app_version: 'v452'
     };
 
-    // V4.5.1: submit through a single JSON RPC. This is the reliable path for guest orders.
+    // V4.5.2: submit through a single JSON RPC. This is the reliable path for guest orders.
     // Do not silently fallback to direct table insert, because that can hit RLS and confuse staff.
     let data=null, error=null;
     let r = await client.rpc('submit_customer_order_payload', { p_order: payload });
     data = r.data; error = r.error;
 
-    // Compatibility path only for projects that already installed V4.4.9 SQL but not V4.5.1 yet.
+    // Compatibility path only for projects that already installed V4.4.9 SQL but not V4.5.2 yet.
     if(error && String(error.message||'').toLowerCase().includes('submit_customer_order_payload')){
       r = await client.rpc('submit_customer_order', {
         p_user_id: payload.user_id,
@@ -670,12 +670,12 @@
     if(error){
       const msg = [error.message, error.details, error.hint, error.code].filter(Boolean).join(' | ');
       if(String(msg).includes('submit_customer_order_payload') || String(msg).includes('submit_customer_order')){
-        throw new Error('Order Cloud SQL is not installed or schema cache is old. Run langar_bar_v451_order_rpc_return_type_fix.sql in Supabase SQL Editor, then refresh the app. Details: ' + msg);
+        throw new Error('Order Cloud SQL is not installed or schema cache is old. Run langar_bar_v452_order_eta_alarm_fix.sql in Supabase SQL Editor, then refresh the app. Details: ' + msg);
       }
       throw new Error(msg || 'Unknown Supabase order submit error');
     }
     const row = Array.isArray(data) ? data[0] : data;
-    if(!row?.order_token){ throw new Error('Order was submitted but Cloud did not return an order tracking token. Run V4.5.1 SQL again.'); }
+    if(!row?.order_token){ throw new Error('Order was submitted but Cloud did not return an order tracking token. Run V4.5.2 SQL again.'); }
     return { ok:true, id:row.id, order_number:row.order_number, order_token:row.order_token, status:row.status || 'new', created_at:row.created_at };
   }
   async function getOrderByToken(token){

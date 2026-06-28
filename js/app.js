@@ -556,7 +556,7 @@ function renderPublicFeedback(){ const box=$('#publicFeedbackList'); if(!box) re
 function maybeGoogleReviewPrompt(rating){ if(+rating>=4){ const googleUrl=LS.get('langar_google_review_url','https://www.google.com/maps/search/?api=1&query=Langar+Bar+Dugo+Selo'); $('#modalBody').innerHTML=`<h2>${state.lang==='hr'?'Hvala na lijepoj ocjeni!':'Thank you for the kind rating!'}</h2><p>${state.lang==='hr'?'Vaša pozitivna recenzija može biti prikazana gostima u aplikaciji. Ako želite podržati Langar Bar i na Google Maps, otvorite Google recenziju.':'Your positive review may be shown to guests in the app. If you would like to support Langar Bar on Google Maps too, open Google review.'}</p><a class="primary full button-link" target="_blank" rel="noopener" href="${googleUrl}">${state.lang==='hr'?'Otvori Google Maps':'Open Google Maps'}</a><button class="secondary full" id="closeReviewPrompt">${state.lang==='hr'?'Kasnije':'Maybe later'}</button>`; $('#modal').classList.remove('hidden'); $('#closeReviewPrompt').onclick=()=>$('#modal').classList.add('hidden'); } else { alert(state.lang==='hr'?'Hvala. Vaša poruka je poslana adminu kako bismo je privatno riješili.':'Thank you. Your feedback was sent to admin so we can solve it privately.'); } }
 
 // =============================
-// V4.4.8 — Customer order status tracker + pickup/delivery notifications
+// V4.5.2 — Customer order status tracker + estimated time notifications
 // =============================
 const orderStatusLabels = {
   new:{hr:'Poslana', en:'Sent'},
@@ -569,13 +569,33 @@ const orderStatusLabels = {
 };
 function orderStatusText(st){ const o=orderStatusLabels[String(st||'new').toLowerCase()]||orderStatusLabels.new; return state.lang==='hr'?o.hr:o.en; }
 function isTerminalOrder(st){ return ['completed','cancelled','rejected'].includes(String(st||'').toLowerCase()); }
+function formatOrderEta(order){
+  const mins = order?.estimatedMinutes || order?.estimated_minutes || null;
+  const readyAt = order?.estimatedReadyAt || order?.estimated_ready_at || null;
+  if(!mins && !readyAt && !order?.adminCustomerNote && !order?.admin_customer_note) return '';
+  let txt = '';
+  if(mins){ txt = state.lang==='hr' ? `Procjena: oko ${mins} min` : `Estimated time: about ${mins} min`; }
+  if(readyAt){
+    try{ const t = new Date(readyAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); txt += txt ? ` · ${t}` : (state.lang==='hr' ? `Procjena: ${t}` : `Estimated ready: ${t}`); }catch(e){}
+  }
+  const note = order?.adminCustomerNote || order?.admin_customer_note || '';
+  if(note) txt += txt ? ` · ${note}` : note;
+  return txt;
+}
 function customerOrders(){ return LS.get('langar_orders_v3',[]); }
 function saveCustomerOrders(list){ LS.set('langar_orders_v3', list); }
 function orderMessageForStatus(o, st){
   const num=o.cloudOrderNumber||o.order_number||o.id||'';
+  const eta=formatOrderEta(o);
   const en={accepted:`Your order ${num} has been accepted.`,preparing:`Your order ${num} is now being prepared.`,ready:`Your order ${num} is ready.`,completed:`Your order ${num} is completed. Thank you.`,cancelled:`Your order ${num} was cancelled. Please contact staff if needed.`,rejected:`Your order ${num} was rejected. Please contact staff or place another order.`};
   const hr={accepted:`Vaša narudžba ${num} je prihvaćena.`,preparing:`Vaša narudžba ${num} je u pripremi.`,ready:`Vaša narudžba ${num} je spremna.`,completed:`Vaša narudžba ${num} je završena. Hvala.`,cancelled:`Vaša narudžba ${num} je otkazana. Molimo kontaktirajte osoblje ako je potrebno.`,rejected:`Vaša narudžba ${num} je odbijena. Molimo kontaktirajte osoblje ili pošaljite novu narudžbu.`};
-  return state.lang==='hr'?(hr[st]||`Status narudžbe ${num}: ${orderStatusText(st)}`):(en[st]||`Order ${num} status: ${orderStatusText(st)}`);
+  const base=state.lang==='hr'?(hr[st]||`Status narudžbe ${num}: ${orderStatusText(st)}`):(en[st]||`Order ${num} status: ${orderStatusText(st)}`);
+  return eta ? `${base} ${eta}` : base;
+}
+function orderEtaUpdateMessage(o){
+  const num=o.cloudOrderNumber||o.order_number||o.id||'';
+  const eta=formatOrderEta(o);
+  return state.lang==='hr' ? `Vrijeme za narudžbu ${num} je ažurirano. ${eta}` : `Time update for order ${num}. ${eta}`;
 }
 
 async function requestOrderStatusNotifications(order){
@@ -607,6 +627,22 @@ function notifyOrderStatusIfNeeded(order, newStatus){
     showOrderBrowserNotification(order,newStatus);
   }
 }
+function notifyOrderEtaIfNeeded(order){
+  if(!order) return;
+  const etaKey=(order.estimatedReadyAt||'')+'_'+(order.estimatedMinutes||'')+'_'+(order.adminCustomerNote||'');
+  if(!etaKey.replace(/_/g,'')) return;
+  const key='order_eta_'+(order.cloudId||order.id)+'_'+etaKey;
+  const sent=LS.get('langar_order_status_notified',{});
+  if(sent[key]) return;
+  sent[key]=new Date().toISOString(); LS.set('langar_order_status_notified',sent);
+  const body=orderEtaUpdateMessage(order);
+  addInbox({id:uid('msg'),type:'message',title:state.lang==='hr'?'Vrijeme narudžbe':'Order time update',body,unread:true,createdAt:new Date().toISOString()});
+  try{
+    if('Notification' in window && Notification.permission==='granted' && (order?.type||'')!=='dine_in'){
+      new Notification(state.lang==='hr'?'Langar Bar — vrijeme narudžbe':'Langar Bar — order time', { body, tag:'langar-order-eta-'+(order.cloudId||order.id), badge:'assets/icon-192.png', icon:'assets/icon-192.png' });
+    }
+  }catch(e){}
+}
 async function syncCustomerOrderStatuses(){
   const orders=customerOrders();
   const track=orders.filter(o=>o.cloudOrderToken && !String(o.status||'new').match(/^(completed|cancelled|rejected)$/));
@@ -617,8 +653,12 @@ async function syncCustomerOrderStatuses(){
       const row = window.LangarOrderCloud.getOrderByToken ? await window.LangarOrderCloud.getOrderByToken(o.cloudOrderToken) : (await window.LangarOrderCloud.client.rpc('get_customer_order_by_token',{p_token:o.cloudOrderToken})).data?.[0];
       if(!row) continue;
       const old=o.status||'new';
+      const oldEta=(o.estimatedReadyAt||'')+'|'+(o.estimatedMinutes||'')+'|'+(o.adminCustomerNote||'');
       o.status=row.status||old; o.paid=!!row.paid; o.updatedAt=row.updated_at||o.updatedAt; o.completedAt=row.completed_at||o.completedAt; o.cloudOrderNumber=row.order_number||o.cloudOrderNumber;
+      o.estimatedMinutes=row.estimated_minutes||o.estimatedMinutes||null; o.estimatedReadyAt=row.estimated_ready_at||o.estimatedReadyAt||null; o.adminCustomerNote=row.admin_customer_note||o.adminCustomerNote||'';
+      const newEta=(o.estimatedReadyAt||'')+'|'+(o.estimatedMinutes||'')+'|'+(o.adminCustomerNote||'');
       if(o.status!==old){ notifyOrderStatusIfNeeded(o,o.status); changed=true; }
+      else if(newEta!==oldEta && (o.estimatedReadyAt||o.estimatedMinutes||o.adminCustomerNote)){ notifyOrderEtaIfNeeded(o); changed=true; }
     }catch(e){ console.warn('Order status sync failed', e.message||e); }
   }
   if(changed){ saveCustomerOrders(orders); renderCustomerOrderStatus(); renderInboxBadge(); }
@@ -627,7 +667,7 @@ function renderCustomerOrderStatus(){
   const box=document.getElementById('customerOrderStatus'); if(!box) return;
   const orders=customerOrders().filter(o=>o.cloudId||o.cloudOrderToken).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,8);
   if(!orders.length){ box.innerHTML=''; return; }
-  box.innerHTML=`<div class="my-orders-card"><h4>${state.lang==='hr'?'Moje zadnje narudžbe':'My recent orders'}</h4><p class="muted mini">${state.lang==='hr'?'Status je spremljen na ovom uređaju i osvježava se automatski.':'Status is saved on this device and refreshes automatically.'}</p>${orders.map(o=>`<div class="my-order-line ${isTerminalOrder(o.status)?'terminal':''}"><div><b>${escapeHtml(o.cloudOrderNumber||o.id)}</b><small>${new Date(o.createdAt).toLocaleString()}${o.tableNumber?` · Table ${escapeHtml(o.tableNumber)}`:''}${o.type?` · ${escapeHtml(o.type)}`:''}</small><small>${(o.items||[]).slice(0,2).map(i=>escapeHtml((i.qty||1)+' × '+(i.nameSnapshot||i.name||i.id))).join('<br>')}</small></div><span class="status-badge ${escapeHtml(o.status||'new')}">${orderStatusText(o.status||'new')}</span></div>`).join('')}<button type="button" class="secondary full" id="refreshMyOrders">${state.lang==='hr'?'Osvježi status':'Refresh status'}</button></div>`;
+  box.innerHTML=`<div class="my-orders-card"><h4>${state.lang==='hr'?'Moje zadnje narudžbe':'My recent orders'}</h4><p class="muted mini">${state.lang==='hr'?'Status je spremljen na ovom uređaju i osvježava se automatski.':'Status is saved on this device and refreshes automatically.'}</p>${orders.map(o=>{ const eta=formatOrderEta(o); return `<div class="my-order-line ${isTerminalOrder(o.status)?'terminal':''}"><div><b>${escapeHtml(o.cloudOrderNumber||o.id)}</b><small>${new Date(o.createdAt).toLocaleString()}${o.tableNumber?` · Table ${escapeHtml(o.tableNumber)}`:''}${o.type?` · ${escapeHtml(o.type)}`:''}</small><small>${(o.items||[]).slice(0,2).map(i=>escapeHtml((i.qty||1)+' × '+(i.nameSnapshot||i.name||i.id))).join('<br>')}</small>${eta?`<small class="order-eta-line">${escapeHtml(eta)}</small>`:''}</div><span class="status-badge ${escapeHtml(o.status||'new')}">${orderStatusText(o.status||'new')}</span></div>`; }).join('')}<button type="button" class="secondary full" id="refreshMyOrders">${state.lang==='hr'?'Osvježi status':'Refresh status'}</button></div>`;
   const btn=document.getElementById('refreshMyOrders'); if(btn) btn.onclick=syncCustomerOrderStatuses;
 }
 
