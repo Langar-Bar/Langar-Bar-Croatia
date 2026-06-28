@@ -1,6 +1,6 @@
 const $=s=>document.querySelector(s); const $$=s=>Array.from(document.querySelectorAll(s));
 const LS={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}},set(k,v){localStorage.setItem(k,JSON.stringify(v))}};
-const MENU_STORAGE_KEY='langar_menu_v7';
+const MENU_STORAGE_KEY='langar_menu_v6';
 const ICONS={
   'classic_coffee':'☕','signature_coffee':'✨☕','affogato':'🍨☕','espresso_bull':'⚡☕','coffee_cocktails':'🍸☕','tea':'🍵','tea_latte':'🫖','iced_refreshers':'🧊🍹','lemonade':'🍋','matcha':'🍵✨','smoothies':'🥭','coffee_milkshakes':'🥤☕','kids_milk':'🧸🥛','protein':'💪🥤','soft_drinks':'🧃','beer':'🍺','wine':'🍷','wine_pairing':'🧀🍷','breakfast_combos':'<span class="combo-icon">☕🥐</span>','desserts':'🧁','ice_cream':'🍦','toast_sandwiches':'🥪','tacos':'🌮','focaccia_pizza':'🍕','tapas':'<img src="assets/tapas_icon_clean.png" alt="Tapas">',
   'cat-coffee':'☕','cat-tea':'🍵','cat-matcha-smoothies':'🥤','cat-protein':'💪','cat-soft':'🧃','cat-beer-wine':'🍷','cat-combo':'<span class="combo-icon">☕🥐</span>','cat-dessert':'🧁','cat-toast':'🥖','cat-tacos':'🌮','cat-focaccia-pizza':'🍕','cat-tapas':'<img src="assets/tapas_icon_clean.png" alt="Tapas">'

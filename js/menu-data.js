@@ -1,515 +1,5 @@
 const LANGAR_DEFAULT_MENU = [
   {
-    "id": "breakfast",
-    "title": {
-      "en": "Breakfast",
-      "hr": "Doručak"
-    },
-    "description": {
-      "en": "Egg breakfast, omelettes and breakfast combos. Served 07:00–10:30.",
-      "hr": "Doručak s jajima, omleti i doručak combo. Poslužuje se 07:00–10:30."
-    },
-    "icon": "🍳",
-    "homeExplore": true,
-    "active": true,
-    "sort": 1,
-    "items": [
-      {
-        "id": "BRK-001",
-        "name": {
-          "en": "Three Fried Eggs + Drink",
-          "hr": "Tri jaja na oko + piće"
-        },
-        "desc": {
-          "en": "Three fried eggs with salt, black pepper and parsley. Includes one drink choice: orange juice 200ml, espresso, Americano or classic tea. Breakfast served 07:00–10:30.",
-          "hr": "Tri jaja na oko sa soli, crnim paprom i peršinom. Uključuje izbor jednog pića: sok od naranče 200 ml, espresso, Americano ili klasični čaj. Doručak se poslužuje 07:00–10:30."
-        },
-        "ingredients": {
-          "en": "Eggs, oil or butter, salt, black pepper, parsley. Drink choice included.",
-          "hr": "Jaja, ulje ili maslac, sol, crni papar, peršin. Uključeno piće po izboru."
-        },
-        "price": "€5.00",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Egg, milk possible"
-      },
-      {
-        "id": "BRK-002",
-        "name": {
-          "en": "Classic Skillet Omelette + Drink",
-          "hr": "Klasični skillet omlet + piće"
-        },
-        "desc": {
-          "en": "Three-egg classic skillet omelette prepared in a cast-iron pan under the salamander. Includes one drink choice.",
-          "hr": "Klasični omlet od tri jaja pripremljen u maloj lijevanoj tavi ispod salamandera. Uključuje jedno piće po izboru."
-        },
-        "ingredients": {
-          "en": "Eggs, oil or butter, salt, black pepper, parsley. Drink choice included.",
-          "hr": "Jaja, ulje ili maslac, sol, crni papar, peršin. Uključeno piće po izboru."
-        },
-        "price": "€5.50",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Egg, milk possible"
-      },
-      {
-        "id": "BRK-003",
-        "name": {
-          "en": "Tomato Garlic Omelette + Drink",
-          "hr": "Omlet s rajčicom i češnjakom + piće"
-        },
-        "desc": {
-          "en": "Three-egg skillet omelette with tomato garlic breakfast base and parsley. Includes one drink choice.",
-          "hr": "Omlet od tri jaja s bazom od rajčice i češnjaka te peršinom. Uključuje jedno piće po izboru."
-        },
-        "ingredients": {
-          "en": "Eggs, tomato garlic base, oil or butter, salt, black pepper, parsley. Drink choice included.",
-          "hr": "Jaja, baza od rajčice i češnjaka, ulje ili maslac, sol, crni papar, peršin. Uključeno piće po izboru."
-        },
-        "price": "€6.50",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Egg, milk possible"
-      },
-      {
-        "id": "BRK-004",
-        "name": {
-          "en": "Mushroom Paprika Cheese Omelette + Drink",
-          "hr": "Omlet s gljivama, paprikom i sirom + piće"
-        },
-        "desc": {
-          "en": "Three-egg skillet omelette with mushroom, paprika and melted cheese. Includes one drink choice.",
-          "hr": "Omlet od tri jaja s gljivama, paprikom i topljenim sirom. Uključuje jedno piće po izboru."
-        },
-        "ingredients": {
-          "en": "Eggs, mushroom, paprika, cheese, oil or butter, salt, black pepper, parsley. Drink choice included.",
-          "hr": "Jaja, gljive, paprika, sir, ulje ili maslac, sol, crni papar, peršin. Uključeno piće po izboru."
-        },
-        "price": "€7.00",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Egg, milk"
-      },
-      {
-        "id": "BRK-C01",
-        "name": {
-          "en": "Egg & Tapas Breakfast Plate + Drink",
-          "hr": "Doručak jaja i tapas + piće"
-        },
-        "desc": {
-          "en": "Two fried eggs, one tapas scoop, toasted focaccia or bread, tomato/cucumber garnish and one drink choice.",
-          "hr": "Dva jaja na oko, jedna tapas kuglica, tostirana focaccia ili kruh, dodatak rajčice/krastavca i jedno piće po izboru."
-        },
-        "ingredients": {
-          "en": "Eggs, tapas scoop, focaccia or bread, tomato/cucumber garnish, drink choice.",
-          "hr": "Jaja, tapas kuglica, focaccia ili kruh, dodatak rajčice/krastavca, piće po izboru."
-        },
-        "price": "€7.90",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Egg, gluten, sesame possible, milk/nuts possible"
-      },
-      {
-        "id": "BRK-C02",
-        "name": {
-          "en": "Omelette & Tapas Combo + Drink",
-          "hr": "Omlet i tapas combo + piće"
-        },
-        "desc": {
-          "en": "Classic three-egg skillet omelette, one tapas scoop, toasted focaccia, butter and one drink choice.",
-          "hr": "Klasični skillet omlet od tri jaja, jedna tapas kuglica, tostirana focaccia, maslac i jedno piće po izboru."
-        },
-        "ingredients": {
-          "en": "Eggs, tapas scoop, focaccia, butter, drink choice.",
-          "hr": "Jaja, tapas kuglica, focaccia, maslac, piće po izboru."
-        },
-        "price": "€8.50",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Egg, gluten, milk, sesame possible, nuts possible"
-      },
-      {
-        "id": "BRK-C03",
-        "name": {
-          "en": "Langar Supreme Breakfast with Baked Beans + Drink",
-          "hr": "Langar Supreme doručak s grahom + piće"
-        },
-        "desc": {
-          "en": "Two fried eggs or classic omelette, baked beans, feta/white cheese, mortadella or turkey ham, toasted focaccia, butter, jam or honey, olives/tomato/cucumber garnish and one drink choice.",
-          "hr": "Dva jaja na oko ili klasični omlet, zapečeni grah, feta/bijeli sir, mortadela ili pureća šunka, tostirana focaccia, maslac, džem ili med, masline/rajčica/krastavac i jedno piće po izboru."
-        },
-        "ingredients": {
-          "en": "Eggs or omelette, baked beans, white cheese, mortadella or turkey ham, focaccia, butter, jam or honey, olives, tomato, cucumber, drink choice.",
-          "hr": "Jaja ili omlet, zapečeni grah, bijeli sir, mortadela ili pureća šunka, focaccia, maslac, džem ili med, masline, rajčica, krastavac, piće po izboru."
-        },
-        "price": "€9.90",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Egg, gluten, milk, mustard possible"
-      }
-    ]
-  },
-  {
-    "id": "breakfast_addons",
-    "title": {
-      "en": "Breakfast Add-ons & Upgrades",
-      "hr": "Doručak dodaci i nadoplate"
-    },
-    "description": {
-      "en": "Optional breakfast sides and drink upgrades shown inside breakfast item details.",
-      "hr": "Dodatni prilozi i nadoplate pića prikazuju se unutar detalja doručka."
-    },
-    "icon": "🥖",
-    "homeExplore": false,
-    "active": true,
-    "hiddenInMenu": true,
-    "sort": 2,
-    "items": [
-      {
-        "id": "ADD-BRK-001",
-        "name": {
-          "en": "Toasted Bread",
-          "hr": "Tostirani kruh"
-        },
-        "desc": {
-          "en": "2 slices of toasted bread.",
-          "hr": "2 kriške tostiranog kruha."
-        },
-        "ingredients": {
-          "en": "Bread.",
-          "hr": "Kruh."
-        },
-        "price": "€1.00",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Gluten"
-      },
-      {
-        "id": "ADD-BRK-002",
-        "name": {
-          "en": "Toasted Focaccia",
-          "hr": "Tostirana focaccia"
-        },
-        "desc": {
-          "en": "2 slices of toasted focaccia.",
-          "hr": "2 kriške tostirane focaccie."
-        },
-        "ingredients": {
-          "en": "Focaccia bread.",
-          "hr": "Focaccia kruh."
-        },
-        "price": "€1.50",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Gluten"
-      },
-      {
-        "id": "ADD-BRK-003",
-        "name": {
-          "en": "Tapas Scoop",
-          "hr": "Tapas kuglica"
-        },
-        "desc": {
-          "en": "One 75g tapas scoop. Customer chooses available tapas flavor.",
-          "hr": "Jedna tapas kuglica od 75 g. Gost bira dostupni okus tapasa."
-        },
-        "ingredients": {
-          "en": "Tapas scoop, flavor by choice.",
-          "hr": "Tapas kuglica, okus po izboru."
-        },
-        "price": "€2.50",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Ask staff"
-      },
-      {
-        "id": "ADD-BRK-004",
-        "name": {
-          "en": "Feta / White Cheese",
-          "hr": "Feta / bijeli sir"
-        },
-        "desc": {
-          "en": "50g feta or white cheese portion.",
-          "hr": "50 g fete ili bijelog sira."
-        },
-        "ingredients": {
-          "en": "Feta / white cheese.",
-          "hr": "Feta / bijeli sir."
-        },
-        "price": "€1.20",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Milk"
-      },
-      {
-        "id": "ADD-BRK-005",
-        "name": {
-          "en": "Mortadella",
-          "hr": "Mortadela"
-        },
-        "desc": {
-          "en": "50g mortadella portion.",
-          "hr": "50 g mortadele."
-        },
-        "ingredients": {
-          "en": "Mortadella.",
-          "hr": "Mortadela."
-        },
-        "price": "€1.50",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Ask staff"
-      },
-      {
-        "id": "ADD-BRK-006",
-        "name": {
-          "en": "Turkey Ham",
-          "hr": "Pureća šunka"
-        },
-        "desc": {
-          "en": "50g turkey ham portion.",
-          "hr": "50 g pureće šunke."
-        },
-        "ingredients": {
-          "en": "Turkey ham.",
-          "hr": "Pureća šunka."
-        },
-        "price": "€1.20",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Ask staff"
-      },
-      {
-        "id": "ADD-BRK-007",
-        "name": {
-          "en": "Baked Beans Side",
-          "hr": "Prilog zapečeni grah"
-        },
-        "desc": {
-          "en": "120g warm baked beans side.",
-          "hr": "120 g toplog priloga od zapečenog graha."
-        },
-        "ingredients": {
-          "en": "Baked beans, tomato sauce, smoked paprika, black pepper.",
-          "hr": "Zapečeni grah, umak od rajčice, dimljena paprika, crni papar."
-        },
-        "price": "€2.50",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Ask staff"
-      },
-      {
-        "id": "ADD-BRK-008",
-        "name": {
-          "en": "Butter Portion",
-          "hr": "Porcija maslaca"
-        },
-        "desc": {
-          "en": "10g butter portion.",
-          "hr": "10 g maslaca."
-        },
-        "ingredients": {
-          "en": "Butter.",
-          "hr": "Maslac."
-        },
-        "price": "€0.50",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Milk"
-      },
-      {
-        "id": "ADD-BRK-009",
-        "name": {
-          "en": "Jam or Honey",
-          "hr": "Džem ili med"
-        },
-        "desc": {
-          "en": "25g jam or honey portion.",
-          "hr": "25 g džema ili meda."
-        },
-        "ingredients": {
-          "en": "Jam or honey.",
-          "hr": "Džem ili med."
-        },
-        "price": "€0.70",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Ask staff"
-      },
-      {
-        "id": "ADD-BRK-010",
-        "name": {
-          "en": "Extra Egg",
-          "hr": "Dodatno jaje"
-        },
-        "desc": {
-          "en": "One extra egg.",
-          "hr": "Jedno dodatno jaje."
-        },
-        "ingredients": {
-          "en": "Egg.",
-          "hr": "Jaje."
-        },
-        "price": "€0.80",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Egg"
-      },
-      {
-        "id": "BRK-UPG-001",
-        "name": {
-          "en": "Upgrade to Cappuccino",
-          "hr": "Nadoplata za cappuccino"
-        },
-        "desc": {
-          "en": "Upgrade the included breakfast drink to cappuccino.",
-          "hr": "Nadoplata za uključeno piće u cappuccino."
-        },
-        "ingredients": {
-          "en": "Espresso, milk.",
-          "hr": "Espresso, mlijeko."
-        },
-        "price": "€0.70",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Milk"
-      },
-      {
-        "id": "BRK-UPG-002",
-        "name": {
-          "en": "Upgrade to Latte",
-          "hr": "Nadoplata za latte"
-        },
-        "desc": {
-          "en": "Upgrade the included breakfast drink to latte.",
-          "hr": "Nadoplata za uključeno piće u latte."
-        },
-        "ingredients": {
-          "en": "Espresso, milk.",
-          "hr": "Espresso, mlijeko."
-        },
-        "price": "€1.00",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Milk"
-      }
-    ]
-  },
-  {
     "id": "classic_coffee",
     "title": {
       "en": "Classic Coffee",
@@ -522,7 +12,7 @@ const LANGAR_DEFAULT_MENU = [
     "icon": "☕",
     "homeExplore": false,
     "active": true,
-    "sort": 3,
+    "sort": 1,
     "items": [
       {
         "id": "classic_coffee_001",
@@ -773,31 +263,6 @@ const LANGAR_DEFAULT_MENU = [
         "orderable": true,
         "rewardEligible": true,
         "allergens": "ask staff"
-      },
-      {
-        "id": "classic_coffee_011",
-        "name": {
-          "en": "Latte",
-          "hr": "Latte"
-        },
-        "desc": {
-          "en": "Espresso with steamed milk.",
-          "hr": "Espresso s toplim mlijekom."
-        },
-        "ingredients": {
-          "en": "Espresso, milk.",
-          "hr": "Espresso, mlijeko."
-        },
-        "price": "€2.80",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Milk"
       }
     ]
   },
@@ -814,7 +279,7 @@ const LANGAR_DEFAULT_MENU = [
     "icon": "✨☕",
     "homeExplore": true,
     "active": true,
-    "sort": 4,
+    "sort": 2,
     "items": [
       {
         "id": "signature_coffee_001",
@@ -1156,7 +621,7 @@ const LANGAR_DEFAULT_MENU = [
     "icon": "🍨☕",
     "homeExplore": true,
     "active": true,
-    "sort": 5,
+    "sort": 3,
     "items": [
       {
         "id": "affogato_001",
@@ -1323,7 +788,7 @@ const LANGAR_DEFAULT_MENU = [
     "icon": "⚡☕",
     "homeExplore": false,
     "active": true,
-    "sort": 6,
+    "sort": 4,
     "items": [
       {
         "id": "espresso_bull_001",
@@ -1465,7 +930,7 @@ const LANGAR_DEFAULT_MENU = [
     "icon": "🍸☕",
     "homeExplore": false,
     "active": true,
-    "sort": 7,
+    "sort": 5,
     "items": [
       {
         "id": "coffee_cocktails_001",
@@ -1657,21 +1122,21 @@ const LANGAR_DEFAULT_MENU = [
     "icon": "🍵",
     "homeExplore": false,
     "active": true,
-    "sort": 8,
+    "sort": 6,
     "items": [
       {
         "id": "tea_001",
         "name": {
           "en": "Black Tea",
-          "hr": "Crni čaj"
+          "hr": "Black Tea"
         },
         "desc": {
-          "en": "Classic black tea.",
-          "hr": "Klasični crni čaj."
+          "en": "Smooth and full-bodied black tea.",
+          "hr": "Blag i punog okusa."
         },
         "ingredients": {
-          "en": "Tea bag, hot water.",
-          "hr": "Vrećica čaja, vruća voda."
+          "en": "Black tea, hot water.",
+          "hr": "Crni čaj, vruća voda."
         },
         "price": "€2.00",
         "isNew": false,
@@ -1688,15 +1153,15 @@ const LANGAR_DEFAULT_MENU = [
         "id": "tea_002",
         "name": {
           "en": "Green Tea",
-          "hr": "Zeleni čaj"
+          "hr": "Green Tea"
         },
         "desc": {
-          "en": "Classic green tea.",
-          "hr": "Klasični zeleni čaj."
+          "en": "Light and refreshing green tea.",
+          "hr": "Lagan i osvježavajući."
         },
         "ingredients": {
-          "en": "Tea bag, hot water.",
-          "hr": "Vrećica čaja, vruća voda."
+          "en": "Green tea, hot water.",
+          "hr": "Zeleni čaj, vruća voda."
         },
         "price": "€2.00",
         "isNew": false,
@@ -1713,11 +1178,11 @@ const LANGAR_DEFAULT_MENU = [
         "id": "tea_003",
         "name": {
           "en": "Mint Tea",
-          "hr": "Čaj od mente"
+          "hr": "Mint Tea"
         },
         "desc": {
-          "en": "Classic mint tea.",
-          "hr": "Klasični čaj od mente."
+          "en": "Fresh and calming mint tea.",
+          "hr": "Svjež i umirujući."
         },
         "ingredients": {
           "en": "Mint tea, hot water.",
@@ -1738,15 +1203,15 @@ const LANGAR_DEFAULT_MENU = [
         "id": "tea_004",
         "name": {
           "en": "Chamomile Tea",
-          "hr": "Čaj od kamilice"
+          "hr": "Chamomile Tea"
         },
         "desc": {
-          "en": "Classic chamomile tea.",
-          "hr": "Klasični čaj od kamilice."
+          "en": "Soft, floral and relaxing tea.",
+          "hr": "Nježan, cvjetni i opuštajući."
         },
         "ingredients": {
           "en": "Chamomile tea, hot water.",
-          "hr": "Čaj od kamilice, vruća voda."
+          "hr": "Kamilica, vruća voda."
         },
         "price": "€2.00",
         "isNew": false,
@@ -1766,14 +1231,14 @@ const LANGAR_DEFAULT_MENU = [
           "hr": "Čaj od višnje"
         },
         "desc": {
-          "en": "Fruit tea with sour cherry flavor.",
-          "hr": "Voćni čaj s okusom višnje."
+          "en": "Made with real sour cherries.",
+          "hr": "Od pravih višanja."
         },
         "ingredients": {
-          "en": "Fruit tea, hot water.",
-          "hr": "Voćni čaj, vruća voda."
+          "en": "Sour cherries, hot water, optional honey.",
+          "hr": "Višnje, vruća voda, opcionalno med."
         },
-        "price": "€2.50",
+        "price": "€2.80",
         "isNew": false,
         "isFeatured": false,
         "isKids": false,
@@ -1788,17 +1253,17 @@ const LANGAR_DEFAULT_MENU = [
         "id": "tea_006",
         "name": {
           "en": "Mixed Berry Tea",
-          "hr": "Čaj šumsko voće"
+          "hr": "Čaj od šumskog voća"
         },
         "desc": {
-          "en": "Fruit tea with mixed berry flavor.",
-          "hr": "Voćni čaj s okusom šumskog voća."
+          "en": "Strawberry, raspberry and forest fruits.",
+          "hr": "Jagoda, malina i šumsko voće."
         },
         "ingredients": {
-          "en": "Fruit tea, hot water.",
-          "hr": "Voćni čaj, vruća voda."
+          "en": "Mixed berries, hot water, optional honey.",
+          "hr": "Miješano bobičasto voće, vruća voda, opcionalno med."
         },
-        "price": "€2.50",
+        "price": "€2.80",
         "isNew": false,
         "isFeatured": false,
         "isKids": false,
@@ -1816,14 +1281,14 @@ const LANGAR_DEFAULT_MENU = [
           "hr": "Citrus voćni čaj"
         },
         "desc": {
-          "en": "Fruit tea with citrus notes.",
-          "hr": "Voćni čaj s citrusnim notama."
+          "en": "Orange, lemon and fresh citrus blend.",
+          "hr": "Naranča, limun i svježa citrusna mješavina."
         },
         "ingredients": {
-          "en": "Fruit tea, hot water.",
-          "hr": "Voćni čaj, vruća voda."
+          "en": "Orange, lemon, citrus fruit base, hot water.",
+          "hr": "Naranča, limun, citrus baza, vruća voda."
         },
-        "price": "€2.50",
+        "price": "€2.80",
         "isNew": false,
         "isFeatured": false,
         "isKids": false,
@@ -1838,17 +1303,17 @@ const LANGAR_DEFAULT_MENU = [
         "id": "tea_008",
         "name": {
           "en": "Ginger Lemon Tea",
-          "hr": "Čaj đumbir limun"
+          "hr": "Đumbir limun čaj"
         },
         "desc": {
-          "en": "Wellness tea with ginger and lemon.",
-          "hr": "Wellness čaj s đumbirom i limunom."
+          "en": "Fresh ginger and lemon, warming and energizing.",
+          "hr": "Svježi đumbir i limun, grije i daje energiju."
         },
         "ingredients": {
-          "en": "Tea, ginger/lemon flavor, hot water.",
-          "hr": "Čaj, okus đumbira/limuna, vruća voda."
+          "en": "Fresh ginger, lemon, hot water, optional honey.",
+          "hr": "Svježi đumbir, limun, vruća voda, opcionalno med."
         },
-        "price": "€2.50",
+        "price": "€2.80",
         "isNew": false,
         "isFeatured": false,
         "isKids": false,
@@ -1866,14 +1331,14 @@ const LANGAR_DEFAULT_MENU = [
           "hr": "Svježa menta i limun"
         },
         "desc": {
-          "en": "Fresh mint and lemon tea.",
-          "hr": "Čaj od svježe mente i limuna."
+          "en": "Light, refreshing and digestive.",
+          "hr": "Lagano, osvježavajuće i dobro za probavu."
         },
         "ingredients": {
           "en": "Fresh mint, lemon, hot water.",
           "hr": "Svježa menta, limun, vruća voda."
         },
-        "price": "€2.50",
+        "price": "€2.80",
         "isNew": false,
         "isFeatured": false,
         "isKids": false,
@@ -1888,17 +1353,17 @@ const LANGAR_DEFAULT_MENU = [
         "id": "tea_010",
         "name": {
           "en": "Honey Cinnamon Tea",
-          "hr": "Čaj med cimet"
+          "hr": "Med cimet čaj"
         },
         "desc": {
-          "en": "Warm tea with honey and cinnamon.",
-          "hr": "Topli čaj s medom i cimetom."
+          "en": "Honey and cinnamon in warm tea.",
+          "hr": "Med i cimet u toplom čaju."
         },
         "ingredients": {
-          "en": "Tea, honey, cinnamon.",
-          "hr": "Čaj, med, cimet."
+          "en": "Tea base, honey, cinnamon, hot water.",
+          "hr": "Čaj baza, med, cimet, vruća voda."
         },
-        "price": "€2.50",
+        "price": "€3.00",
         "isNew": false,
         "isFeatured": false,
         "isKids": false,
@@ -1913,17 +1378,17 @@ const LANGAR_DEFAULT_MENU = [
         "id": "tea_011",
         "name": {
           "en": "Cold Relief Tea",
-          "hr": "Cold Relief čaj"
+          "hr": "Cold Relief Tea"
         },
         "desc": {
-          "en": "Warm wellness tea for cold days.",
-          "hr": "Topli wellness čaj za hladne dane."
+          "en": "Ginger, lemon and honey. Helps relieve cold and boost immunity.",
+          "hr": "Đumbir, limun, med. Pomaže kod prehlade i jača imunitet."
         },
         "ingredients": {
-          "en": "Tea, lemon/ginger/honey style ingredients.",
-          "hr": "Čaj, sastojci u stilu limun/đumbir/med."
+          "en": "Fresh ginger, lemon, honey, hot water.",
+          "hr": "Svježi đumbir, limun, med, vruća voda."
         },
-        "price": "€2.50",
+        "price": "€3.50",
         "isNew": false,
         "isFeatured": false,
         "isKids": false,
@@ -1938,17 +1403,17 @@ const LANGAR_DEFAULT_MENU = [
         "id": "tea_012",
         "name": {
           "en": "Relax Tea",
-          "hr": "Relax čaj"
+          "hr": "Relax Tea"
         },
         "desc": {
-          "en": "Relaxing herbal tea.",
-          "hr": "Opuštajući biljni čaj."
+          "en": "Chamomile, mint and honey. Calming and stress-relieving.",
+          "hr": "Kamilica, menta, med. Umiruje i pomaže kod stresa."
         },
         "ingredients": {
-          "en": "Herbal tea, hot water.",
-          "hr": "Biljni čaj, vruća voda."
+          "en": "Chamomile, mint, honey, hot water.",
+          "hr": "Kamilica, menta, med, vruća voda."
         },
-        "price": "€2.50",
+        "price": "€3.50",
         "isNew": false,
         "isFeatured": false,
         "isKids": false,
@@ -1963,17 +1428,17 @@ const LANGAR_DEFAULT_MENU = [
         "id": "tea_013",
         "name": {
           "en": "Immunity Boost Tea",
-          "hr": "Immunity Boost čaj"
+          "hr": "Immunity Boost Tea"
         },
         "desc": {
-          "en": "Warm wellness tea with citrus notes.",
-          "hr": "Topli wellness čaj s citrusnim notama."
+          "en": "Green tea, lemon, honey, fresh ginger and cinnamon.",
+          "hr": "Zeleni čaj, limun, med, svježi đumbir, cimet."
         },
         "ingredients": {
-          "en": "Tea, citrus/ginger style ingredients.",
-          "hr": "Čaj, sastojci u stilu citrus/đumbir."
+          "en": "Green tea, lemon, honey, fresh ginger, cinnamon, hot water.",
+          "hr": "Zeleni čaj, limun, med, svježi đumbir, cimet, vruća voda."
         },
-        "price": "€2.50",
+        "price": "€3.50",
         "isNew": false,
         "isFeatured": false,
         "isKids": false,
@@ -1999,23 +1464,23 @@ const LANGAR_DEFAULT_MENU = [
     "icon": "🫖",
     "homeExplore": false,
     "active": true,
-    "sort": 9,
+    "sort": 7,
     "items": [
       {
         "id": "tea_latte_001",
         "name": {
           "en": "Chai Latte",
-          "hr": "Chai latte"
+          "hr": "Chai Latte"
         },
         "desc": {
-          "en": "Chai tea with milk.",
-          "hr": "Chai čaj s mlijekom."
+          "en": "Spiced tea with milk, warm and comforting.",
+          "hr": "Začinjeni čaj s mlijekom, topao i ugodan."
         },
         "ingredients": {
-          "en": "Chai, milk.",
-          "hr": "Chai, mlijeko."
+          "en": "Chai tea, milk, spices.",
+          "hr": "Chai čaj, mlijeko, začini."
         },
-        "price": "€2.50",
+        "price": "€3.00",
         "isNew": false,
         "isFeatured": false,
         "isKids": false,
@@ -2024,23 +1489,23 @@ const LANGAR_DEFAULT_MENU = [
         "available": true,
         "orderable": true,
         "rewardEligible": true,
-        "allergens": "Milk"
+        "allergens": "ask staff"
       },
       {
         "id": "tea_latte_002",
         "name": {
           "en": "Vanilla Tea Latte",
-          "hr": "Vanilla tea latte"
+          "hr": "Vanilla Tea Latte"
         },
         "desc": {
-          "en": "Tea latte with vanilla flavor.",
-          "hr": "Čaj latte s okusom vanilije."
+          "en": "Black tea with vanilla and milk.",
+          "hr": "Crni čaj s vanilijom i mlijekom."
         },
         "ingredients": {
-          "en": "Tea, milk, vanilla flavor.",
-          "hr": "Čaj, mlijeko, aroma vanilije."
+          "en": "Black tea, milk, vanilla syrup.",
+          "hr": "Crni čaj, mlijeko, vanilija sirup."
         },
-        "price": "€2.50",
+        "price": "€3.00",
         "isNew": false,
         "isFeatured": false,
         "isKids": false,
@@ -2049,7 +1514,57 @@ const LANGAR_DEFAULT_MENU = [
         "available": true,
         "orderable": true,
         "rewardEligible": true,
-        "allergens": "Milk"
+        "allergens": "ask staff"
+      },
+      {
+        "id": "tea_latte_003",
+        "name": {
+          "en": "Honey Cinnamon Tea Latte",
+          "hr": "Honey Cinnamon Tea Latte"
+        },
+        "desc": {
+          "en": "Warm tea latte with honey and cinnamon.",
+          "hr": "Topli čaj latte s medom i cimetom."
+        },
+        "ingredients": {
+          "en": "Tea, milk, honey, cinnamon.",
+          "hr": "Čaj, mlijeko, med, cimet."
+        },
+        "price": "€3.30",
+        "isNew": true,
+        "isFeatured": false,
+        "isKids": false,
+        "isAlcoholic": false,
+        "tags": [],
+        "available": true,
+        "orderable": true,
+        "rewardEligible": true,
+        "allergens": "ask staff"
+      },
+      {
+        "id": "tea_latte_004",
+        "name": {
+          "en": "Coconut Tea Latte",
+          "hr": "Coconut Tea Latte"
+        },
+        "desc": {
+          "en": "Tea latte with coconut and milk.",
+          "hr": "Čaj latte s kokosom i mlijekom."
+        },
+        "ingredients": {
+          "en": "Black tea, milk, coconut syrup.",
+          "hr": "Crni čaj, mlijeko, kokos sirup."
+        },
+        "price": "€3.30",
+        "isNew": true,
+        "isFeatured": false,
+        "isKids": false,
+        "isAlcoholic": false,
+        "tags": [],
+        "available": true,
+        "orderable": true,
+        "rewardEligible": true,
+        "allergens": "ask staff"
       }
     ]
   },
@@ -2066,7 +1581,7 @@ const LANGAR_DEFAULT_MENU = [
     "icon": "🧊🍹",
     "homeExplore": true,
     "active": true,
-    "sort": 10,
+    "sort": 8,
     "items": [
       {
         "id": "iced_refreshers_001",
@@ -2082,7 +1597,7 @@ const LANGAR_DEFAULT_MENU = [
           "en": "Tea base, lemon, ice.",
           "hr": "Čaj baza, limun, led."
         },
-        "price": "€2.50",
+        "price": "€2.80",
         "isNew": false,
         "isFeatured": false,
         "isKids": false,
@@ -2107,7 +1622,7 @@ const LANGAR_DEFAULT_MENU = [
           "en": "Tea base, peach flavor, ice.",
           "hr": "Čaj baza, breskva aroma, led."
         },
-        "price": "€2.50",
+        "price": "€2.80",
         "isNew": false,
         "isFeatured": false,
         "isKids": false,
@@ -2132,7 +1647,7 @@ const LANGAR_DEFAULT_MENU = [
           "en": "Tea base, berries, ice.",
           "hr": "Čaj baza, bobičasto voće, led."
         },
-        "price": "€2.50",
+        "price": "€2.80",
         "isNew": false,
         "isFeatured": false,
         "isKids": false,
@@ -2308,7 +1823,7 @@ const LANGAR_DEFAULT_MENU = [
     "icon": "🍋",
     "homeExplore": true,
     "active": true,
-    "sort": 11,
+    "sort": 9,
     "items": [
       {
         "id": "lemonade_001",
@@ -2475,7 +1990,7 @@ const LANGAR_DEFAULT_MENU = [
     "icon": "🍵✨",
     "homeExplore": true,
     "active": true,
-    "sort": 12,
+    "sort": 10,
     "items": [
       {
         "id": "matcha_001",
@@ -2491,7 +2006,7 @@ const LANGAR_DEFAULT_MENU = [
           "en": "Premium matcha, milk.",
           "hr": "Premium matcha, mlijeko."
         },
-        "price": "€3.50",
+        "price": "€4.50",
         "isNew": false,
         "isFeatured": false,
         "isKids": false,
@@ -2516,7 +2031,7 @@ const LANGAR_DEFAULT_MENU = [
           "en": "Premium matcha, milk, chosen syrup.",
           "hr": "Premium matcha, mlijeko, odabrani sirup."
         },
-        "price": "€3.70",
+        "price": "€4.50",
         "isNew": false,
         "isFeatured": false,
         "isKids": false,
@@ -2541,7 +2056,7 @@ const LANGAR_DEFAULT_MENU = [
           "en": "Premium matcha, milk, strawberry puree.",
           "hr": "Premium matcha, mlijeko, jagoda pire."
         },
-        "price": "€3.80",
+        "price": "€4.80",
         "isNew": true,
         "isFeatured": true,
         "isKids": false,
@@ -2566,7 +2081,7 @@ const LANGAR_DEFAULT_MENU = [
           "en": "Premium matcha, milk, mango puree.",
           "hr": "Premium matcha, mlijeko, mango pire."
         },
-        "price": "€3.80",
+        "price": "€4.80",
         "isNew": true,
         "isFeatured": false,
         "isKids": false,
@@ -2591,7 +2106,7 @@ const LANGAR_DEFAULT_MENU = [
           "en": "Premium matcha, mango puree, coconut syrup, milk.",
           "hr": "Premium matcha, mango pire, kokos sirup, mlijeko."
         },
-        "price": "€4.00",
+        "price": "€4.90",
         "isNew": true,
         "isFeatured": true,
         "isKids": false,
@@ -2616,7 +2131,7 @@ const LANGAR_DEFAULT_MENU = [
           "en": "Premium matcha, milk, espresso.",
           "hr": "Premium matcha, mlijeko, espresso."
         },
-        "price": "€4.00",
+        "price": "€4.80",
         "isNew": false,
         "isFeatured": false,
         "isKids": false,
@@ -2641,7 +2156,7 @@ const LANGAR_DEFAULT_MENU = [
           "en": "Premium matcha, milk, pistachio cream.",
           "hr": "Premium matcha, mlijeko, pistacija krema."
         },
-        "price": "€4.00",
+        "price": "€4.90",
         "isNew": true,
         "isFeatured": true,
         "isKids": false,
@@ -2667,7 +2182,7 @@ const LANGAR_DEFAULT_MENU = [
     "icon": "🥭",
     "homeExplore": false,
     "active": true,
-    "sort": 13,
+    "sort": 11,
     "items": [
       {
         "id": "smoothies_001",
@@ -2884,7 +2399,7 @@ const LANGAR_DEFAULT_MENU = [
     "icon": "🥤☕",
     "homeExplore": false,
     "active": true,
-    "sort": 14,
+    "sort": 12,
     "items": [
       {
         "id": "coffee_milkshakes_001",
@@ -3050,10 +2565,202 @@ const LANGAR_DEFAULT_MENU = [
           "en": "Espresso, milk, ice cream, tiramisu flavor.",
           "hr": "Espresso, mlijeko, sladoled, aroma tiramisua."
         },
-        "price": "€4.50",
+        "price": "€4.80",
         "isNew": false,
         "isFeatured": false,
         "isKids": false,
+        "isAlcoholic": false,
+        "tags": [],
+        "available": true,
+        "orderable": true,
+        "rewardEligible": true,
+        "allergens": "ask staff"
+      },
+      {
+        "id": "coffee_milkshakes_008",
+        "name": {
+          "en": "Pistachio Coffee Milkshake",
+          "hr": "Pistachio Coffee Milkshake"
+        },
+        "desc": {
+          "en": "Coffee milkshake with pistachio.",
+          "hr": "Milkshake s kavom i pistacijom."
+        },
+        "ingredients": {
+          "en": "Espresso, milk, ice cream, pistachio cream.",
+          "hr": "Espresso, mlijeko, sladoled, pistacija krema."
+        },
+        "price": "€4.90",
+        "isNew": true,
+        "isFeatured": false,
+        "isKids": false,
+        "isAlcoholic": false,
+        "tags": [],
+        "available": true,
+        "orderable": true,
+        "rewardEligible": true,
+        "allergens": "ask staff"
+      }
+    ]
+  },
+  {
+    "id": "kids_milk",
+    "title": {
+      "en": "Kids & Milk Drinks",
+      "hr": "Dječji i mliječni napitci"
+    },
+    "description": {
+      "en": "Milk drinks and child-friendly options",
+      "hr": "Mliječni napitci i opcije za djecu"
+    },
+    "icon": "🧸🥛",
+    "homeExplore": false,
+    "active": true,
+    "sort": 13,
+    "items": [
+      {
+        "id": "kids_milk_001",
+        "name": {
+          "en": "Chocolate Milk",
+          "hr": "Čokoladno mlijeko"
+        },
+        "desc": {
+          "en": "Hot or cold milk with chocolate.",
+          "hr": "Toplo ili hladno mlijeko s čokoladom."
+        },
+        "ingredients": {
+          "en": "Milk, chocolate sauce.",
+          "hr": "Mlijeko, čokoladni umak."
+        },
+        "price": "€3.20",
+        "isNew": true,
+        "isFeatured": false,
+        "isKids": true,
+        "isAlcoholic": false,
+        "tags": [],
+        "available": true,
+        "orderable": true,
+        "rewardEligible": true,
+        "allergens": "ask staff"
+      },
+      {
+        "id": "kids_milk_002",
+        "name": {
+          "en": "White Chocolate Milk",
+          "hr": "Bijela čokolada mlijeko"
+        },
+        "desc": {
+          "en": "Hot or cold milk with white chocolate.",
+          "hr": "Toplo ili hladno mlijeko s bijelom čokoladom."
+        },
+        "ingredients": {
+          "en": "Milk, white chocolate sauce.",
+          "hr": "Mlijeko, umak od bijele čokolade."
+        },
+        "price": "€3.50",
+        "isNew": true,
+        "isFeatured": false,
+        "isKids": true,
+        "isAlcoholic": false,
+        "tags": [],
+        "available": true,
+        "orderable": true,
+        "rewardEligible": true,
+        "allergens": "ask staff"
+      },
+      {
+        "id": "kids_milk_003",
+        "name": {
+          "en": "Strawberry Milk",
+          "hr": "Mlijeko jagoda"
+        },
+        "desc": {
+          "en": "Milk and strawberry puree.",
+          "hr": "Mlijeko i pire od jagode."
+        },
+        "ingredients": {
+          "en": "Milk, strawberry puree.",
+          "hr": "Mlijeko, jagoda pire."
+        },
+        "price": "€3.50",
+        "isNew": true,
+        "isFeatured": false,
+        "isKids": true,
+        "isAlcoholic": false,
+        "tags": [],
+        "available": true,
+        "orderable": true,
+        "rewardEligible": true,
+        "allergens": "ask staff"
+      },
+      {
+        "id": "kids_milk_004",
+        "name": {
+          "en": "Vanilla Milk",
+          "hr": "Mlijeko vanilija"
+        },
+        "desc": {
+          "en": "Milk with vanilla flavor.",
+          "hr": "Mlijeko s okusom vanilije."
+        },
+        "ingredients": {
+          "en": "Milk, vanilla syrup.",
+          "hr": "Mlijeko, vanilija sirup."
+        },
+        "price": "€3.20",
+        "isNew": true,
+        "isFeatured": false,
+        "isKids": true,
+        "isAlcoholic": false,
+        "tags": [],
+        "available": true,
+        "orderable": true,
+        "rewardEligible": true,
+        "allergens": "ask staff"
+      },
+      {
+        "id": "kids_milk_005",
+        "name": {
+          "en": "Pistachio Milk",
+          "hr": "Mlijeko pistacija"
+        },
+        "desc": {
+          "en": "Milk and premium pistachio cream.",
+          "hr": "Mlijeko i premium pistacija krema."
+        },
+        "ingredients": {
+          "en": "Milk, pistachio cream.",
+          "hr": "Mlijeko, pistacija krema."
+        },
+        "price": "€3.80",
+        "isNew": true,
+        "isFeatured": false,
+        "isKids": true,
+        "isAlcoholic": false,
+        "tags": [],
+        "available": true,
+        "orderable": true,
+        "rewardEligible": true,
+        "allergens": "ask staff"
+      },
+      {
+        "id": "kids_milk_006",
+        "name": {
+          "en": "Babyccino",
+          "hr": "Babyccino"
+        },
+        "desc": {
+          "en": "Warm milk foam with chocolate topping.",
+          "hr": "Topla mliječna pjena s čokoladnim posipom."
+        },
+        "ingredients": {
+          "en": "Warm milk foam, chocolate topping.",
+          "hr": "Topla mliječna pjena, čokoladni posip."
+        },
+        "price": "€1.80",
+        "isNew": true,
+        "isFeatured": false,
+        "isKids": true,
         "isAlcoholic": false,
         "tags": [],
         "available": true,
@@ -3076,7 +2783,7 @@ const LANGAR_DEFAULT_MENU = [
     "icon": "💪🥤",
     "homeExplore": false,
     "active": true,
-    "sort": 15,
+    "sort": 14,
     "items": [
       {
         "id": "protein_001",
@@ -3256,173 +2963,6 @@ const LANGAR_DEFAULT_MENU = [
     ]
   },
   {
-    "id": "kids_milk",
-    "title": {
-      "en": "Kids & Milk Drinks",
-      "hr": "Dječji i mliječni napitci"
-    },
-    "description": {
-      "en": "Milk drinks and child-friendly options",
-      "hr": "Mliječni napitci i opcije za djecu"
-    },
-    "icon": "🧸🥛",
-    "homeExplore": false,
-    "active": true,
-    "sort": 16,
-    "items": [
-      {
-        "id": "kids_milk_001",
-        "name": {
-          "en": "Chocolate Milk",
-          "hr": "Čokoladno mlijeko"
-        },
-        "desc": {
-          "en": "Hot or cold milk with chocolate.",
-          "hr": "Toplo ili hladno mlijeko s čokoladom."
-        },
-        "ingredients": {
-          "en": "Milk, chocolate sauce.",
-          "hr": "Mlijeko, čokoladni umak."
-        },
-        "price": "€3.20",
-        "isNew": true,
-        "isFeatured": false,
-        "isKids": true,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "ask staff"
-      },
-      {
-        "id": "kids_milk_002",
-        "name": {
-          "en": "White Chocolate Milk",
-          "hr": "Bijela čokolada mlijeko"
-        },
-        "desc": {
-          "en": "Hot or cold milk with white chocolate.",
-          "hr": "Toplo ili hladno mlijeko s bijelom čokoladom."
-        },
-        "ingredients": {
-          "en": "Milk, white chocolate sauce.",
-          "hr": "Mlijeko, umak od bijele čokolade."
-        },
-        "price": "€3.50",
-        "isNew": true,
-        "isFeatured": false,
-        "isKids": true,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "ask staff"
-      },
-      {
-        "id": "kids_milk_003",
-        "name": {
-          "en": "Strawberry Milk",
-          "hr": "Mlijeko jagoda"
-        },
-        "desc": {
-          "en": "Milk and strawberry puree.",
-          "hr": "Mlijeko i pire od jagode."
-        },
-        "ingredients": {
-          "en": "Milk, strawberry puree.",
-          "hr": "Mlijeko, jagoda pire."
-        },
-        "price": "€3.50",
-        "isNew": true,
-        "isFeatured": false,
-        "isKids": true,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "ask staff"
-      },
-      {
-        "id": "kids_milk_004",
-        "name": {
-          "en": "Vanilla Milk",
-          "hr": "Mlijeko vanilija"
-        },
-        "desc": {
-          "en": "Milk with vanilla flavor.",
-          "hr": "Mlijeko s okusom vanilije."
-        },
-        "ingredients": {
-          "en": "Milk, vanilla syrup.",
-          "hr": "Mlijeko, vanilija sirup."
-        },
-        "price": "€3.20",
-        "isNew": true,
-        "isFeatured": false,
-        "isKids": true,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "ask staff"
-      },
-      {
-        "id": "kids_milk_005",
-        "name": {
-          "en": "Pistachio Milk",
-          "hr": "Mlijeko pistacija"
-        },
-        "desc": {
-          "en": "Milk and premium pistachio cream.",
-          "hr": "Mlijeko i premium pistacija krema."
-        },
-        "ingredients": {
-          "en": "Milk, pistachio cream.",
-          "hr": "Mlijeko, pistacija krema."
-        },
-        "price": "€3.80",
-        "isNew": true,
-        "isFeatured": false,
-        "isKids": true,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "ask staff"
-      },
-      {
-        "id": "kids_milk_006",
-        "name": {
-          "en": "Babyccino",
-          "hr": "Babyccino"
-        },
-        "desc": {
-          "en": "Warm milk foam with chocolate topping.",
-          "hr": "Topla mliječna pjena s čokoladnim posipom."
-        },
-        "ingredients": {
-          "en": "Warm milk foam, chocolate topping.",
-          "hr": "Topla mliječna pjena, čokoladni posip."
-        },
-        "price": "€1.80",
-        "isNew": true,
-        "isFeatured": false,
-        "isKids": true,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "ask staff"
-      }
-    ]
-  },
-  {
     "id": "soft_drinks",
     "title": {
       "en": "Soft Drinks",
@@ -3435,7 +2975,7 @@ const LANGAR_DEFAULT_MENU = [
     "icon": "🧃",
     "homeExplore": false,
     "active": true,
-    "sort": 17,
+    "sort": 15,
     "items": [
       {
         "id": "soft_drinks_001",
@@ -3777,7 +3317,7 @@ const LANGAR_DEFAULT_MENU = [
     "icon": "🍺",
     "homeExplore": false,
     "active": true,
-    "sort": 18,
+    "sort": 16,
     "items": [
       {
         "id": "beer_001",
@@ -3919,7 +3459,7 @@ const LANGAR_DEFAULT_MENU = [
     "icon": "🍷",
     "homeExplore": true,
     "active": true,
-    "sort": 19,
+    "sort": 17,
     "items": [
       {
         "id": "wine_001",
@@ -4061,7 +3601,7 @@ const LANGAR_DEFAULT_MENU = [
     "icon": "🧀🍷",
     "homeExplore": true,
     "active": true,
-    "sort": 20,
+    "sort": 18,
     "items": [
       {
         "id": "wine_pairing_001",
@@ -4166,820 +3706,194 @@ const LANGAR_DEFAULT_MENU = [
     ]
   },
   {
-    "id": "premium_ciabatta",
+    "id": "breakfast_combos",
     "title": {
-      "en": "Premium Ciabatta Sandwiches",
-      "hr": "Premium ciabatta sendviči"
+      "en": "Breakfast & Coffee Combos",
+      "hr": "Doručak i coffee combo"
     },
     "description": {
-      "en": "Grilled ciabatta sandwiches. Prices currently kept from previous app until final sandwich prices are approved.",
-      "hr": "Grilani ciabatta sendviči. Cijene su privremeno zadržane iz prethodne aplikacije do konačne potvrde."
+      "en": "Coffee combos and breakfast offers",
+      "hr": "Coffee combo i doručak ponude"
     },
-    "icon": "🥪",
+    "icon": "<span class=\"combo-icon\">☕🥐</span>",
     "homeExplore": true,
     "active": true,
-    "sort": 21,
+    "sort": 19,
     "items": [
       {
-        "id": "SAN-001",
+        "id": "breakfast_combos_001",
         "name": {
-          "en": "Chicken Pesto & Mozzarella Ciabatta",
-          "hr": "Ciabatta s piletinom, pestom i mozzarellom"
+          "en": "Espresso + Croissant",
+          "hr": "Espresso + kroasan"
         },
         "desc": {
-          "en": "Ciabatta with prepared chicken, mozzarella and pesto sauce. Price currently kept from app until final sandwich prices are approved.",
-          "hr": "Ciabatta s pripremljenom piletinom, mozzarellom i pesto umakom. Cijena je privremeno zadržana iz aplikacije do konačne potvrde cijena sendviča."
+          "en": "Espresso and croissant.",
+          "hr": "Espresso i kroasan."
         },
         "ingredients": {
-          "en": "Ciabatta, chicken, mozzarella, pesto.",
-          "hr": "Ciabatta, piletina, mozzarella, pesto."
+          "en": "Espresso, croissant.",
+          "hr": "Espresso, kroasan."
         },
-        "price": "€3.90",
+        "price": "€4.00",
         "isNew": false,
-        "isFeatured": false,
+        "isFeatured": true,
         "isKids": false,
         "isAlcoholic": false,
         "tags": [],
         "available": true,
         "orderable": true,
         "rewardEligible": true,
-        "allergens": "Gluten, milk, nuts possible"
+        "allergens": "ask staff"
       },
       {
-        "id": "SAN-002",
+        "id": "breakfast_combos_002",
         "name": {
-          "en": "Tuna Melt Ciabatta",
-          "hr": "Tuna melt ciabatta"
+          "en": "Cappuccino + Croissant",
+          "hr": "Cappuccino + kroasan"
         },
         "desc": {
-          "en": "Ciabatta with tuna filling, mozzarella and crispy onion. Price currently kept from app until final sandwich prices are approved.",
-          "hr": "Ciabatta s nadjevom od tune, mozzarellom i hrskavim lukom. Cijena je privremeno zadržana iz aplikacije do konačne potvrde cijena sendviča."
+          "en": "Cappuccino and croissant.",
+          "hr": "Cappuccino i kroasan."
         },
         "ingredients": {
-          "en": "Ciabatta, tuna filling, mozzarella, crispy onion.",
-          "hr": "Ciabatta, nadjev od tune, mozzarella, hrskavi luk."
+          "en": "Cappuccino, croissant.",
+          "hr": "Cappuccino, kroasan."
         },
-        "price": "€3.80",
+        "price": "€5.00",
         "isNew": false,
-        "isFeatured": false,
+        "isFeatured": true,
         "isKids": false,
         "isAlcoholic": false,
         "tags": [],
         "available": true,
         "orderable": true,
         "rewardEligible": true,
-        "allergens": "Gluten, fish, milk, egg, mustard"
+        "allergens": "ask staff"
       },
       {
-        "id": "SAN-003",
+        "id": "breakfast_combos_003",
         "name": {
-          "en": "Garlic Margherita Ciabatta",
-          "hr": "Garlic Margherita ciabatta"
+          "en": "Latte + Croissant",
+          "hr": "Latte + kroasan"
         },
         "desc": {
-          "en": "Ciabatta with tomato sauce, garlic olive sauce and mozzarella. Price currently kept from app until final sandwich prices are approved.",
-          "hr": "Ciabatta s umakom od rajčice, umakom od češnjaka i maslinovog ulja te mozzarellom. Cijena je privremeno zadržana iz aplikacije do konačne potvrde cijena sendviča."
+          "en": "Latte and croissant.",
+          "hr": "Latte i kroasan."
         },
         "ingredients": {
-          "en": "Ciabatta, tomato sauce, garlic olive sauce, mozzarella.",
-          "hr": "Ciabatta, umak od rajčice, umak češnjak-maslina, mozzarella."
+          "en": "Latte, croissant.",
+          "hr": "Latte, kroasan."
         },
-        "price": "€3.80",
+        "price": "€5.00",
         "isNew": false,
-        "isFeatured": false,
+        "isFeatured": true,
         "isKids": false,
         "isAlcoholic": false,
         "tags": [],
         "available": true,
         "orderable": true,
         "rewardEligible": true,
-        "allergens": "Gluten, milk"
+        "allergens": "ask staff"
       },
       {
-        "id": "SAN-004",
+        "id": "breakfast_combos_004",
         "name": {
-          "en": "Cheesy Mortadella Ciabatta",
-          "hr": "Ciabatta s mortadelom i sirom"
+          "en": "Pistachio Latte + Croissant",
+          "hr": "Pistachio latte + kroasan"
         },
         "desc": {
-          "en": "Ciabatta with mortadella and mozzarella. Price currently kept from app until final sandwich prices are approved.",
-          "hr": "Ciabatta s mortadelom i mozzarellom. Cijena je privremeno zadržana iz aplikacije do konačne potvrde cijena sendviča."
+          "en": "Premium combo: pistachio latte and croissant.",
+          "hr": "Premium combo: pistachio latte i kroasan."
         },
         "ingredients": {
-          "en": "Ciabatta, mortadella, mozzarella.",
-          "hr": "Ciabatta, mortadela, mozzarella."
+          "en": "Pistachio latte, croissant.",
+          "hr": "Pistachio latte, kroasan."
         },
-        "price": "€3.80",
+        "price": "€5.90",
         "isNew": false,
-        "isFeatured": false,
+        "isFeatured": true,
         "isKids": false,
         "isAlcoholic": false,
         "tags": [],
         "available": true,
         "orderable": true,
         "rewardEligible": true,
-        "allergens": "Gluten, milk"
+        "allergens": "ask staff"
       },
       {
-        "id": "SAN-005",
+        "id": "breakfast_combos_005",
         "name": {
-          "en": "Avocado Chicken Ciabatta",
-          "hr": "Ciabatta s piletinom i avokadom"
+          "en": "Spanish Latte + Muffin",
+          "hr": "Spanish Latte + muffin"
         },
         "desc": {
-          "en": "Ciabatta with chicken, guacamole and mozzarella. Price currently kept from app until final sandwich prices are approved.",
-          "hr": "Ciabatta s piletinom, guacamoleom i mozzarellom. Cijena je privremeno zadržana iz aplikacije do konačne potvrde cijena sendviča."
+          "en": "Premium combo: Spanish latte and muffin.",
+          "hr": "Premium combo: Spanish latte i muffin."
         },
         "ingredients": {
-          "en": "Ciabatta, chicken, guacamole, mozzarella.",
-          "hr": "Ciabatta, piletina, guacamole, mozzarella."
+          "en": "Spanish latte, muffin.",
+          "hr": "Spanish latte, muffin."
         },
-        "price": "€4.20",
+        "price": "€5.60",
         "isNew": false,
-        "isFeatured": false,
+        "isFeatured": true,
         "isKids": false,
         "isAlcoholic": false,
         "tags": [],
         "available": true,
         "orderable": true,
         "rewardEligible": true,
-        "allergens": "Gluten, milk"
+        "allergens": "ask staff"
       },
       {
-        "id": "SAN-006",
+        "id": "breakfast_combos_006",
         "name": {
-          "en": "Turkey Ham & Mozzarella Ciabatta",
-          "hr": "Ciabatta s purećom šunkom i mozzarellom"
+          "en": "Dubai Pistachio Latte + Croissant",
+          "hr": "Dubai Pistachio Latte + kroasan"
         },
         "desc": {
-          "en": "Ciabatta with turkey ham, mozzarella, honey mustard and crispy onion. Price currently kept from app until final sandwich prices are approved.",
-          "hr": "Ciabatta s purećom šunkom, mozzarellom, honey mustard umakom i hrskavim lukom. Cijena je privremeno zadržana iz aplikacije do konačne potvrde cijena sendviča."
+          "en": "Dubai pistachio latte with croissant.",
+          "hr": "Dubai pistachio latte s kroasanom."
         },
         "ingredients": {
-          "en": "Ciabatta, turkey ham, mozzarella, honey mustard, crispy onion.",
-          "hr": "Ciabatta, pureća šunka, mozzarella, honey mustard, hrskavi luk."
+          "en": "Dubai pistachio latte, croissant.",
+          "hr": "Dubai pistachio latte, kroasan."
         },
-        "price": "€4.20",
-        "isNew": false,
-        "isFeatured": false,
+        "price": "€6.50",
+        "isNew": true,
+        "isFeatured": true,
         "isKids": false,
         "isAlcoholic": false,
         "tags": [],
         "available": true,
         "orderable": true,
         "rewardEligible": true,
-        "allergens": "Gluten, milk, egg, mustard"
+        "allergens": "ask staff"
       },
       {
-        "id": "SAN-007",
+        "id": "breakfast_combos_007",
         "name": {
-          "en": "Egg & Gouda Crunch Ciabatta",
-          "hr": "Ciabatta s jajem i goudom"
+          "en": "Americano + Toast Sandwich",
+          "hr": "Americano + tost sendvič"
         },
         "desc": {
-          "en": "Ciabatta with boiled egg, Gouda, egg sandwich sauce, pickles and crispy onion. Price currently kept from app until final sandwich prices are approved.",
-          "hr": "Ciabatta s kuhanim jajem, goudom, umakom za sendvič s jajem, kiselim krastavcima i hrskavim lukom. Cijena je privremeno zadržana iz aplikacije do konačne potvrde cijena sendviča."
+          "en": "Americano with toast sandwich.",
+          "hr": "Americano s tost sendvičem."
         },
         "ingredients": {
-          "en": "Ciabatta, egg, Gouda, egg sauce, pickles, crispy onion.",
-          "hr": "Ciabatta, jaje, Gouda, umak od jaja, kiseli krastavci, hrskavi luk."
-        },
-        "price": "€3.80",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Gluten, egg, milk, mustard"
-      }
-    ]
-  },
-  {
-    "id": "tacos",
-    "title": {
-      "en": "Premium Tacos",
-      "hr": "Premium tacos"
-    },
-    "description": {
-      "en": "Premium tacos. Each taco portion includes one 90ml side sauce.",
-      "hr": "Premium tacos. Svaka porcija uključuje jedan 90 ml umak sa strane."
-    },
-    "icon": "🌮",
-    "homeExplore": true,
-    "active": true,
-    "sort": 22,
-    "items": [
-      {
-        "id": "TAC-001",
-        "name": {
-          "en": "Golden Chicken Taco",
-          "hr": "Golden Chicken Taco"
-        },
-        "desc": {
-          "en": "Three tacos with crispy golden chicken, coleslaw, arugula, teriyaki, sesame and one included 90ml side sauce.",
-          "hr": "Tri tacosa s hrskavom golden piletinom, coleslaw salatom, rikolom, teriyaki umakom, sezamom i jednim uključenim 90 ml umakom sa strane."
-        },
-        "ingredients": {
-          "en": "Tortilla, crispy chicken, coleslaw, arugula, teriyaki sauce, sesame, side sauce.",
-          "hr": "Tortilla, hrskava piletina, coleslaw, rikola, teriyaki umak, sezam, umak sa strane."
-        },
-        "price": "€7.90",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Gluten, egg, milk, soy, sesame"
-      },
-      {
-        "id": "TAC-002",
-        "name": {
-          "en": "Crunchy Prawn Taco",
-          "hr": "Crunchy Prawn Taco"
-        },
-        "desc": {
-          "en": "Three tacos with crispy prawns, coleslaw, arugula, teriyaki, sesame and one included 90ml side sauce.",
-          "hr": "Tri tacosa s hrskavim kozicama, coleslaw salatom, rikolom, teriyaki umakom, sezamom i jednim uključenim 90 ml umakom sa strane."
-        },
-        "ingredients": {
-          "en": "Tortilla, prawns, coleslaw, arugula, teriyaki sauce, sesame, side sauce.",
-          "hr": "Tortilla, kozice, coleslaw, rikola, teriyaki umak, sezam, umak sa strane."
-        },
-        "price": "€7.90",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Gluten, egg, milk, crustaceans, soy, sesame"
-      },
-      {
-        "id": "TAC-003",
-        "name": {
-          "en": "Tuna Taco",
-          "hr": "Tuna Taco"
-        },
-        "desc": {
-          "en": "Three tacos with tuna, sweet corn, pickles, pico de gallo, arugula, mayo wasabi and crispy onion. Includes one 90ml side sauce.",
-          "hr": "Tri tacosa s tunom, kukuruzom, kiselim krastavcima, pico de gallo, rikolom, mayo wasabi umakom i hrskavim lukom. Uključuje jedan 90 ml umak sa strane."
-        },
-        "ingredients": {
-          "en": "Tortilla, tuna, corn, pickles, pico de gallo, arugula, mayo wasabi, crispy onion, side sauce.",
-          "hr": "Tortilla, tuna, kukuruz, kiseli krastavci, pico de gallo, rikola, mayo wasabi, hrskavi luk, umak sa strane."
-        },
-        "price": "€7.90",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Gluten, fish, egg, mustard, soy"
-      },
-      {
-        "id": "TAC-004",
-        "name": {
-          "en": "Chicken Curry Taco",
-          "hr": "Chicken Curry Taco"
-        },
-        "desc": {
-          "en": "Three tacos with chicken thigh, basmati rice, curry mayo and herbs. Includes one 90ml side sauce.",
-          "hr": "Tri tacosa s pilećim zabatkom, basmati rižom, curry mayo umakom i začinskim biljem. Uključuje jedan 90 ml umak sa strane."
-        },
-        "ingredients": {
-          "en": "Tortilla, chicken thigh, basmati rice, curry mayo, herbs, side sauce.",
-          "hr": "Tortilla, pileći zabatak, basmati riža, curry mayo, začinsko bilje, umak sa strane."
-        },
-        "price": "€7.90",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Gluten, egg, mustard"
-      },
-      {
-        "id": "TAC-005",
-        "name": {
-          "en": "Picante Chicken Taco",
-          "hr": "Picante Chicken Taco"
-        },
-        "desc": {
-          "en": "Three tacos with pulled/chopped chicken, mozzarella, sriracha mayo and crispy onion. Includes one 90ml side sauce.",
-          "hr": "Tri tacosa s piletinom, mozzarellom, sriracha mayo umakom i hrskavim lukom. Uključuje jedan 90 ml umak sa strane."
-        },
-        "ingredients": {
-          "en": "Tortilla, chicken, mozzarella, sriracha mayo, crispy onion, side sauce.",
-          "hr": "Tortilla, piletina, mozzarella, sriracha mayo, hrskavi luk, umak sa strane."
-        },
-        "price": "€7.90",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Gluten, milk, egg"
-      },
-      {
-        "id": "TAC-006",
-        "name": {
-          "en": "Mango Chicken Taco",
-          "hr": "Mango Chicken Taco"
-        },
-        "desc": {
-          "en": "Three tacos with crispy chicken, coleslaw, mango sauce, arugula and sesame. Includes one 90ml side sauce.",
-          "hr": "Tri tacosa s hrskavom piletinom, coleslaw salatom, mango umakom, rikolom i sezamom. Uključuje jedan 90 ml umak sa strane."
-        },
-        "ingredients": {
-          "en": "Tortilla, crispy chicken, coleslaw, mango sauce, arugula, sesame, side sauce.",
-          "hr": "Tortilla, hrskava piletina, coleslaw, mango umak, rikola, sezam, umak sa strane."
-        },
-        "price": "€8.00",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Gluten, egg, milk possible, sesame"
-      },
-      {
-        "id": "TAC-007",
-        "name": {
-          "en": "Teriyaki Chicken Taco",
-          "hr": "Teriyaki Chicken Taco"
-        },
-        "desc": {
-          "en": "Three tacos with chicken thigh, basmati rice, teriyaki sauce, sesame and herbs. Includes one 90ml side sauce.",
-          "hr": "Tri tacosa s pilećim zabatkom, basmati rižom, teriyaki umakom, sezamom i začinskim biljem. Uključuje jedan 90 ml umak sa strane."
-        },
-        "ingredients": {
-          "en": "Tortilla, chicken thigh, basmati rice, teriyaki sauce, sesame, herbs, side sauce.",
-          "hr": "Tortilla, pileći zabatak, basmati riža, teriyaki umak, sezam, začinsko bilje, umak sa strane."
-        },
-        "price": "€8.00",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Gluten, soy, sesame"
-      }
-    ]
-  },
-  {
-    "id": "tapas",
-    "title": {
-      "en": "Tapas",
-      "hr": "Tapas"
-    },
-    "description": {
-      "en": "Choose tapas flavors. Served with tortilla chips or focaccia upgrade.",
-      "hr": "Odaberite okuse tapasa. Poslužuje se s tortilla čipsom ili nadoplatom za focacciu."
-    },
-    "icon": "<img src=\"assets/tapas_icon_clean.png\" alt=\"Tapas\">",
-    "homeExplore": true,
-    "active": true,
-    "sort": 23,
-    "items": [
-      {
-        "id": "TAP-002",
-        "name": {
-          "en": "Tapas Duo",
-          "hr": "Tapas Duo"
-        },
-        "desc": {
-          "en": "Choose 2 tapas flavors. Served as 4 mini scoops with tortilla chips.",
-          "hr": "Odaberite 2 okusa tapasa. Poslužuje se kao 4 mini kuglice s tortilla čipsom."
-        },
-        "ingredients": {
-          "en": "Two tapas flavors, tortilla chips.",
-          "hr": "Dva okusa tapasa, tortilla čips."
+          "en": "Americano, toast sandwich.",
+          "hr": "Americano, tost sendvič."
         },
         "price": "€5.50",
-        "isNew": false,
-        "isFeatured": false,
+        "isNew": true,
+        "isFeatured": true,
         "isKids": false,
         "isAlcoholic": false,
         "tags": [],
         "available": true,
         "orderable": true,
         "rewardEligible": true,
-        "allergens": "Ask staff"
-      },
-      {
-        "id": "TAP-003",
-        "name": {
-          "en": "Tapas Trio",
-          "hr": "Tapas Trio"
-        },
-        "desc": {
-          "en": "Choose 3 tapas flavors. Served as 6 mini scoops with tortilla chips.",
-          "hr": "Odaberite 3 okusa tapasa. Poslužuje se kao 6 mini kuglica s tortilla čipsom."
-        },
-        "ingredients": {
-          "en": "Three tapas flavors, tortilla chips.",
-          "hr": "Tri okusa tapasa, tortilla čips."
-        },
-        "price": "€8.00",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Ask staff"
-      },
-      {
-        "id": "TAP-004",
-        "name": {
-          "en": "Tapas Quartet",
-          "hr": "Tapas Quartet"
-        },
-        "desc": {
-          "en": "Choose 4 tapas flavors. Served as 8 mini scoops with tortilla chips.",
-          "hr": "Odaberite 4 okusa tapasa. Poslužuje se kao 8 mini kuglica s tortilla čipsom."
-        },
-        "ingredients": {
-          "en": "Four tapas flavors, tortilla chips.",
-          "hr": "Četiri okusa tapasa, tortilla čips."
-        },
-        "price": "€10.50",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Ask staff"
-      },
-      {
-        "id": "MOD-FOC",
-        "name": {
-          "en": "Focaccia Upgrade",
-          "hr": "Focaccia nadoplata"
-        },
-        "desc": {
-          "en": "Upgrade tapas side from tortilla chips to toasted focaccia.",
-          "hr": "Nadoplata za zamjenu tortilla čipsa tostiranom focacciom."
-        },
-        "ingredients": {
-          "en": "Toasted focaccia.",
-          "hr": "Tostirana focaccia."
-        },
-        "price": "€1.00",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Gluten"
-      },
-      {
-        "id": "SCO-001",
-        "name": {
-          "en": "House Hummus",
-          "hr": "House hummus"
-        },
-        "desc": {
-          "en": "Tapas flavor choice: house hummus.",
-          "hr": "Izbor okusa tapasa: house hummus."
-        },
-        "ingredients": {
-          "en": "Chickpeas, tahini, lemon, olive oil, garlic, cumin.",
-          "hr": "Slanutak, tahini, limun, maslinovo ulje, češnjak, kumin."
-        },
-        "price": "€0.00",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": false,
-        "rewardEligible": false,
-        "allergens": "Sesame"
-      },
-      {
-        "id": "SCO-002",
-        "name": {
-          "en": "Eggplant Hummus",
-          "hr": "Hummus od patlidžana"
-        },
-        "desc": {
-          "en": "Tapas flavor choice: eggplant hummus.",
-          "hr": "Izbor okusa tapasa: hummus od patlidžana."
-        },
-        "ingredients": {
-          "en": "Eggplant, chickpeas, tahini, lemon, olive oil, garlic.",
-          "hr": "Patlidžan, slanutak, tahini, limun, maslinovo ulje, češnjak."
-        },
-        "price": "€0.00",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": false,
-        "rewardEligible": false,
-        "allergens": "Sesame"
-      },
-      {
-        "id": "SCO-003",
-        "name": {
-          "en": "Tuna Wasabi Cream",
-          "hr": "Tuna wasabi krema"
-        },
-        "desc": {
-          "en": "Tapas flavor choice: tuna wasabi cream.",
-          "hr": "Izbor okusa tapasa: tuna wasabi krema."
-        },
-        "ingredients": {
-          "en": "Tuna, mayo wasabi sauce, corn, pickles, lemon, herbs.",
-          "hr": "Tuna, mayo wasabi umak, kukuruz, kiseli krastavci, limun, začinsko bilje."
-        },
-        "price": "€0.00",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": false,
-        "rewardEligible": false,
-        "allergens": "Fish, egg, mustard, soy"
-      },
-      {
-        "id": "SCO-004",
-        "name": {
-          "en": "Guacamole",
-          "hr": "Guacamole"
-        },
-        "desc": {
-          "en": "Tapas flavor choice: guacamole.",
-          "hr": "Izbor okusa tapasa: guacamole."
-        },
-        "ingredients": {
-          "en": "Avocado, lemon/lime, olive oil, honey, herbs.",
-          "hr": "Avokado, limun/limeta, maslinovo ulje, med, začinsko bilje."
-        },
-        "price": "€0.00",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": false,
-        "rewardEligible": false,
-        "allergens": "Ask staff"
-      },
-      {
-        "id": "SCO-005",
-        "name": {
-          "en": "Creamy Chicken Tapas",
-          "hr": "Kremasti pileći tapas"
-        },
-        "desc": {
-          "en": "Tapas flavor choice: creamy chicken tapas.",
-          "hr": "Izbor okusa tapasa: kremasti pileći tapas."
-        },
-        "ingredients": {
-          "en": "Chicken, mayonnaise, corn, pickles, sweet mustard, honey, lemon.",
-          "hr": "Piletina, majoneza, kukuruz, kiseli krastavci, slatki senf, med, limun."
-        },
-        "price": "€0.00",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": false,
-        "rewardEligible": false,
-        "allergens": "Egg, mustard"
-      },
-      {
-        "id": "SCO-006",
-        "name": {
-          "en": "Smoky Red Bean Cream",
-          "hr": "Dimljena krema od crvenog graha"
-        },
-        "desc": {
-          "en": "Tapas flavor choice: smoky red bean cream.",
-          "hr": "Izbor okusa tapasa: dimljena krema od crvenog graha."
-        },
-        "ingredients": {
-          "en": "Red kidney beans, tomato sauce, olive oil, garlic, smoked paprika, cumin.",
-          "hr": "Crveni grah, umak od rajčice, maslinovo ulje, češnjak, dimljena paprika, kumin."
-        },
-        "price": "€0.00",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": false,
-        "rewardEligible": false,
-        "allergens": "Ask staff"
-      }
-    ]
-  },
-  {
-    "id": "focaccia_pizza",
-    "title": {
-      "en": "Focaccia Pizza",
-      "hr": "Focaccia pizza"
-    },
-    "description": {
-      "en": "Focaccia pizzas with premium toppings.",
-      "hr": "Focaccia pizze s premium dodacima."
-    },
-    "icon": "🍕",
-    "homeExplore": true,
-    "active": true,
-    "sort": 24,
-    "items": [
-      {
-        "id": "FOC-001",
-        "name": {
-          "en": "Margherita Focaccia Pizza",
-          "hr": "Margherita focaccia pizza"
-        },
-        "desc": {
-          "en": "Focaccia pizza with tomato sauce, mozzarella, olive oil and herbs.",
-          "hr": "Focaccia pizza s umakom od rajčice, mozzarellom, maslinovim uljem i začinskim biljem."
-        },
-        "ingredients": {
-          "en": "Focaccia, tomato sauce, mozzarella, olive oil, oregano/basil.",
-          "hr": "Focaccia, umak od rajčice, mozzarella, maslinovo ulje, origano/bosiljak."
-        },
-        "price": "€8.50",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Gluten, milk"
-      },
-      {
-        "id": "FOC-002",
-        "name": {
-          "en": "Bacon Focaccia Pizza",
-          "hr": "Bacon focaccia pizza"
-        },
-        "desc": {
-          "en": "Focaccia pizza with tomato sauce, cheese, bacon and sweet pesto sauce.",
-          "hr": "Focaccia pizza s umakom od rajčice, sirom, bacon i slatkim pesto umakom."
-        },
-        "ingredients": {
-          "en": "Focaccia, tomato sauce, cheese, bacon, sweet pesto sauce.",
-          "hr": "Focaccia, umak od rajčice, sir, bacon, slatki pesto umak."
-        },
-        "price": "€9.50",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Gluten, milk, nuts possible"
-      },
-      {
-        "id": "FOC-003",
-        "name": {
-          "en": "Mortadella Focaccia Pizza",
-          "hr": "Mortadella focaccia pizza"
-        },
-        "desc": {
-          "en": "Focaccia pizza with tomato sauce, cheese, mortadella, sweet pesto and arugula.",
-          "hr": "Focaccia pizza s umakom od rajčice, sirom, mortadelom, slatkim pestom i rikolom."
-        },
-        "ingredients": {
-          "en": "Focaccia, tomato sauce, cheese, mortadella, sweet pesto, arugula.",
-          "hr": "Focaccia, umak od rajčice, sir, mortadela, slatki pesto, rikola."
-        },
-        "price": "€9.50",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Gluten, milk, nuts possible"
-      },
-      {
-        "id": "FOC-004",
-        "name": {
-          "en": "Prosciutto Focaccia Pizza",
-          "hr": "Prosciutto focaccia pizza"
-        },
-        "desc": {
-          "en": "Focaccia pizza with tomato sauce, cheese, prosciutto, sweet pesto and arugula.",
-          "hr": "Focaccia pizza s umakom od rajčice, sirom, pršutom, slatkim pestom i rikolom."
-        },
-        "ingredients": {
-          "en": "Focaccia, tomato sauce, cheese, prosciutto, sweet pesto, arugula.",
-          "hr": "Focaccia, umak od rajčice, sir, pršut, slatki pesto, rikola."
-        },
-        "price": "€9.80",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Gluten, milk, nuts possible"
-      },
-      {
-        "id": "FOC-005",
-        "name": {
-          "en": "Pesto Chicken Focaccia Pizza",
-          "hr": "Pesto chicken focaccia pizza"
-        },
-        "desc": {
-          "en": "Focaccia pizza with sweet pesto sauce, cheese, prepared chicken and arugula.",
-          "hr": "Focaccia pizza sa slatkim pesto umakom, sirom, pripremljenom piletinom i rikolom."
-        },
-        "ingredients": {
-          "en": "Focaccia, sweet pesto sauce, cheese, chicken, arugula.",
-          "hr": "Focaccia, slatki pesto umak, sir, piletina, rikola."
-        },
-        "price": "€9.00",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Gluten, milk, nuts possible"
-      },
-      {
-        "id": "FOC-006",
-        "name": {
-          "en": "Tuna Focaccia Pizza",
-          "hr": "Tuna focaccia pizza"
-        },
-        "desc": {
-          "en": "Focaccia pizza with tomato sauce, cheese, tuna, corn, olives and oregano.",
-          "hr": "Focaccia pizza s umakom od rajčice, sirom, tunom, kukuruzom, maslinama i origanom."
-        },
-        "ingredients": {
-          "en": "Focaccia, tomato sauce, cheese, tuna, corn, olives, oregano.",
-          "hr": "Focaccia, umak od rajčice, sir, tuna, kukuruz, masline, origano."
-        },
-        "price": "€9.50",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Gluten, milk, fish"
+        "allergens": "ask staff"
       }
     ]
   },
@@ -4990,52 +3904,28 @@ const LANGAR_DEFAULT_MENU = [
       "hr": "Deserti"
     },
     "description": {
-      "en": "Tiramisu, apple pie, mug cake, soft serve and pastries.",
-      "hr": "Tiramisu, pita od jabuka, mug cake, soft serve i peciva."
+      "en": "Cakes, pastries and sweet desserts",
+      "hr": "Kolači, deserti i slatki zalogaji"
     },
     "icon": "🧁",
     "homeExplore": true,
     "active": true,
-    "sort": 25,
+    "sort": 20,
     "items": [
+      
       {
-        "id": "DES-001",
+        "id": "desserts_002",
         "name": {
-          "en": "Classic Tiramisu Cup",
-          "hr": "Classic tiramisu cup"
+          "en": "Langar Warm Mug Cake with Ice Cream",
+          "hr": "Langar topli mug cake sa sladoledom"
         },
         "desc": {
-          "en": "House-made tiramisu cup.",
-          "hr": "Domaći tiramisu u čaši."
+          "en": "Warm cake served in a mug with ice cream and sauce.",
+          "hr": "Topli kolač u šalici sa sladoledom i umakom."
         },
         "ingredients": {
-          "en": "Mascarpone, cream, ladyfingers, coffee, cocoa.",
-          "hr": "Mascarpone, vrhnje, piškote, kava, kakao."
-        },
-        "price": "€3.90",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Milk, egg/gluten possible"
-      },
-      {
-        "id": "DES-002",
-        "name": {
-          "en": "Pistachio Tiramisu Cup",
-          "hr": "Pistachio tiramisu cup"
-        },
-        "desc": {
-          "en": "House-made pistachio tiramisu cup.",
-          "hr": "Domaći pistachio tiramisu u čaši."
-        },
-        "ingredients": {
-          "en": "Mascarpone, cream, pistachio cream, ladyfingers, pistachio.",
-          "hr": "Mascarpone, vrhnje, krema od pistacije, piškote, pistacija."
+          "en": "Warm mug cake, soft-serve ice cream, chosen sauce.",
+          "hr": "Topli mug cake, sladoled iz aparata, odabrani umak."
         },
         "price": "€4.50",
         "isNew": false,
@@ -5046,146 +3936,71 @@ const LANGAR_DEFAULT_MENU = [
         "available": true,
         "orderable": true,
         "rewardEligible": true,
-        "allergens": "Milk, nuts/pistachio, gluten possible"
+        "allergens": "ask staff"
       },
       {
-        "id": "DES-003",
+        "id": "desserts_003",
+        "name": {
+          "en": "Tiramisu Cup",
+          "hr": "Tiramisu Cup"
+        },
+        "desc": {
+          "en": "Tiramisu dessert cup.",
+          "hr": "Tiramisu desert u čaši."
+        },
+        "ingredients": {
+          "en": "Tiramisu cream, coffee base, cocoa.",
+          "hr": "Tiramisu krema, kava baza, kakao."
+        },
+        "price": "€4.00",
+        "isNew": false,
+        "isFeatured": true,
+        "isKids": false,
+        "isAlcoholic": false,
+        "tags": [],
+        "available": true,
+        "orderable": true,
+        "rewardEligible": true,
+        "allergens": "ask staff"
+      },
+      {
+        "id": "desserts_004",
+        "name": {
+          "en": "Napoleon",
+          "hr": "Napoleon"
+        },
+        "desc": {
+          "en": "Creamy layered pastry dessert.",
+          "hr": "Kremasti lisnati kolač."
+        },
+        "ingredients": {
+          "en": "Puff pastry, cream.",
+          "hr": "Lisnato tijesto, krema."
+        },
+        "price": "€3.80",
+        "isNew": false,
+        "isFeatured": true,
+        "isKids": false,
+        "isAlcoholic": false,
+        "tags": [],
+        "available": true,
+        "orderable": true,
+        "rewardEligible": true,
+        "allergens": "ask staff"
+      },
+      {
+        "id": "desserts_005",
         "name": {
           "en": "Apple Pie",
           "hr": "Pita od jabuka"
         },
         "desc": {
-          "en": "House-made apple pie with cinnamon and sour cherry jam.",
-          "hr": "Domaća pita od jabuka s cimetom i džemom od višnje."
+          "en": "Apple pie.",
+          "hr": "Pita od jabuka."
         },
         "ingredients": {
-          "en": "Flour, butter, milk, apple, sugar, cinnamon, sour cherry jam, egg wash.",
-          "hr": "Brašno, maslac, mlijeko, jabuka, šećer, cimet, džem od višnje, premaz jajem."
-        },
-        "price": "€3.90",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Gluten, milk, egg"
-      },
-      {
-        "id": "DES-004",
-        "name": {
-          "en": "Napoleon Cream Dessert",
-          "hr": "Napoleon krem desert"
-        },
-        "desc": {
-          "en": "Puff pastry and whipped cream dessert.",
-          "hr": "Desert od lisnatog tijesta i šlaga."
-        },
-        "ingredients": {
-          "en": "Puff pastry, cream, sugar, vanilla, cinnamon.",
-          "hr": "Lisnato tijesto, vrhnje, šećer, vanilija, cimet."
-        },
-        "price": "€4.20",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Gluten, milk"
-      },
-      {
-        "id": "DES-005",
-        "name": {
-          "en": "Langar Warm Mug Cake",
-          "hr": "Langar topli mug cake"
-        },
-        "desc": {
-          "en": "Warm microwave mug cake served with vanilla soft serve and sauce choice.",
-          "hr": "Topli mug cake iz mikrovalne poslužen s vanilla soft serve sladoledom i umakom po izboru."
-        },
-        "ingredients": {
-          "en": "Mug cake batter, vanilla soft serve, sauce choice.",
-          "hr": "Smjesa za mug cake, vanilla soft serve, umak po izboru."
-        },
-        "price": "€4.50",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Gluten, milk"
-      },
-      {
-        "id": "DES-006A",
-        "name": {
-          "en": "Plain Vanilla Soft Serve",
-          "hr": "Vanilla soft serve"
-        },
-        "desc": {
-          "en": "Plain vanilla soft serve in 250ml cup.",
-          "hr": "Vanilla soft serve u čaši 250 ml."
-        },
-        "ingredients": {
-          "en": "Vanilla soft serve base.",
-          "hr": "Vanilla soft serve baza."
-        },
-        "price": "€2.00",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Milk, egg possible"
-      },
-      {
-        "id": "DES-006B",
-        "name": {
-          "en": "Soft Serve with Sauce",
-          "hr": "Soft serve s umakom"
-        },
-        "desc": {
-          "en": "Vanilla soft serve with one sauce choice.",
-          "hr": "Vanilla soft serve s jednim umakom po izboru."
-        },
-        "ingredients": {
-          "en": "Vanilla soft serve, sauce choice.",
-          "hr": "Vanilla soft serve, umak po izboru."
-        },
-        "price": "€2.50",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Milk, egg possible"
-      },
-      {
-        "id": "DES-006C",
-        "name": {
-          "en": "Soft Serve with Sauce + Nuts",
-          "hr": "Soft serve s umakom i orašastim plodovima"
-        },
-        "desc": {
-          "en": "Vanilla soft serve with sauce and nuts.",
-          "hr": "Vanilla soft serve s umakom i orašastim plodovima."
-        },
-        "ingredients": {
-          "en": "Vanilla soft serve, sauce, nuts.",
-          "hr": "Vanilla soft serve, umak, orašasti plodovi."
+          "en": "Apple pie pastry, apple filling.",
+          "hr": "Tijesto za pitu, nadjev od jabuke."
         },
         "price": "€3.00",
         "isNew": false,
@@ -5196,48 +4011,23 @@ const LANGAR_DEFAULT_MENU = [
         "available": true,
         "orderable": true,
         "rewardEligible": true,
-        "allergens": "Milk, nuts, egg possible"
+        "allergens": "ask staff"
       },
       {
-        "id": "DES-006D",
-        "name": {
-          "en": "Soft Serve with Pistachio Cream",
-          "hr": "Soft serve s kremom od pistacije"
-        },
-        "desc": {
-          "en": "Vanilla soft serve with pistachio cream.",
-          "hr": "Vanilla soft serve s kremom od pistacije."
-        },
-        "ingredients": {
-          "en": "Vanilla soft serve, pistachio cream.",
-          "hr": "Vanilla soft serve, krema od pistacije."
-        },
-        "price": "€3.50",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Milk, nuts/pistachio"
-      },
-      {
-        "id": "DES-007",
+        "id": "desserts_006",
         "name": {
           "en": "Chocolate Croissant",
           "hr": "Čokoladni kroasan"
         },
         "desc": {
-          "en": "Ready-bought chocolate croissant.",
-          "hr": "Gotovi čokoladni kroasan."
+          "en": "Chocolate croissant.",
+          "hr": "Kroasan s čokoladom."
         },
         "ingredients": {
-          "en": "Chocolate croissant.",
-          "hr": "Čokoladni kroasan."
+          "en": "Croissant, chocolate filling.",
+          "hr": "Kroasan, čokoladno punjenje."
         },
-        "price": "€2.70",
+        "price": "€3.00",
         "isNew": false,
         "isFeatured": false,
         "isKids": false,
@@ -5246,23 +4036,48 @@ const LANGAR_DEFAULT_MENU = [
         "available": true,
         "orderable": true,
         "rewardEligible": true,
-        "allergens": "Gluten, milk"
+        "allergens": "ask staff"
       },
       {
-        "id": "DES-008",
+        "id": "desserts_007",
         "name": {
           "en": "Pistachio Croissant",
           "hr": "Pistachio kroasan"
         },
         "desc": {
-          "en": "Ready-bought pistachio croissant.",
-          "hr": "Gotovi pistachio kroasan."
+          "en": "Pistachio croissant.",
+          "hr": "Kroasan s pistacijom."
         },
         "ingredients": {
-          "en": "Pistachio croissant.",
-          "hr": "Pistachio kroasan."
+          "en": "Croissant, pistachio cream.",
+          "hr": "Kroasan, pistacija krema."
         },
         "price": "€3.50",
+        "isNew": false,
+        "isFeatured": true,
+        "isKids": false,
+        "isAlcoholic": false,
+        "tags": [],
+        "available": true,
+        "orderable": true,
+        "rewardEligible": true,
+        "allergens": "ask staff"
+      },
+      {
+        "id": "desserts_008",
+        "name": {
+          "en": "Turkish Baklava",
+          "hr": "Turska baklava"
+        },
+        "desc": {
+          "en": "Per piece.",
+          "hr": "Po komadu."
+        },
+        "ingredients": {
+          "en": "Yufka pastry, nuts, syrup.",
+          "hr": "Yufka tijesto, orašasti plodovi, sirup."
+        },
+        "price": "€1.80",
         "isNew": false,
         "isFeatured": false,
         "isKids": false,
@@ -5271,21 +4086,230 @@ const LANGAR_DEFAULT_MENU = [
         "available": true,
         "orderable": true,
         "rewardEligible": true,
-        "allergens": "Gluten, milk, nuts/pistachio"
-      },
+        "allergens": "ask staff"
+      }
+    ]
+  },
+  {
+    "id": "ice_cream",
+    "title": {
+      "en": "Soft-Serve Ice Cream",
+      "hr": "Sladoled iz aparata"
+    },
+    "description": {
+      "en": "Soft-serve ice cream flavors",
+      "hr": "Sladoled iz aparata s okusima"
+    },
+    "icon": "🍦",
+    "homeExplore": false,
+    "active": true,
+    "sort": 21,
+    "items": [
       {
-        "id": "DES-009",
+        "id": "ice_cream_001",
         "name": {
-          "en": "Cruffin",
-          "hr": "Cruffin"
+          "en": "Pistachio Ice Cream",
+          "hr": "Sladoled pistacija"
         },
         "desc": {
-          "en": "Ready-bought cruffin.",
-          "hr": "Gotovi cruffin."
+          "en": "Soft-serve ice cream, not scooped.",
+          "hr": "Sladoled iz aparata, nije na kuglice."
         },
         "ingredients": {
-          "en": "Cruffin.",
-          "hr": "Cruffin."
+          "en": "Soft-serve ice cream, pistachio flavor.",
+          "hr": "Sladoled iz aparata, pistacija okus."
+        },
+        "price": "€3.00",
+        "isNew": false,
+        "isFeatured": false,
+        "isKids": false,
+        "isAlcoholic": false,
+        "tags": [],
+        "available": true,
+        "orderable": true,
+        "rewardEligible": true,
+        "allergens": "ask staff"
+      },
+      {
+        "id": "ice_cream_002",
+        "name": {
+          "en": "Nutella Ice Cream",
+          "hr": "Sladoled Nutella"
+        },
+        "desc": {
+          "en": "Soft-serve ice cream, not scooped.",
+          "hr": "Sladoled iz aparata, nije na kuglice."
+        },
+        "ingredients": {
+          "en": "Soft-serve ice cream, Nutella flavor.",
+          "hr": "Sladoled iz aparata, Nutella okus."
+        },
+        "price": "€3.00",
+        "isNew": false,
+        "isFeatured": false,
+        "isKids": false,
+        "isAlcoholic": false,
+        "tags": [],
+        "available": true,
+        "orderable": true,
+        "rewardEligible": true,
+        "allergens": "ask staff"
+      },
+      {
+        "id": "ice_cream_003",
+        "name": {
+          "en": "Caramel Ice Cream",
+          "hr": "Sladoled karamela"
+        },
+        "desc": {
+          "en": "Soft-serve ice cream, not scooped.",
+          "hr": "Sladoled iz aparata, nije na kuglice."
+        },
+        "ingredients": {
+          "en": "Soft-serve ice cream, caramel flavor.",
+          "hr": "Sladoled iz aparata, karamela okus."
+        },
+        "price": "€3.00",
+        "isNew": false,
+        "isFeatured": false,
+        "isKids": false,
+        "isAlcoholic": false,
+        "tags": [],
+        "available": true,
+        "orderable": true,
+        "rewardEligible": true,
+        "allergens": "ask staff"
+      },
+      {
+        "id": "ice_cream_004",
+        "name": {
+          "en": "Mango Ice Cream",
+          "hr": "Sladoled mango"
+        },
+        "desc": {
+          "en": "Soft-serve ice cream, not scooped.",
+          "hr": "Sladoled iz aparata, nije na kuglice."
+        },
+        "ingredients": {
+          "en": "Soft-serve ice cream, mango flavor.",
+          "hr": "Sladoled iz aparata, mango okus."
+        },
+        "price": "€3.00",
+        "isNew": false,
+        "isFeatured": false,
+        "isKids": false,
+        "isAlcoholic": false,
+        "tags": [],
+        "available": true,
+        "orderable": true,
+        "rewardEligible": true,
+        "allergens": "ask staff"
+      },
+      {
+        "id": "ice_cream_005",
+        "name": {
+          "en": "Strawberry Ice Cream",
+          "hr": "Sladoled jagoda"
+        },
+        "desc": {
+          "en": "Soft-serve ice cream, not scooped.",
+          "hr": "Sladoled iz aparata, nije na kuglice."
+        },
+        "ingredients": {
+          "en": "Soft-serve ice cream, strawberry flavor.",
+          "hr": "Sladoled iz aparata, jagoda okus."
+        },
+        "price": "€3.00",
+        "isNew": true,
+        "isFeatured": false,
+        "isKids": false,
+        "isAlcoholic": false,
+        "tags": [],
+        "available": true,
+        "orderable": true,
+        "rewardEligible": true,
+        "allergens": "ask staff"
+      },
+      {
+        "id": "ice_cream_006",
+        "name": {
+          "en": "Lotus Ice Cream",
+          "hr": "Sladoled Lotus"
+        },
+        "desc": {
+          "en": "Soft-serve ice cream with Lotus flavor.",
+          "hr": "Sladoled iz aparata s Lotus okusom."
+        },
+        "ingredients": {
+          "en": "Soft-serve ice cream, Lotus flavor.",
+          "hr": "Sladoled iz aparata, Lotus okus."
+        },
+        "price": "€3.50",
+        "isNew": true,
+        "isFeatured": false,
+        "isKids": false,
+        "isAlcoholic": false,
+        "tags": [],
+        "available": true,
+        "orderable": true,
+        "rewardEligible": true,
+        "allergens": "ask staff"
+      },
+      {
+        "id": "ice_cream_007",
+        "name": {
+          "en": "Kinder Ice Cream",
+          "hr": "Sladoled Kinder"
+        },
+        "desc": {
+          "en": "Soft-serve ice cream with Kinder flavor.",
+          "hr": "Sladoled iz aparata s Kinder okusom."
+        },
+        "ingredients": {
+          "en": "Soft-serve ice cream, Kinder flavor.",
+          "hr": "Sladoled iz aparata, Kinder okus."
+        },
+        "price": "€3.50",
+        "isNew": true,
+        "isFeatured": false,
+        "isKids": false,
+        "isAlcoholic": false,
+        "tags": [],
+        "available": true,
+        "orderable": true,
+        "rewardEligible": true,
+        "allergens": "ask staff"
+      }
+    ]
+  },
+  {
+    "id": "toast_sandwiches",
+    "title": {
+      "en": "Toast Sandwiches",
+      "hr": "Tost sendviči"
+    },
+    "description": {
+      "en": "Warm toast sandwiches",
+      "hr": "Topli tost sendviči"
+    },
+    "icon": "🥪",
+    "homeExplore": false,
+    "active": true,
+    "sort": 22,
+    "items": [
+      {
+        "id": "toast_sandwiches_001",
+        "name": {
+          "en": "Chicken Pesto & Cheese",
+          "hr": "Chicken pesto & cheese"
+        },
+        "desc": {
+          "en": "Chicken, pesto sauce and cheese.",
+          "hr": "Piletina, pesto umak, sir."
+        },
+        "ingredients": {
+          "en": "Chicken, pesto sauce, cheese, toast bread.",
+          "hr": "Piletina, pesto umak, sir, tost kruh."
         },
         "price": "€3.90",
         "isNew": false,
@@ -5296,40 +4320,215 @@ const LANGAR_DEFAULT_MENU = [
         "available": true,
         "orderable": true,
         "rewardEligible": true,
-        "allergens": "Gluten, milk"
+        "allergens": "ask staff"
+      },
+      {
+        "id": "toast_sandwiches_002",
+        "name": {
+          "en": "Tuna Sandwich",
+          "hr": "Tuna Sandwich"
+        },
+        "desc": {
+          "en": "Tuna, sauce and fresh additions.",
+          "hr": "Tuna, umak, svježi dodaci."
+        },
+        "ingredients": {
+          "en": "Tuna, sauce, fresh additions, toast bread.",
+          "hr": "Tuna, umak, svježi dodaci, tost kruh."
+        },
+        "price": "€3.80",
+        "isNew": false,
+        "isFeatured": false,
+        "isKids": false,
+        "isAlcoholic": false,
+        "tags": [],
+        "available": true,
+        "orderable": true,
+        "rewardEligible": true,
+        "allergens": "ask staff"
+      },
+      {
+        "id": "toast_sandwiches_003",
+        "name": {
+          "en": "Margherita Toast",
+          "hr": "Margherita Toast"
+        },
+        "desc": {
+          "en": "Tomato sauce, mozzarella and herbs.",
+          "hr": "Umak od rajčice, mozzarella, začini."
+        },
+        "ingredients": {
+          "en": "Tomato sauce, mozzarella, herbs, toast bread.",
+          "hr": "Umak od rajčice, mozzarella, začini, tost kruh."
+        },
+        "price": "€3.80",
+        "isNew": false,
+        "isFeatured": false,
+        "isKids": false,
+        "isAlcoholic": false,
+        "tags": [],
+        "available": true,
+        "orderable": true,
+        "rewardEligible": true,
+        "allergens": "ask staff"
+      },
+      {
+        "id": "toast_sandwiches_004",
+        "name": {
+          "en": "Cheesy Mortadella",
+          "hr": "Cheesy Mortadella"
+        },
+        "desc": {
+          "en": "Mortadella, cheese and sauce.",
+          "hr": "Mortadela, sir, umak."
+        },
+        "ingredients": {
+          "en": "Mortadella, cheese, sauce, toast bread.",
+          "hr": "Mortadela, sir, umak, tost kruh."
+        },
+        "price": "€3.80",
+        "isNew": false,
+        "isFeatured": false,
+        "isKids": false,
+        "isAlcoholic": false,
+        "tags": [],
+        "available": true,
+        "orderable": true,
+        "rewardEligible": true,
+        "allergens": "ask staff"
+      },
+      {
+        "id": "toast_sandwiches_005",
+        "name": {
+          "en": "Avocado Chicken",
+          "hr": "Avocado Chicken"
+        },
+        "desc": {
+          "en": "Chicken, avocado, cheese and sauce.",
+          "hr": "Piletina, avokado, sir, umak."
+        },
+        "ingredients": {
+          "en": "Chicken, avocado, cheese, sauce, toast bread.",
+          "hr": "Piletina, avokado, sir, umak, tost kruh."
+        },
+        "price": "€4.20",
+        "isNew": false,
+        "isFeatured": false,
+        "isKids": false,
+        "isAlcoholic": false,
+        "tags": [],
+        "available": true,
+        "orderable": true,
+        "rewardEligible": true,
+        "allergens": "ask staff"
+      },
+      {
+        "id": "toast_sandwiches_006",
+        "name": {
+          "en": "Turkey & Cheese Croissant",
+          "hr": "Pureća šunka & sir kroasan"
+        },
+        "desc": {
+          "en": "Butter croissant, turkey ham, cheese and fresh salad.",
+          "hr": "Maslac kroasan, pureća šunka, sir i svježa salata."
+        },
+        "ingredients": {
+          "en": "Butter croissant, turkey ham, cheese, fresh salad.",
+          "hr": "Maslac kroasan, pureća šunka, sir, svježa salata."
+        },
+        "price": "€4.20",
+        "isNew": true,
+        "isFeatured": false,
+        "isKids": false,
+        "isAlcoholic": false,
+        "tags": [],
+        "available": true,
+        "orderable": true,
+        "rewardEligible": true,
+        "allergens": "ask staff"
+      },
+      {
+        "id": "toast_sandwiches_007",
+        "name": {
+          "en": "Egg & Cheese Toast",
+          "hr": "Egg & Cheese Toast"
+        },
+        "desc": {
+          "en": "Eggs, melted cheese and toasted bread.",
+          "hr": "Jaja, topljeni sir i tost kruh."
+        },
+        "ingredients": {
+          "en": "Eggs, melted cheese, toast bread.",
+          "hr": "Jaja, topljeni sir, tost kruh."
+        },
+        "price": "€3.80",
+        "isNew": true,
+        "isFeatured": false,
+        "isKids": false,
+        "isAlcoholic": false,
+        "tags": [],
+        "available": true,
+        "orderable": true,
+        "rewardEligible": true,
+        "allergens": "ask staff"
       }
     ]
   },
   {
-    "id": "extra_sauces",
+    "id": "tacos",
     "title": {
-      "en": "Extra Sauces",
-      "hr": "Dodatni umaci"
+      "en": "Taco Menu",
+      "hr": "Taco menu"
     },
     "description": {
-      "en": "Extra 90ml sauce cups.",
-      "hr": "Dodatne čašice umaka 90 ml."
+      "en": "Langar tacos",
+      "hr": "Langar tacosi"
     },
-    "icon": "🥫",
-    "homeExplore": false,
+    "icon": "🌮",
+    "homeExplore": true,
     "active": true,
-    "sort": 26,
+    "sort": 23,
     "items": [
       {
-        "id": "ESC-001",
+        "id": "tacos_001",
         "name": {
-          "en": "Extra Ketchup 90g",
-          "hr": "Dodatni ketchup 90g"
+          "en": "Golden Chicken Taco",
+          "hr": "Golden Chicken Taco"
         },
         "desc": {
-          "en": "Extra 90ml ketchup sauce cup.",
-          "hr": "Dodatna čašica ketchup umaka 90 ml."
+          "en": "Crunchy fried chicken, coleslaw, arugula, teriyaki sauce and sesame.",
+          "hr": "Hrskava pržena piletina, coleslaw salata, rikola, teriyaki umak, sezam."
         },
         "ingredients": {
-          "en": "Ketchup.",
-          "hr": "Ketchup."
+          "en": "Crunchy fried chicken, coleslaw, arugula, teriyaki sauce, sesame.",
+          "hr": "Hrskava pržena piletina, coleslaw, rikola, teriyaki umak, sezam."
         },
-        "price": "€1.50",
+        "price": "€6.80",
+        "isNew": false,
+        "isFeatured": true,
+        "isKids": false,
+        "isAlcoholic": false,
+        "tags": [],
+        "available": true,
+        "orderable": true,
+        "rewardEligible": true,
+        "allergens": "ask staff"
+      },
+      {
+        "id": "tacos_002",
+        "name": {
+          "en": "Crunchy Prawn Taco",
+          "hr": "Crunchy Prawn Taco"
+        },
+        "desc": {
+          "en": "Crunchy fried prawns, coleslaw, arugula, teriyaki sauce and sesame.",
+          "hr": "Hrskave pržene kozice, coleslaw salata, rikola, teriyaki umak, sezam."
+        },
+        "ingredients": {
+          "en": "Crunchy fried prawns, coleslaw, arugula, teriyaki sauce, sesame.",
+          "hr": "Hrskave pržene kozice, coleslaw, rikola, teriyaki umak, sezam."
+        },
+        "price": "€6.80",
         "isNew": false,
         "isFeatured": false,
         "isKids": false,
@@ -5341,70 +4540,20 @@ const LANGAR_DEFAULT_MENU = [
         "allergens": "ask staff"
       },
       {
-        "id": "ESC-002",
+        "id": "tacos_003",
         "name": {
-          "en": "Extra Mayonnaise 90g",
-          "hr": "Dodatna majoneza 90g"
+          "en": "Tuna Taco",
+          "hr": "Tuna Taco"
         },
         "desc": {
-          "en": "Extra 90ml mayonnaise sauce cup.",
-          "hr": "Dodatna čašica majoneze 90 ml."
+          "en": "Tuna, pico de gallo, sweet corn, pickles, arugula, lime mayo and crispy onion.",
+          "hr": "Tuna, pico de gallo, kukuruz, kiseli krastavci, rikola, lime mayo umak, hrskavi luk."
         },
         "ingredients": {
-          "en": "Mayonnaise.",
-          "hr": "Majoneza."
+          "en": "Tuna, pico de gallo, sweet corn, pickles, arugula, lime mayo, crispy onion.",
+          "hr": "Tuna, pico de gallo, kukuruz, kiseli krastavci, rikola, lime mayo, hrskavi luk."
         },
-        "price": "€1.50",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Egg"
-      },
-      {
-        "id": "ESC-003",
-        "name": {
-          "en": "Extra Teriyaki Sauce 90g",
-          "hr": "Dodatni teriyaki umak 90g"
-        },
-        "desc": {
-          "en": "Extra 90ml teriyaki sauce cup.",
-          "hr": "Dodatna čašica teriyaki umaka 90 ml."
-        },
-        "ingredients": {
-          "en": "Teriyaki sauce.",
-          "hr": "Teriyaki umak."
-        },
-        "price": "€1.80",
-        "isNew": false,
-        "isFeatured": false,
-        "isKids": false,
-        "isAlcoholic": false,
-        "tags": [],
-        "available": true,
-        "orderable": true,
-        "rewardEligible": true,
-        "allergens": "Soy"
-      },
-      {
-        "id": "ESC-004",
-        "name": {
-          "en": "Extra Sweet Chili Sauce 90g",
-          "hr": "Dodatni sweet chili umak 90g"
-        },
-        "desc": {
-          "en": "Extra 90ml sweet chili sauce cup.",
-          "hr": "Dodatna čašica sweet chili umaka 90 ml."
-        },
-        "ingredients": {
-          "en": "Sweet chili sauce.",
-          "hr": "Sweet chili umak."
-        },
-        "price": "€1.80",
+        "price": "€6.80",
         "isNew": false,
         "isFeatured": false,
         "isKids": false,
@@ -5416,20 +4565,20 @@ const LANGAR_DEFAULT_MENU = [
         "allergens": "ask staff"
       },
       {
-        "id": "ESC-005",
+        "id": "tacos_004",
         "name": {
-          "en": "Extra Mayo Wasabi Sauce 90g",
-          "hr": "Dodatni mayo wasabi umak 90g"
+          "en": "Chicken Curry Taco",
+          "hr": "Chicken Curry Taco"
         },
         "desc": {
-          "en": "Extra 90ml mayo wasabi sauce cup.",
-          "hr": "Dodatna čašica mayo wasabi umaka 90 ml."
+          "en": "Boneless chicken thigh, basmati rice and curry sauce.",
+          "hr": "Pileći zabatak bez kosti, basmati riža, curry umak."
         },
         "ingredients": {
-          "en": "Mayo wasabi sauce.",
-          "hr": "Mayo wasabi umak."
+          "en": "Boneless chicken thigh, basmati rice, curry sauce.",
+          "hr": "Pileći zabatak bez kosti, basmati riža, curry umak."
         },
-        "price": "€1.80",
+        "price": "€6.80",
         "isNew": false,
         "isFeatured": false,
         "isKids": false,
@@ -5438,23 +4587,23 @@ const LANGAR_DEFAULT_MENU = [
         "available": true,
         "orderable": true,
         "rewardEligible": true,
-        "allergens": "Egg, mustard, soy"
+        "allergens": "ask staff"
       },
       {
-        "id": "ESC-006",
+        "id": "tacos_005",
         "name": {
-          "en": "Extra Sriracha Mayo Sauce 90g",
-          "hr": "Dodatni sriracha mayo umak 90g"
+          "en": "Picante Chicken Taco",
+          "hr": "Picante Chicken Taco"
         },
         "desc": {
-          "en": "Extra 90ml sriracha mayo sauce cup.",
-          "hr": "Dodatna čašica sriracha mayo umaka 90 ml."
+          "en": "Shredded chicken, mozzarella and mayo-sriracha sauce.",
+          "hr": "Trgana piletina, mozzarella sir, mayo-sriracha umak."
         },
         "ingredients": {
-          "en": "Sriracha mayo sauce.",
-          "hr": "Sriracha mayo umak."
+          "en": "Shredded chicken, mozzarella, mayo-sriracha sauce.",
+          "hr": "Trgana piletina, mozzarella, mayo-sriracha umak."
         },
-        "price": "€1.80",
+        "price": "€6.80",
         "isNew": false,
         "isFeatured": false,
         "isKids": false,
@@ -5463,48 +4612,90 @@ const LANGAR_DEFAULT_MENU = [
         "available": true,
         "orderable": true,
         "rewardEligible": true,
-        "allergens": "Egg"
+        "allergens": "ask staff"
       },
       {
-        "id": "ESC-007",
+        "id": "tacos_006",
         "name": {
-          "en": "Extra Curry Mayo Sauce 90g",
-          "hr": "Dodatni curry mayo umak 90g"
+          "en": "Mango Chicken Taco",
+          "hr": "Mango Chicken Taco"
         },
         "desc": {
-          "en": "Extra 90ml curry mayo sauce cup.",
-          "hr": "Dodatna čašica curry mayo umaka 90 ml."
+          "en": "Crispy chicken, coleslaw, mango sauce, arugula and sesame.",
+          "hr": "Hrskava piletina, coleslaw salata, mango umak, rikola i sezam."
         },
         "ingredients": {
-          "en": "Curry mayo sauce.",
-          "hr": "Curry mayo umak."
+          "en": "Crispy chicken, coleslaw, mango sauce, arugula, sesame.",
+          "hr": "Hrskava piletina, coleslaw, mango umak, rikola, sezam."
         },
-        "price": "€1.80",
-        "isNew": false,
-        "isFeatured": false,
+        "price": "€6.90",
+        "isNew": true,
+        "isFeatured": true,
         "isKids": false,
         "isAlcoholic": false,
         "tags": [],
         "available": true,
         "orderable": true,
         "rewardEligible": true,
-        "allergens": "Egg, mustard"
+        "allergens": "ask staff"
       },
       {
-        "id": "ESC-008",
+        "id": "tacos_007",
         "name": {
-          "en": "Extra Mango Sauce 90g",
-          "hr": "Dodatni mango umak 90g"
+          "en": "Teriyaki Chicken Taco",
+          "hr": "Teriyaki Chicken Taco"
         },
         "desc": {
-          "en": "Extra 90ml mango sauce cup.",
-          "hr": "Dodatna čašica mango umaka 90 ml."
+          "en": "Grilled chicken thigh with basmati rice, teriyaki sauce and sesame.",
+          "hr": "Grilani pileći zabatak s basmati rižom, teriyaki umakom i sezamom."
         },
         "ingredients": {
-          "en": "Mango sauce.",
-          "hr": "Mango umak."
+          "en": "Grilled chicken thigh, basmati rice, teriyaki sauce, sesame.",
+          "hr": "Grilani pileći zabatak, basmati riža, teriyaki umak, sezam."
         },
-        "price": "€1.80",
+        "price": "€6.90",
+        "isNew": true,
+        "isFeatured": false,
+        "isKids": false,
+        "isAlcoholic": false,
+        "tags": [],
+        "available": true,
+        "orderable": true,
+        "rewardEligible": true,
+        "allergens": "ask staff"
+      }
+    ]
+  },
+  {
+    "id": "focaccia_pizza",
+    "title": {
+      "en": "Focaccia Pizza",
+      "hr": "Focaccia pizza"
+    },
+    "description": {
+      "en": "Focaccia pizzas",
+      "hr": "Focaccia pizze"
+    },
+    "icon": "🍕",
+    "homeExplore": true,
+    "active": true,
+    "sort": 24,
+    "items": [
+      {
+        "id": "focaccia_pizza_001",
+        "name": {
+          "en": "Margherita Pizza",
+          "hr": "Margherita Pizza"
+        },
+        "desc": {
+          "en": "Tomato sauce, mozzarella and olive oil.",
+          "hr": "Umak od rajčice, mozzarella, maslinovo ulje."
+        },
+        "ingredients": {
+          "en": "Focaccia, tomato sauce, mozzarella, olive oil.",
+          "hr": "Focaccia, umak od rajčice, mozzarella, maslinovo ulje."
+        },
+        "price": "€7.00",
         "isNew": false,
         "isFeatured": false,
         "isKids": false,
@@ -5513,7 +4704,274 @@ const LANGAR_DEFAULT_MENU = [
         "available": true,
         "orderable": true,
         "rewardEligible": true,
-        "allergens": "Mustard/soy possible"
+        "allergens": "ask staff"
+      },
+      {
+        "id": "focaccia_pizza_002",
+        "name": {
+          "en": "Bacon Pizza",
+          "hr": "Bacon Pizza"
+        },
+        "desc": {
+          "en": "Tomato sauce, bacon and mozzarella.",
+          "hr": "Umak od rajčice, slanina, mozzarella."
+        },
+        "ingredients": {
+          "en": "Focaccia, tomato sauce, bacon, mozzarella.",
+          "hr": "Focaccia, umak od rajčice, slanina, mozzarella."
+        },
+        "price": "€7.80",
+        "isNew": false,
+        "isFeatured": false,
+        "isKids": false,
+        "isAlcoholic": false,
+        "tags": [],
+        "available": true,
+        "orderable": true,
+        "rewardEligible": true,
+        "allergens": "ask staff"
+      },
+      {
+        "id": "focaccia_pizza_003",
+        "name": {
+          "en": "Mortadella Truffle Pizza",
+          "hr": "Mortadella Truffle Pizza"
+        },
+        "desc": {
+          "en": "Tomato sauce, truffle mortadella, mozzarella, burrata and green sauce.",
+          "hr": "Umak od rajčice, mortadela s tartufom, mozzarella, burrata, zeleni umak."
+        },
+        "ingredients": {
+          "en": "Focaccia, tomato sauce, truffle mortadella, mozzarella, burrata, green sauce.",
+          "hr": "Focaccia, umak od rajčice, mortadela s tartufom, mozzarella, burrata, zeleni umak."
+        },
+        "price": "€8.30",
+        "isNew": false,
+        "isFeatured": false,
+        "isKids": false,
+        "isAlcoholic": false,
+        "tags": [],
+        "available": true,
+        "orderable": true,
+        "rewardEligible": true,
+        "allergens": "ask staff"
+      },
+      {
+        "id": "focaccia_pizza_004",
+        "name": {
+          "en": "Prosciutto Pizza",
+          "hr": "Prosciutto Pizza"
+        },
+        "desc": {
+          "en": "Tomato sauce, mozzarella, prosciutto, burrata, arugula and pesto sauce.",
+          "hr": "Umak od rajčice, mozzarella, pršut, burrata, rikola, pesto umak."
+        },
+        "ingredients": {
+          "en": "Focaccia, tomato sauce, mozzarella, prosciutto, burrata, arugula, pesto sauce.",
+          "hr": "Focaccia, umak od rajčice, mozzarella, pršut, burrata, rikola, pesto umak."
+        },
+        "price": "€8.90",
+        "isNew": false,
+        "isFeatured": true,
+        "isKids": false,
+        "isAlcoholic": false,
+        "tags": [],
+        "available": true,
+        "orderable": true,
+        "rewardEligible": true,
+        "allergens": "ask staff"
+      },
+      {
+        "id": "focaccia_pizza_005",
+        "name": {
+          "en": "Pesto Chicken Focaccia",
+          "hr": "Pesto Chicken Focaccia"
+        },
+        "desc": {
+          "en": "Pesto sauce, mozzarella, chicken and arugula.",
+          "hr": "Pesto umak, mozzarella, piletina i rikola."
+        },
+        "ingredients": {
+          "en": "Focaccia, pesto sauce, mozzarella, chicken, arugula.",
+          "hr": "Focaccia, pesto umak, mozzarella, piletina, rikola."
+        },
+        "price": "€8.50",
+        "isNew": true,
+        "isFeatured": true,
+        "isKids": false,
+        "isAlcoholic": false,
+        "tags": [],
+        "available": true,
+        "orderable": true,
+        "rewardEligible": true,
+        "allergens": "ask staff"
+      },
+      {
+        "id": "focaccia_pizza_006",
+        "name": {
+          "en": "Tuna Focaccia",
+          "hr": "Tuna Focaccia"
+        },
+        "desc": {
+          "en": "Tuna, mozzarella, sweet corn and olives.",
+          "hr": "Tuna, mozzarella, kukuruz i masline."
+        },
+        "ingredients": {
+          "en": "Focaccia, tuna, mozzarella, sweet corn, olives.",
+          "hr": "Focaccia, tuna, mozzarella, kukuruz, masline."
+        },
+        "price": "€8.20",
+        "isNew": true,
+        "isFeatured": false,
+        "isKids": false,
+        "isAlcoholic": false,
+        "tags": [],
+        "available": true,
+        "orderable": true,
+        "rewardEligible": true,
+        "allergens": "ask staff"
+      }
+    ]
+  },
+  {
+    "id": "tapas",
+    "title": {
+      "en": "Tapas",
+      "hr": "Tapas"
+    },
+    "description": {
+      "en": "Small plates and tapas",
+      "hr": "Male plate i tapas"
+    },
+    "icon": "<img src=\"assets/tapas_icon_clean.png\" alt=\"Tapas\">",
+    "homeExplore": true,
+    "active": true,
+    "sort": 25,
+    "items": [
+      {
+        "id": "tapas_001",
+        "name": {
+          "en": "Hummus Tapas",
+          "hr": "Hummus Tapas"
+        },
+        "desc": {
+          "en": "Hummus with additions.",
+          "hr": "Humus s dodacima."
+        },
+        "ingredients": {
+          "en": "Hummus, olive oil, crispy bites, garnish.",
+          "hr": "Humus, maslinovo ulje, hrskavi zalogaji, dekoracija."
+        },
+        "price": "€5.80",
+        "isNew": false,
+        "isFeatured": false,
+        "isKids": false,
+        "isAlcoholic": false,
+        "tags": [],
+        "available": true,
+        "orderable": true,
+        "rewardEligible": true,
+        "allergens": "ask staff"
+      },
+      {
+        "id": "tapas_002",
+        "name": {
+          "en": "Eggplant Hummus Tapas",
+          "hr": "Eggplant Hummus Tapas"
+        },
+        "desc": {
+          "en": "Hummus with eggplant.",
+          "hr": "Humus s patlidžanom."
+        },
+        "ingredients": {
+          "en": "Hummus, eggplant, olive oil, crispy bites.",
+          "hr": "Humus, patlidžan, maslinovo ulje, hrskavi zalogaji."
+        },
+        "price": "€5.80",
+        "isNew": false,
+        "isFeatured": false,
+        "isKids": false,
+        "isAlcoholic": false,
+        "tags": [],
+        "available": true,
+        "orderable": true,
+        "rewardEligible": true,
+        "allergens": "ask staff"
+      },
+      {
+        "id": "tapas_003",
+        "name": {
+          "en": "Tuna Tapas",
+          "hr": "Tuna Tapas"
+        },
+        "desc": {
+          "en": "Tuna tapas with additions.",
+          "hr": "Tuna tapas s dodacima."
+        },
+        "ingredients": {
+          "en": "Tuna, sauce, fresh additions, crispy bites.",
+          "hr": "Tuna, umak, svježi dodaci, hrskavi zalogaji."
+        },
+        "price": "€5.80",
+        "isNew": false,
+        "isFeatured": false,
+        "isKids": false,
+        "isAlcoholic": false,
+        "tags": [],
+        "available": true,
+        "orderable": true,
+        "rewardEligible": true,
+        "allergens": "ask staff"
+      },
+      {
+        "id": "tapas_004",
+        "name": {
+          "en": "Chicken Tapas",
+          "hr": "Chicken Tapas"
+        },
+        "desc": {
+          "en": "Chicken with additions.",
+          "hr": "Piletina i dodaci."
+        },
+        "ingredients": {
+          "en": "Chicken, sauce, fresh additions, crispy bites.",
+          "hr": "Piletina, umak, svježi dodaci, hrskavi zalogaji."
+        },
+        "price": "€5.80",
+        "isNew": false,
+        "isFeatured": false,
+        "isKids": false,
+        "isAlcoholic": false,
+        "tags": [],
+        "available": true,
+        "orderable": true,
+        "rewardEligible": true,
+        "allergens": "ask staff"
+      },
+      {
+        "id": "tapas_005",
+        "name": {
+          "en": "Avocado Tapas",
+          "hr": "Avocado Tapas"
+        },
+        "desc": {
+          "en": "Avocado with fresh additions.",
+          "hr": "Avokado i svježi dodaci."
+        },
+        "ingredients": {
+          "en": "Avocado, fresh additions, crispy bites.",
+          "hr": "Avokado, svježi dodaci, hrskavi zalogaji."
+        },
+        "price": "€5.80",
+        "isNew": false,
+        "isFeatured": false,
+        "isKids": false,
+        "isAlcoholic": false,
+        "tags": [],
+        "available": true,
+        "orderable": true,
+        "rewardEligible": true,
+        "allergens": "ask staff"
       }
     ]
   }
