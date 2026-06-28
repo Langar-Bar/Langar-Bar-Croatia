@@ -2,7 +2,7 @@ const CACHE_NAME = 'langar-bar-v4-3-9';
 const ASSETS = [
   './','./index.html','./admin.html','./styles.css','./manifest.webmanifest','./admin-manifest.webmanifest',
   './js/menu-data.js','./js/app.js','./js/cloud.js','./js/admin.js','./js/admin-cloud.js','./js/admin-stable-v433.js',
-  './js/order-flow-v439.js','./js/admin-order-flow-v439.js',
+  './js/order-flow-v440.js','./js/admin-order-flow-v440.js',
   './assets/logo.jpeg','./assets/icon-192.png','./assets/icon-512.png','./assets/admin-icon-192.png','./assets/admin-icon-512.png'
 ];
 self.addEventListener('install', event => { event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)).then(()=>self.skipWaiting())); });
