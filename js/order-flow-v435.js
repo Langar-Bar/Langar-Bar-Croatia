@@ -1,4 +1,4 @@
-// Langar App V4.3.6 — stable orders with pickup, delivery and dine-in modes
+// Langar App V4.3.7 — stable orders with pickup, delivery and dine-in modes
 (function(){
   'use strict';
   const LS = window.LS || {get:(k,d)=>{try{return JSON.parse(localStorage.getItem(k)) ?? d}catch{return d}},set:(k,v)=>localStorage.setItem(k,JSON.stringify(v))};
@@ -12,6 +12,9 @@
   const profile = window.profile || (()=>LS.get('langar_profile', null));
   const cloud = ()=>window.LangarCloud;
   const client = ()=>cloud()?.client || null;
+  function appState(){
+    try{ return window.state || state || null; }catch(e){ return window.state || null; }
+  }
 
   function showToast(message){
     let el=$('#langarToast');
@@ -52,7 +55,7 @@
     return `${m}:${String(s).padStart(2,'0')}`;
   }
 
-  function currentOrderType(){ return (window.state && state.orderType) || 'pickup'; }
+  function currentOrderType(){ const st=appState(); return (st && st.orderType) || 'pickup'; }
   function updateOrderModeFields(){
     const mode=currentOrderType();
     const addr=$('#orderAddress'); if(!addr) return;
@@ -228,21 +231,23 @@ Customer note: ${order.note}`;
     const btn=$('#submitOrder'); if(!btn) return;
     btn.dataset.etaReady='1';
     btn.onclick=async()=>{
-      if(!window.state || !state.cart.length) return alert((window.T&&T[lang()]?.emptyCart)||'Cart is empty.');
-      const total=state.cart.reduce((s,it)=>s+priceNum(it.price)*it.qty,0);
+      const st=appState();
+      const cart=(st && Array.isArray(st.cart)) ? st.cart : [];
+      if(!cart.length) return alert((window.T&&T[lang()]?.emptyCart)||'Cart is empty.');
+      const total=cart.reduce((s,it)=>s+priceNum(it.price)*it.qty,0);
       const p=profile();
       const orderType=state.orderType||'pickup';
       const addressOrTable=$('#orderAddress')?.value||'';
       const order={
         id:uid('ORD'),status:'new',paid:false,remarisEntered:false,type:orderType,paymentMethod:$('#orderPaymentMethod')?.value||'cash',
         name:$('#orderName')?.value||p?.firstName||'',phone:$('#orderPhone')?.value||p?.phone||'',address:orderType==='delivery'?addressOrTable:'',tableNumber:orderType==='dine_in'?addressOrTable:'',note:$('#orderNote')?.value||'',customerId:p?.id||null,
-        items:state.cart.map(it=>({...it, nameSnapshot:window.itemName?itemName(it,'en'):(it.name?.en||it.name||'Item'), nameSnapshotHr:window.itemName?itemName(it,'hr'):(it.name?.hr||it.name?.en||it.name||'Item')})),
+        items:cart.map(it=>({...it, nameSnapshot:window.itemName?itemName(it,'en'):(it.name?.en||it.name||'Item'), nameSnapshotHr:window.itemName?itemName(it,'hr'):(it.name?.hr||it.name?.en||it.name||'Item')})),
         subtotal:+total.toFixed(2),total:+total.toFixed(2),referredBy:p?.referredBy||null,createdAt:new Date().toISOString()
       };
       try{ const cloudRow=await submitCloudOrder(order); if(cloudRow){ order.cloudId=cloudRow.id; order.cloudOrderNumber=cloudRow.order_number; order.cloud=true; } }
       catch(err){ console.warn('Cloud order save failed:',err.message); showToast(t('Narudžba je spremljena lokalno. Cloud nije dostupan.','Order saved locally. Cloud is not available.')); }
       const orders=LS.get('langar_orders_v3',[]); orders.unshift(order); LS.set('langar_orders_v3',orders);
-      state.cart=[]; if(window.renderCart) renderCart(); decorateOrderUI();
+      if(st) st.cart=[]; if(window.renderCart) renderCart(); decorateOrderUI();
       showToast(t('Narudžba je poslana. Čekajte procijenjeno vrijeme od Langar Bara.','Order sent. Wait for Langar Bar to send estimated time.'));
     };
   }

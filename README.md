@@ -1,4 +1,4 @@
-Langar Bar App V4.3.6 — Dine-in Order Mode Fix
+Langar Bar App V4.3.7 — Order Submit + Delivery Panel Fix
 
 Fixes:
 - Removed internal POS/courier instruction from customer Payment Method UI.
@@ -11,8 +11,11 @@ Fixes:
 - Ready/reject notifications create customer inbox messages when possible.
 - Dine-in order mode restored.
 - Admin sees Dine-in orders and table number.
-- Cache updated to V4.3.6.
+- Cache updated to V4.3.7.
+- Fixed order submit reading an empty cart even when the cart visually had items.
+- Exposed app cart state safely for order workflow scripts.
+- Orders / Delivery will now receive local and Cloud orders after submit.
 
 Test URLs:
-App: https://langar-bar.github.io/Langar-Bar-Croatia/?v=436
-Admin: https://langar-bar.github.io/Langar-Bar-Croatia/admin.html?v=436
+App: https://langar-bar.github.io/Langar-Bar-Croatia/?v=437
+Admin: https://langar-bar.github.io/Langar-Bar-Croatia/admin.html?v=437
