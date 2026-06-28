@@ -1,0 +1,17 @@
+Langar Bar V4.5.8 — Account Sync + Tapas + Ice Cream Fix
+
+Changes:
+- My recent orders is now account-authoritative when the customer is logged in.
+- Logged-in orders are stored in account-specific local cache: langar_orders_user_<auth_uid>.
+- Guest/device orders are separated from member/account orders.
+- Cloud sync replaces the account order view with Cloud orders so one account shows the same order history on phone, tablet and computer.
+- Older guest/token orders on the device are claimed to the logged-in account when possible.
+- SQL get_my_customer_orders now claims older orders with the same profile phone number into the logged-in account.
+- Tapas category is forced to the full correct menu even if the Cloud menu has zero-price/old Tapas rows.
+- Tapas Duo/Trio/Quartet now open a flavor chooser in Order: Hummus, Eggplant, Tuna, Guacamole, Chicken and Red Bean.
+- Focaccia is now a Tapas upgrade option inside the item, not a standalone order item.
+- Ice Cream is now a separate category with its own cone icon.
+- Soft serve ice cream items were moved out of Desserts into Ice Cream.
+
+SQL to run:
+langar_bar_v458_account_authoritative_sync_fix.sql

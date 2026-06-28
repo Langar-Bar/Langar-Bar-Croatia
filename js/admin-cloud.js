@@ -662,7 +662,7 @@
 
 
 // =============================
-// V4.5.7 — ETA draft+accept, overdue alarm, quick delay messages
+// V4.5.8 — ETA draft+accept, overdue alarm, account/menu compatible
 // =============================
 (function(){
   'use strict';
@@ -891,7 +891,7 @@
       ${o.note?`<p class="muted"><b>Note:</b> ${safe(o.note)}</p>`:''}
       ${o.cancel_requested_at?`<div class="cancel-request-box ${o.cancel_status==='rejected'?'rejected':(o.cancel_status==='approved'?'approved':'pending')}"><b>Customer cancellation request</b><small>${new Date(o.cancel_requested_at).toLocaleString()}${o.cancel_reason?` · ${safe(o.cancel_reason)}`:''}</small><span>Status: ${safe(o.cancel_status||'requested')}</span>${(!terminalStatus(o.status) && (!o.cancel_status || o.cancel_status==='requested'))?`<div class="toolbar mini"><button class="danger subtle" data-cancel-approve="${safe(o.id)}">Approve cancel</button><button class="secondary" data-cancel-reject="${safe(o.id)}">Reject request</button></div>`:''}</div>`:''}
       <div class="cloud-order-actions"><select data-order-status="${safe(o.id)}"><option value="new" ${o.status==='new'?'selected':''}>New</option><option value="accepted" ${o.status==='accepted'?'selected':''}>Accept order${(draft.preset||draft.custom)?' + send time':''}</option><option value="preparing" ${o.status==='preparing'?'selected':''}>Preparing${(draft.preset||draft.custom)?' + send time':''}</option><option value="ready" ${o.status==='ready'?'selected':''}>Ready</option><option value="completed" ${o.status==='completed'?'selected':''}>Completed</option><option value="cancelled" ${o.status==='cancelled'?'selected':''}>Cancelled</option><option value="rejected" ${o.status==='rejected'?'selected':''}>Rejected</option></select><label class="checkline"><input type="checkbox" data-order-paid="${safe(o.id)}" ${o.paid?'checked':''}> Paid / entered in Remaris</label></div>
-      <div class="order-eta-controls v457"><label>Set time before accepting</label><select data-order-eta-minutes="${safe(o.id)}"><option value="">Preset</option>${standardEtaMinutes.map(m=>`<option value="${m}" ${String(draft.preset)===String(m)?'selected':''}>${m<60?m+' min':(m===60?'1 hour':'1.5 hours')}</option>`).join('')}</select><input type="number" min="1" max="240" step="1" inputmode="numeric" data-order-eta-custom="${safe(o.id)}" placeholder="Custom min" value="${safe(draft.custom||'')}"><input data-order-customer-note="${safe(o.id)}" placeholder="Optional message to customer" value="${safe(draft.note||'')}"><button class="secondary" data-order-save-eta="${safe(o.id)}">Send time only</button></div>
+      <div class="order-eta-controls v458"><label>Set time before accepting</label><select data-order-eta-minutes="${safe(o.id)}"><option value="">Preset</option>${standardEtaMinutes.map(m=>`<option value="${m}" ${String(draft.preset)===String(m)?'selected':''}>${m<60?m+' min':(m===60?'1 hour':'1.5 hours')}</option>`).join('')}</select><input type="number" min="1" max="240" step="1" inputmode="numeric" data-order-eta-custom="${safe(o.id)}" placeholder="Custom min" value="${safe(draft.custom||'')}"><input data-order-customer-note="${safe(o.id)}" placeholder="Optional message to customer" value="${safe(draft.note||'')}"><button class="secondary" data-order-save-eta="${safe(o.id)}">Send time only</button></div>
       ${delayControls}
       <div class="order-admin-maintenance"><label class="checkline"><input type="checkbox" data-order-test="${safe(o.id)}" ${o.is_test?'checked':''}> Mark as test order</label>${o.is_test?`<button class="danger subtle" data-order-delete-test="${safe(o.id)}">Delete test order</button>`:''}</div>
     </article>`;
@@ -1029,7 +1029,7 @@
   function setupRealtime(){
     if(realtimeChannel || !client.channel) return;
     try{
-      realtimeChannel = client.channel('langar-admin-orders-v457')
+      realtimeChannel = client.channel('langar-admin-orders-v458')
         .on('postgres_changes',{event:'INSERT',schema:'public',table:'customer_orders'}, payload=>{ renderCloudOrders(true); if(payload?.new) startOrderAlarm([payload.new]); })
         .on('postgres_changes',{event:'UPDATE',schema:'public',table:'customer_orders'}, ()=>renderCloudOrders(true))
         .on('postgres_changes',{event:'DELETE',schema:'public',table:'customer_orders'}, ()=>renderCloudOrders(true))

@@ -39,3 +39,7 @@ No new SQL is required if V4.5.4/V4.5.5 SQL was already run. This version keeps 
 - Account orders now sync across devices when the customer is logged into Langar Club.
 - Added OneSignal worker files and customer Enable order alerts action.
 - Run `langar_bar_v457_customer_push_account_sync_fix.sql` in Supabase.
+
+
+## V4.5.8 — Account Sync + Tapas + Ice Cream Fix
+Run `langar_bar_v458_account_authoritative_sync_fix.sql` in Supabase after upload. Logged-in My Recent Orders is now Cloud/account-authoritative and uses account-specific local cache. Tapas is normalized to the full Duo/Trio/Quartet flavor chooser, and Ice Cream is separated from Desserts with its own cone icon.

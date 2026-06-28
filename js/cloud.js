@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  const CLOUD_VERSION = 'V4.5.7 Customer Push + Account Sync Fix';
+  const CLOUD_VERSION = 'V4.5.8 Account Sync + Tapas/Ice Cream Fix';
   const CONFIG = {
     supabaseUrl: 'https://fkanccgigogbxodiljqt.supabase.co',
     supabaseKey: 'sb_publishable_WbWIWgu9R2AKepJiRrygCw_1oWrdwG7',
@@ -401,7 +401,7 @@
           else if(phone){ ({error}=await client.auth.signInWithOtp({ phone })); if(error) throw error; showOtpModal(phone, { phone }, 'login'); return; }
           else { alert(t('Unesite email i lozinku.','Enter email and password.')); return; }
           if(error) throw error; const session = data.session || await getSession(); if(!session) throw new Error(t('Prijava treba potvrdu emaila. Provjerite email i pokušajte ponovno.','Login may require email confirmation. Check your email and try again.'));
-          await upsertProfile(session.user,{email:session.user.email, phone:session.user.phone}); await initOneSignal(session.user.id); await ensureWelcomeRewards(); await syncInbox(); await syncRewardCards(); setClubRegisteredView(session); if(typeof window.renderAll==='function') window.renderAll();
+          localStorage.langar_current_user_id=session.user.id; await upsertProfile(session.user,{email:session.user.email, phone:session.user.phone}); await initOneSignal(session.user.id); await ensureWelcomeRewards(); await syncInbox(); await syncRewardCards(); setTimeout(()=>window.LangarOrderCloud?.syncAccountOrders?.(120).then(()=>{ if(typeof window.renderCustomerOrderStatus==='function') window.renderCustomerOrderStatus(); }).catch(()=>{}),800); setClubRegisteredView(session); if(typeof window.renderAll==='function') window.renderAll();
         }catch(err){ alert((err && err.message) ? err.message : String(err)); }
         finally{ if(btn){ btn.disabled=false; btn.textContent=oldText; } }
       }, true);
@@ -432,7 +432,7 @@
           showClubMode('login'); return;
         }
         if(!session) throw new Error(t('Registracija nije vratila sesiju. Pokušajte se prijaviti.','Registration did not return a session. Try logging in.'));
-        await upsertProfile(session.user, registration); await initOneSignal(session.user.id); await ensureWelcomeRewards(); await syncInbox(); await syncRewardCards(); form.reset(); setClubRegisteredView(session); if(typeof window.renderAll==='function') window.renderAll(); if(typeof window.renderInboxBadge==='function') window.renderInboxBadge();
+        localStorage.langar_current_user_id=session.user.id; await upsertProfile(session.user, registration); await initOneSignal(session.user.id); await ensureWelcomeRewards(); await syncInbox(); await syncRewardCards(); setTimeout(()=>window.LangarOrderCloud?.syncAccountOrders?.(120).then(()=>{ if(typeof window.renderCustomerOrderStatus==='function') window.renderCustomerOrderStatus(); }).catch(()=>{}),800); form.reset(); setClubRegisteredView(session); if(typeof window.renderAll==='function') window.renderAll(); if(typeof window.renderInboxBadge==='function') window.renderInboxBadge();
         alert(t('Registracija je završena. Profil je spremljen u Cloud.','Registration completed. Profile is saved in Cloud.'));
       }catch(err){ alert((err && err.message) ? err.message : String(err)); }
       finally{ if(btn){ btn.disabled=false; btn.textContent=oldText; } }
@@ -464,11 +464,11 @@
     window.LangarCloudAuth = { renderClub: async()=>{ ensureClubMarkup(); wireClubRegistrationOtp(); const s=await getSession(); if(s) setClubRegisteredView(s); else setClubRegisterView(); }, showLogin:()=>showClubMode('login'), showSignup:()=>showClubMode('signup') };
     window.renderClubState = window.LangarCloudAuth.renderClub;
     const session = await getSession();
-    if(session){ await upsertProfile(session.user, { phone:session.user.phone, email:session.user.email }); await initOneSignal(session.user.id); await ensureWelcomeRewards(); await syncInbox(); await syncRewardCards(); setClubRegisteredView(session); }
-    else { setClubRegisterView(); }
+    if(session){ localStorage.langar_current_user_id=session.user.id; await upsertProfile(session.user, { phone:session.user.phone, email:session.user.email }); await initOneSignal(session.user.id); await ensureWelcomeRewards(); await syncInbox(); await syncRewardCards(); setTimeout(()=>window.LangarOrderCloud?.syncAccountOrders?.(120).then(()=>{ if(typeof window.renderCustomerOrderStatus==='function') window.renderCustomerOrderStatus(); }).catch(()=>{}),1000); setClubRegisteredView(session); }
+    else { localStorage.removeItem('langar_current_user_id'); setClubRegisterView(); }
     client.auth.onAuthStateChange(async(_event, session)=>{
-      if(session){ await upsertProfile(session.user,{phone:session.user.phone,email:session.user.email}); await initOneSignal(session.user.id); await ensureWelcomeRewards(); await syncInbox(); await syncRewardCards(); setClubRegisteredView(session); if(typeof window.renderAll==='function') window.renderAll(); }
-      else { setClubRegisterView(); }
+      if(session){ localStorage.langar_current_user_id=session.user.id; await upsertProfile(session.user,{phone:session.user.phone,email:session.user.email}); await initOneSignal(session.user.id); await ensureWelcomeRewards(); await syncInbox(); await syncRewardCards(); setTimeout(()=>window.LangarOrderCloud?.syncAccountOrders?.(120).then(()=>{ if(typeof window.renderCustomerOrderStatus==='function') window.renderCustomerOrderStatus(); }).catch(()=>{}),800); setClubRegisteredView(session); if(typeof window.renderAll==='function') window.renderAll(); }
+      else { localStorage.removeItem('langar_current_user_id'); setClubRegisterView(); }
     });
     document.addEventListener('click', async(e)=>{ const item=e.target.closest?.('.inbox-item'); if(!item) return; const text=item.textContent||''; const cloudMsgs=readLS('langar_inbox',[]).filter(m=>m.cloudId); const match=cloudMsgs.find(m=>text.includes(m.title)); if(match && !match.__readSynced){ await markCloudMessageRead(match.cloudId); match.__readSynced=true; } }, true);
   }
@@ -531,7 +531,7 @@
       window.LangarCloudMenuLoaded = false;
       return false;
     }
-    const mapped = mapCloudMenu(catsRes.data, itemsRes.data);
+    const mapped = (window.langarFixMenuV458 ? window.langarFixMenuV458(mapCloudMenu(catsRes.data, itemsRes.data)) : mapCloudMenu(catsRes.data, itemsRes.data));
     if(mapped.length){
       LS2.set('langar_cloud_menu_cache', mapped);
       window.LangarCloudMenuLoaded = true;
@@ -593,7 +593,7 @@
     if(originalGetMenu && !getMenu.__cloudV42){
       getMenu = function(){
         const cloud = window.LangarCloudMenuCache || LS2.get('langar_cloud_menu_cache', null);
-        if(Array.isArray(cloud) && cloud.length) return cloud;
+        if(Array.isArray(cloud) && cloud.length) return window.langarFixMenuV458 ? window.langarFixMenuV458(cloud) : cloud;
         return originalGetMenu();
       };
       getMenu.__cloudV42 = true;
@@ -701,7 +701,7 @@
       currency: 'EUR',
       status: 'new',
       paid: false,
-      app_version: 'v457'
+      app_version: 'v458'
     };
 
     // V4.5.4: submit through a single JSON RPC. This is the reliable path for guest orders.
@@ -785,12 +785,23 @@
       syncedFromAccount:true
     };
   }
-  function readOrders(){ try{ return JSON.parse(localStorage.getItem('langar_orders_v3')) || []; }catch{return [];} }
-  function writeOrders(v){ localStorage.setItem('langar_orders_v3', JSON.stringify(v||[])); }
+  function orderKeyForUser(userId){ return userId ? `langar_orders_user_${userId}` : 'langar_orders_guest'; }
+  function readJson(key){ try{ return JSON.parse(localStorage.getItem(key)) || []; }catch{return [];} }
+  function writeJson(key,val){ localStorage.setItem(key, JSON.stringify(val||[])); }
+  async function currentOrderUserId(){ const session=await activeSession(); return session?.user?.id || localStorage.langar_current_user_id || ''; }
+  async function readOrders(){ const uid=await currentOrderUserId(); if(uid) return readJson(orderKeyForUser(uid)); return readJson('langar_orders_guest').length?readJson('langar_orders_guest'):readJson('langar_orders_v3'); }
+  async function writeOrders(v){ const uid=await currentOrderUserId(); writeJson(orderKeyForUser(uid), v||[]); if(!uid) writeJson('langar_orders_v3', v||[]); }
+  function readAllOrderCaches(){
+    const out=[]; const seen=new Set();
+    ['langar_orders_v3','langar_orders_guest', ...Object.keys(localStorage).filter(k=>k.startsWith('langar_orders_user_'))].forEach(k=>{
+      readJson(k).forEach(o=>{ const sig=o.cloudOrderToken||o.cloudId||o.id; if(sig&&!seen.has(sig)){ seen.add(sig); out.push(o); } });
+    });
+    return out;
+  }
   async function claimLocalOrderTokens(){
     const session = await activeSession();
     if(!session?.user) return { ok:false, reason:'not_logged_in' };
-    const tokens = [...new Set(readOrders().map(o=>o.cloudOrderToken).filter(Boolean))].slice(0,120);
+    const tokens = [...new Set(readAllOrderCaches().map(o=>o.cloudOrderToken).filter(Boolean))].slice(0,160);
     if(!tokens.length) return { ok:true, count:0 };
     const c = activeClient();
     const { data, error } = await c.rpc('claim_customer_order_tokens', { p_tokens: tokens });
@@ -806,18 +817,13 @@
     const {data,error}=await c.rpc('get_my_customer_orders', { p_limit:limit });
     if(error) throw error;
     const rows = Array.isArray(data) ? data : [];
-    const local = readOrders();
-    const before = JSON.stringify(local.map(o=>({id:o.id, cloudId:o.cloudId, token:o.cloudOrderToken, status:o.status, eta:o.estimatedReadyAt, updated:o.updatedAt, cancel:o.cancelStatus, cancelAt:o.cancelRequestedAt})));
-    for(const row of rows){
-      const mapped = mapCloudOrderRow(row);
-      const idx = local.findIndex(o => (mapped.cloudId && o.cloudId===mapped.cloudId) || (mapped.cloudOrderToken && o.cloudOrderToken===mapped.cloudOrderToken));
-      if(idx>=0){ local[idx] = { ...local[idx], ...mapped, id:local[idx].id || mapped.id }; }
-      else local.push(mapped);
-    }
-    local.sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
-    writeOrders(local.slice(0,160));
-    const after = JSON.stringify(local.map(o=>({id:o.id, cloudId:o.cloudId, token:o.cloudOrderToken, status:o.status, eta:o.estimatedReadyAt, updated:o.updatedAt, cancel:o.cancelStatus, cancelAt:o.cancelRequestedAt})));
-    return { ok:true, count:rows.length, changed:before!==after };
+    const local = await readOrders();
+    const before = JSON.stringify(local.map(o=>({cloudId:o.cloudId, token:o.cloudOrderToken, status:o.status, eta:o.estimatedReadyAt, updated:o.updatedAt, cancel:o.cancelStatus, cancelAt:o.cancelRequestedAt})));
+    const merged = rows.map(mapCloudOrderRow).sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0)).slice(0,200);
+    await writeOrders(merged);
+    localStorage.langar_orders_last_cloud_sync = new Date().toISOString();
+    const after = JSON.stringify(merged.map(o=>({cloudId:o.cloudId, token:o.cloudOrderToken, status:o.status, eta:o.estimatedReadyAt, updated:o.updatedAt, cancel:o.cancelStatus, cancelAt:o.cancelRequestedAt})));
+    return { ok:true, count:rows.length, changed:before!==after, authoritative:true };
   }
   async function requestOrderCancellation(token, reason=''){
     if(!token) throw new Error('Missing order tracking token.');

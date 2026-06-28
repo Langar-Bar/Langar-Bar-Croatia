@@ -159,3 +159,6 @@
 /* V4.5.7 — customer order alerts and sync polish */
 .order-status-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px}.order-status-actions .secondary{border-color:rgba(238,211,139,.36)}
 .my-orders-card .muted.mini{line-height:1.45}.status-badge.ready{box-shadow:0 0 0 3px rgba(55,196,125,.14)}
+
+/* V4.5.8 — Tapas chooser, ice cream category and account-order sync polish */
+.option-chip input:disabled + span{opacity:.55}.option-chip:has(input:disabled){opacity:.68;cursor:not-allowed}.tapas-options .option-grid{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}.tapas-choice-status{font-weight:900;color:var(--gold2);margin-top:8px}.tapas-focaccia{margin-top:10px}.order-sync-note{display:inline-flex;gap:6px;align-items:center;border:1px solid rgba(91,220,139,.25);background:rgba(91,220,139,.08);color:#c8ffd8;border-radius:999px;padding:5px 8px;font-size:.78rem;font-weight:800;margin-top:5px}

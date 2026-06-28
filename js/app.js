@@ -25,7 +25,7 @@ const ICONS = {
   'wine_pairing':'🧀🍷',
   'breakfast_combos':'<span class="combo-icon">☕🥐</span>',
   'desserts':'🧁',
-  'ice_cream':'🍦',
+  'ice_cream':'<img src="assets/icecream_cone.svg" alt="Ice Cream">',
   'toast_sandwiches':'🥪',
   'tacos':'🌮',
   'focaccia_pizza':'🍕',
@@ -38,6 +38,7 @@ const ICONS = {
   'cat-beer-wine':'🍷',
   'cat-combo':'<span class="combo-icon">☕🥐</span>',
   'cat-dessert':'🧁',
+  'cat-ice-cream':'<img src="assets/icecream_cone.svg" alt="Ice Cream">',
   'cat-toast':'🥖',
   'cat-tacos':'🌮',
   'cat-focaccia-pizza':'🍕',
@@ -78,8 +79,8 @@ function getMenu(){
     return {...item, allergens:item.allergens || (item.isAlcoholic?'18+':(ing.includes('milk')||ing.includes('mozzarella')||ing.includes('cheese')?'milk / gluten possible':'ask staff'))};
   })}));
   const stored=LS.get(MENU_STORAGE_KEY, null);
-  if(stored) return normalize(stored);
-  const m=normalize(LANGAR_DEFAULT_MENU);
+  if(stored) return langarFixMenuV458(normalize(stored));
+  const m=langarFixMenuV458(normalize(LANGAR_DEFAULT_MENU));
   LS.set(MENU_STORAGE_KEY,m);
   return m;
 }
@@ -88,6 +89,64 @@ function setLang(lang){ state.lang=lang; localStorage.langar_lang=lang; document
 function priceNum(p){ const match=String(p).replace(',','.').match(/[0-9]+(\.[0-9]+)?/); return match?parseFloat(match[0]):0; }
 function uid(prefix){ return prefix+'-'+Math.random().toString(36).slice(2,8)+'-'+Date.now().toString(36).slice(-4); }
 function profile(){ return LS.get('langar_profile', null); }
+function cloneJson(v){ return JSON.parse(JSON.stringify(v||null)); }
+function defaultMenuCategories(){ try{return Array.isArray(LANGAR_DEFAULT_MENU)?LANGAR_DEFAULT_MENU:[]}catch{return []} }
+function defaultCategory(id){ return defaultMenuCategories().find(c=>c.id===id); }
+function defaultItemById(id){ for(const c of defaultMenuCategories()){ const it=(c.items||[]).find(x=>x.id===id); if(it) return it; } return null; }
+function itemKeyName(it){ return String(textOf(it?.name,'en')||it?.name_en||it?.sku||it?.id||'').trim().toLowerCase(); }
+function mergeItemPriceFallback(catId,item){
+  const val=priceNum(item?.price);
+  if(val>0 || !item) return item;
+  const defCat=defaultCategory(catId);
+  const local=(defCat?.items||[]).find(x=>x.id===item.id || x.sku===item.sku || itemKeyName(x)===itemKeyName(item)) || defaultItemById(item.id);
+  if(local && priceNum(local.price)>0) return {...item, price:local.price};
+  return item;
+}
+function langarTapasCategoryV458(){
+  const def=cloneJson(defaultCategory('tapas')) || null;
+  if(!def) return null;
+  def.icon='<img src="assets/tapas_icon_clean.png" alt="Tapas">';
+  def.description={en:'Choose Tapas Duo, Trio or Quartet, then select flavors inside the item. Tortilla chips included; focaccia upgrade available.', hr:'Odaberite Tapas Duo, Trio ili Quartet, zatim odaberite okuse unutar artikla. Tortilla čips je uključen; focaccia je dostupna kao nadoplata.'};
+  def.items=(def.items||[]).map(it=>{
+    if(String(it.id||'').startsWith('SCO-')) return {...it, price: state.lang==='hr'?'Uključeno':'Included', orderable:false, rewardEligible:false, isTapasFlavor:true};
+    if(it.id==='MOD-FOC') return {...it, orderable:false, hiddenInOrder:true, isTapasModifier:true};
+    return {...it, orderable:true};
+  });
+  return def;
+}
+function langarIceCreamCategoryV458(){
+  const desserts=cloneJson(defaultCategory('desserts')) || {items:[]};
+  const iceIds=new Set(['DES-006A','DES-006B','DES-006C','DES-006D']);
+  const items=(desserts.items||[]).filter(it=>iceIds.has(it.id)).map(it=>({...it, categoryId:'ice_cream', categoryTitle: state.lang==='hr'?'Sladoled':'Ice Cream'}));
+  return {id:'ice_cream', title:{en:'Ice Cream', hr:'Sladoled'}, description:{en:'Soft serve ice cream cups and toppings.', hr:'Soft serve sladoled u čaši i dodaci.'}, icon:'<img src="assets/icecream_cone.svg" alt="Ice Cream">', homeExplore:true, active:true, sort:25.5, items};
+}
+function langarFixMenuV458(menu){
+  let m=cloneJson(menu)||[];
+  const iceIds=new Set(['DES-006A','DES-006B','DES-006C','DES-006D']);
+  m=m.map(cat=>{
+    const c={...cat};
+    c.icon=ICONS[c.id]||c.icon||'✦';
+    c.title=c.title||{en:c.id,hr:c.id};
+    c.description=c.description||{en:'',hr:''};
+    c.items=(c.items||[]).map(i=>mergeItemPriceFallback(c.id,{...i, name:i.name||{en:i.name_en||'',hr:i.name_hr||i.name_en||''}, desc:i.desc||{en:i.description_en||'',hr:i.description_hr||i.description_en||''}, ingredients:i.ingredients||{en:i.ingredients_en||i.description_en||'',hr:i.ingredients_hr||i.ingredients_en||''}}));
+    if(c.id==='desserts'){
+      c.description={en:'Tiramisu, apple pie, warm mug cake and pastries.', hr:'Tiramisu, pita od jabuka, topli mug cake i peciva.'};
+      c.items=c.items.filter(it=>!iceIds.has(it.id));
+    }
+    return c;
+  });
+  const tapas=langarTapasCategoryV458();
+  if(tapas){ const idx=m.findIndex(c=>c.id==='tapas'); if(idx>=0) m[idx]=tapas; else m.push(tapas); }
+  const ice=langarIceCreamCategoryV458();
+  if(ice && ice.items.length){ const idx=m.findIndex(c=>c.id==='ice_cream'); if(idx>=0) m[idx]=ice; else m.push(ice); }
+  m=m.filter(c=>c.id!=='breakfast_addons' || c.hiddenInMenu===true || c.active!==false);
+  return m.sort((a,b)=>(a.sort||0)-(b.sort||0));
+}
+window.langarFixMenuV458 = langarFixMenuV458;
+function currentOrderUserId(){ return localStorage.langar_current_user_id || ''; }
+function orderStorageKeyForUser(uid){ return uid ? `langar_orders_user_${uid}` : 'langar_orders_guest'; }
+function currentOrderStorageKey(){ return orderStorageKeyForUser(currentOrderUserId()); }
+function migrateLegacyOrdersForGuest(){ if(localStorage.langar_orders_guest) return; const old=LS.get('langar_orders_v3',[]); if(old?.length) LS.set('langar_orders_guest', old); }
 function cards(){ return LS.get('langar_cards', []); }
 function inbox(){ return LS.get('langar_inbox', []); }
 const RESERVATION_SLOTS = ['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00','22:00'];
@@ -247,6 +306,40 @@ function breakfastCustomizedItem(item, drink, addOns){
   const suffixHr=`Piće: ${langDrink.hr}${extrasHr?`; Dodaci: ${extrasHr}`:''}`;
   return {...item, id:[item.id, langDrink.id, ...extras.map(x=>x.id)].join('__'), price:`€${total.toFixed(2)}`, name:{en:`${baseNameEn} (${suffixEn})`, hr:`${baseNameHr} (${suffixHr})`}, desc:{en:`${itemDesc(item,'en')} ${suffixEn}.`, hr:`${itemDesc(item,'hr')} ${suffixHr}.`}, ingredients:{en:`${itemIngredients(item,'en')} ${extrasEn?`Add-ons: ${extrasEn}.`:''}`, hr:`${itemIngredients(item,'hr')} ${extrasHr?`Dodaci: ${extrasHr}.`:''}`}};
 }
+function tapasFlavorItems(){ const cat=getMenu().find(c=>c.id==='tapas'); return (cat?.items||[]).filter(i=>String(i.id||'').startsWith('SCO-') && i.available!==false).map(i=>({...i, categoryId:'tapas'})); }
+function isTapasCombo(item){ return ['TAP-002','TAP-003','TAP-004'].includes(String(item?.id||'').split('__')[0]); }
+function tapasRequiredCount(item){ const id=String(item?.id||''); if(id.includes('TAP-004')) return 4; if(id.includes('TAP-003')) return 3; return 2; }
+function renderTapasOptions(item, orderMode){
+  if(!isTapasCombo(item)) return '';
+  const flavors=tapasFlavorItems(); const need=tapasRequiredCount(item);
+  const title=state.lang==='hr'?'Odabir okusa tapasa':'Tapas flavor selection';
+  const help=state.lang==='hr'?`Odaberite ${need} okusa. Tortilla čips je uključen; focaccia je nadoplata €1.00.`:`Choose ${need} flavors. Tortilla chips are included; focaccia upgrade is €1.00.`;
+  const flavorHtml=flavors.map((f,idx)=>`<label class="option-chip tapas-chip ${idx<need?'selected':''}"><input type="checkbox" name="tapasFlavor" value="${escapeHtml(f.id)}" ${idx<need?'checked':''}> <span>${escapeHtml(itemName(f))}</span></label>`).join('');
+  return `<div class="breakfast-options tapas-options" data-required="${need}"><h4>${title}</h4><p class="muted mini">${help}</p><div class="option-grid">${flavorHtml}</div><label class="option-chip addon-chip tapas-focaccia"><input type="checkbox" name="tapasFocaccia" value="MOD-FOC"> <span>${state.lang==='hr'?'Zamijeni tortilla čips tostiranom focacciom':'Upgrade tortilla chips to toasted focaccia'}</span><b>+€1.00</b></label><p class="mini tapas-choice-status"></p></div>`;
+}
+function readTapasSelection(){
+  const flavors=tapasFlavorItems(); const map=Object.fromEntries(flavors.map(f=>[f.id,f]));
+  const selected=$$('#modalBody input[name="tapasFlavor"]:checked').map(x=>map[x.value]).filter(Boolean);
+  const focaccia=!!$('#modalBody input[name="tapasFocaccia"]')?.checked;
+  return {flavors:selected, focaccia};
+}
+function tapasCustomizedItem(item, flavors, focaccia){
+  const total=priceNum(item.price)+(focaccia?1:0);
+  const namesEn=(flavors||[]).map(x=>itemName(x,'en')).join(', ');
+  const namesHr=(flavors||[]).map(x=>itemName(x,'hr')).join(', ');
+  const sideEn=focaccia?'Toasted focaccia':'Tortilla chips';
+  const sideHr=focaccia?'Tostirana focaccia':'Tortilla čips';
+  return {...item, id:[item.id, ...(flavors||[]).map(x=>x.id), focaccia?'FOCACCIA':'CHIPS'].join('__'), price:`€${total.toFixed(2)}`, name:{en:`${itemName(item,'en')} (${namesEn}; ${sideEn})`, hr:`${itemName(item,'hr')} (${namesHr}; ${sideHr})`}, desc:{en:`${itemDesc(item,'en')} Flavors: ${namesEn}. Side: ${sideEn}.`, hr:`${itemDesc(item,'hr')} Okusi: ${namesHr}. Prilog: ${sideHr}.`}, ingredients:{en:`${itemIngredients(item,'en')} Selected flavors: ${namesEn}.`, hr:`${itemIngredients(item,'hr')} Odabrani okusi: ${namesHr}.`}};
+}
+function updateTapasChoiceUX(){
+  const box=$('#modalBody .tapas-options'); if(!box) return;
+  const need=+box.dataset.required||2; const checked=$$('#modalBody input[name="tapasFlavor"]:checked');
+  $$('#modalBody input[name="tapasFlavor"]').forEach(inp=>{ inp.closest('.option-chip')?.classList.toggle('selected', inp.checked); inp.disabled=!inp.checked && checked.length>=need; });
+  const f=$('#modalBody input[name="tapasFocaccia"]'); if(f) f.closest('.option-chip')?.classList.toggle('selected', f.checked);
+  const status=$('#modalBody .tapas-choice-status'); if(status) status.textContent=state.lang==='hr'?`${checked.length}/${need} okusa odabrano`:`${checked.length}/${need} flavors selected`;
+  const btn=$('#modalBody .addFromModal'); if(btn) btn.disabled=checked.length!==need;
+}
+function attachTapasOptionUX(){ $$('#modalBody input[name="tapasFlavor"], #modalBody input[name="tapasFocaccia"]').forEach(inp=>inp.addEventListener('change', updateTapasChoiceUX)); updateTapasChoiceUX(); }
 function renderBreakfastOptions(item, orderMode){
   if(!isBreakfastItem(item)) return '';
   const drinks=breakfastDrinkChoices();
@@ -313,8 +406,8 @@ function renderOrderGrid(){ const wrap=$('#orderMenu'); if(!wrap) return; const 
 function likesMap(){ return LS.get('langar_item_likes',{}); }
 function isLiked(id){ return !!likesMap()[id]; }
 function toggleLike(item){ const likes=likesMap(); likes[item.id]=!likes[item.id]; LS.set('langar_item_likes',likes); renderMenu(); renderOrderMenu(); renderHomeMarketing(); }
-function itemNode(item, orderMode=false){ const node=document.createElement('article'); node.className='menu-item'; const disabled=orderMode&&item.orderable===false; node.innerHTML=`<div class="item-main"><h4>${itemName(item)}</h4><p class="hint">${T[state.lang].tap}</p>${item.isAlcoholic?`<span class="tag">${T[state.lang].alcoholic}</span>`:''}${item.isNew?`<span class="tag">NEW</span>`:''}</div><div class="item-side"><button class="likeBtn ${isLiked(item.id)?'liked':''}" aria-label="Favorite">${isLiked(item.id)?'♥':'♡'}</button><div class="price">${item.price}</div>${orderMode&&!disabled?`<button class="secondary addBtn">${T[state.lang].add}</button>`:''}${disabled?`<p class="muted">${T[state.lang].notOrderable}</p>`:''}</div>`; node.onclick=e=>{ if(e.target.classList.contains('addBtn')){e.stopPropagation(); if(isBreakfastItem(item)) openDetails(item, orderMode); else addToCart(item); return;} if(e.target.classList.contains('likeBtn')){e.stopPropagation();toggleLike(item);return;} openDetails(item, orderMode); }; return node; }
-function openDetails(item, orderMode){ const name=itemName(item), desc=itemDesc(item), ingredients=itemIngredients(item); const breakfastOptions=renderBreakfastOptions(item, orderMode); $('#modalBody').innerHTML=`<div class="detail-row"><div><h2>${name}</h2><p class="price">${item.price}</p></div>${orderMode&&item.orderable!==false?`<button class="primary addFromModal">${T[state.lang].add}</button>`:''}</div>${desc?`<p class="muted detail-desc">${desc}</p>`:''}<div class="ingredients-box"><h4>${T[state.lang].ingredients}</h4><p>${ingredients}</p></div>${breakfastOptions}<p class="muted"><b>Allergens:</b> ${item.allergens||'Ask staff'}</p>${item.rewardEligible!==false?`<p class="tag">${T[state.lang].eligible}</p>`:''}${item.isAlcoholic?`<p class="tag">${state.lang==='hr'?'Samo za osobe 18+. Osoblje može zatražiti osobni dokument.':'18+ only. Staff may request ID.'}</p>`:''}`; attachBreakfastOptionUX(); const btn=$('#modalBody .addFromModal'); if(btn) btn.onclick=()=>{ if(isBreakfastItem(item)){ const sel=readBreakfastSelection(); addToCart(breakfastCustomizedItem(item, sel.drink, sel.addOns)); } else { addToCart(item); } $('#modal').classList.add('hidden')}; updateBreakfastLiveTotal(); $('#modal').classList.remove('hidden'); }
+function itemNode(item, orderMode=false){ const node=document.createElement('article'); node.className='menu-item'; const disabled=orderMode&&item.orderable===false; node.innerHTML=`<div class="item-main"><h4>${itemName(item)}</h4><p class="hint">${T[state.lang].tap}</p>${item.isAlcoholic?`<span class="tag">${T[state.lang].alcoholic}</span>`:''}${item.isNew?`<span class="tag">NEW</span>`:''}</div><div class="item-side"><button class="likeBtn ${isLiked(item.id)?'liked':''}" aria-label="Favorite">${isLiked(item.id)?'♥':'♡'}</button><div class="price">${item.price}</div>${orderMode&&!disabled?`<button class="secondary addBtn">${T[state.lang].add}</button>`:''}${disabled?`<p class="muted">${T[state.lang].notOrderable}</p>`:''}</div>`; node.onclick=e=>{ if(e.target.classList.contains('addBtn')){e.stopPropagation(); if(isBreakfastItem(item)||isTapasCombo(item)) openDetails(item, orderMode); else addToCart(item); return;} if(e.target.classList.contains('likeBtn')){e.stopPropagation();toggleLike(item);return;} openDetails(item, orderMode); }; return node; }
+function openDetails(item, orderMode){ const name=itemName(item), desc=itemDesc(item), ingredients=itemIngredients(item); const breakfastOptions=renderBreakfastOptions(item, orderMode); const tapasOptions=renderTapasOptions(item, orderMode); $('#modalBody').innerHTML=`<div class="detail-row"><div><h2>${name}</h2><p class="price">${item.price}</p></div>${orderMode&&item.orderable!==false?`<button class="primary addFromModal">${T[state.lang].add}</button>`:''}</div>${desc?`<p class="muted detail-desc">${desc}</p>`:''}<div class="ingredients-box"><h4>${T[state.lang].ingredients}</h4><p>${ingredients}</p></div>${breakfastOptions}${tapasOptions}<p class="muted"><b>Allergens:</b> ${item.allergens||'Ask staff'}</p>${item.rewardEligible!==false?`<p class="tag">${T[state.lang].eligible}</p>`:''}${item.isAlcoholic?`<p class="tag">${state.lang==='hr'?'Samo za osobe 18+. Osoblje može zatražiti osobni dokument.':'18+ only. Staff may request ID.'}</p>`:''}`; attachBreakfastOptionUX(); attachTapasOptionUX(); const btn=$('#modalBody .addFromModal'); if(btn) btn.onclick=()=>{ if(isBreakfastItem(item)){ const sel=readBreakfastSelection(); addToCart(breakfastCustomizedItem(item, sel.drink, sel.addOns)); } else if(isTapasCombo(item)){ const sel=readTapasSelection(); if(sel.flavors.length!==tapasRequiredCount(item)){ alert(state.lang==='hr'?'Odaberite točan broj okusa tapasa.':'Choose the required number of tapas flavors.'); return; } addToCart(tapasCustomizedItem(item, sel.flavors, sel.focaccia)); } else { addToCart(item); } $('#modal').classList.add('hidden')}; updateBreakfastLiveTotal(); $('#modal').classList.remove('hidden'); }
 function renderMenu(){
   const list=$('#menuList'); if(!list) return;
   if(state.menuMode!=='detail'){ renderMenuGrid(); return; }
@@ -556,7 +649,7 @@ function renderPublicFeedback(){ const box=$('#publicFeedbackList'); if(!box) re
 function maybeGoogleReviewPrompt(rating){ if(+rating>=4){ const googleUrl=LS.get('langar_google_review_url','https://www.google.com/maps/search/?api=1&query=Langar+Bar+Dugo+Selo'); $('#modalBody').innerHTML=`<h2>${state.lang==='hr'?'Hvala na lijepoj ocjeni!':'Thank you for the kind rating!'}</h2><p>${state.lang==='hr'?'Vaša pozitivna recenzija može biti prikazana gostima u aplikaciji. Ako želite podržati Langar Bar i na Google Maps, otvorite Google recenziju.':'Your positive review may be shown to guests in the app. If you would like to support Langar Bar on Google Maps too, open Google review.'}</p><a class="primary full button-link" target="_blank" rel="noopener" href="${googleUrl}">${state.lang==='hr'?'Otvori Google Maps':'Open Google Maps'}</a><button class="secondary full" id="closeReviewPrompt">${state.lang==='hr'?'Kasnije':'Maybe later'}</button>`; $('#modal').classList.remove('hidden'); $('#closeReviewPrompt').onclick=()=>$('#modal').classList.add('hidden'); } else { alert(state.lang==='hr'?'Hvala. Vaša poruka je poslana adminu kako bismo je privatno riješili.':'Thank you. Your feedback was sent to admin so we can solve it privately.'); } }
 
 // =============================
-// V4.5.7 — Customer order status tracker, countdown and stronger local notifications
+// V4.5.8 — Account-authoritative orders + Tapas/Ice Cream menu fixes
 // =============================
 const orderStatusLabels = {
   new:{hr:'Poslana', en:'Sent'},
@@ -600,8 +693,8 @@ function orderCountdownInfo(order){
 function hasActiveOrderCountdown(){
   return customerOrders().some(o=>orderCountdownInfo(o) && !isTerminalOrder(o.status));
 }
-function customerOrders(){ return LS.get('langar_orders_v3',[]); }
-function saveCustomerOrders(list){ LS.set('langar_orders_v3', list); }
+function customerOrders(){ migrateLegacyOrdersForGuest(); return LS.get(currentOrderStorageKey(),[]); }
+function saveCustomerOrders(list){ const key=currentOrderStorageKey(); LS.set(key, list||[]); if(!currentOrderUserId()) LS.set('langar_orders_v3', list||[]); }
 function orderMessageForStatus(o, st){
   const num=o.cloudOrderNumber||o.order_number||o.id||'';
   const eta=formatOrderEta(o);
@@ -776,6 +869,7 @@ function updateOrderTypeFields(){
       : (state.lang==='hr'?'Za pick-up/delivery status ostaje vidljiv na ovom uređaju. Uključite obavijesti ako želite poruke o statusu.':'For pick-up/delivery, status remains visible on this device. Enable notifications to receive order updates.');
   }
 }
+window.renderCustomerOrderStatus = renderCustomerOrderStatus;
 function renderAll(){ renderCategoryTabs(); renderMenu(); renderOrderCategoryTabs(); renderOrderMenu(); renderCart(); renderDashboard(); renderHomeMarketing(); renderPublicFeedback(); renderAppQr(); renderInboxBadge(); renderReservationCalendar(); renderEventCalendar(); renderSushiPreorder(); updateOrderTypeFields(); renderCustomerOrderStatus(); }
 function setupEvents(){
   attachNav();
@@ -819,14 +913,15 @@ function setupEvents(){
     if(state.orderType!=='dine_in' && !$('#orderName')?.value.trim()) return alert(state.lang==='hr'?'Unesite ime za pick-up/delivery.':'Please enter name for pick-up/delivery.');
     if(state.orderType!=='dine_in' && !$('#orderPhone')?.value.trim()) return alert(state.lang==='hr'?'Unesite telefon za pick-up/delivery.':'Please enter phone number for pick-up/delivery.');
     if(state.orderType==='delivery' && !$('#orderAddress')?.value.trim()) return alert(state.lang==='hr'?'Unesite adresu dostave.':'Please enter delivery address.');
+    try{ const s=await window.LangarCloud?.getSession?.(); if(s?.user?.id) localStorage.langar_current_user_id=s.user.id; }catch(e){}
     const total=state.cart.reduce((sum,it)=>sum+priceNum(it.price)*it.qty,0);
     const order={id:uid('ORD'),status:'new',paid:false,type:state.orderType,tableNumber:$('#orderTable')?.value.trim()||'',name:$('#orderName').value,phone:$('#orderPhone').value,address:$('#orderAddress').value,note:$('#orderNote').value,items:state.cart.map(it=>({...it, nameSnapshot:itemName(it,'en'), nameSnapshotHr:itemName(it,'hr')})),total:+total.toFixed(2),referredBy:profile()?.referredBy||null,createdAt:new Date().toISOString()};
-    const orders=LS.get('langar_orders_v3',[]); orders.unshift(order); LS.set('langar_orders_v3',orders);
+    const orders=customerOrders(); orders.unshift(order); saveCustomerOrders(orders);
     let cloudOk=false;
     let cloudError='';
     if(window.LangarOrderCloud && typeof window.LangarOrderCloud.submitOrder==='function'){
       const btn=$('#submitOrder'); const oldText=btn.textContent; btn.disabled=true; btn.textContent=state.lang==='hr'?'Šaljem narudžbu...':'Sending order...';
-      try{ const res=await window.LangarOrderCloud.submitOrder(order); cloudOk=!!res?.ok; if(res?.id) order.cloudId=res.id; if(res?.order_number) order.cloudOrderNumber=res.order_number; if(res?.order_token) order.cloudOrderToken=res.order_token; if(res?.status) order.status=res.status; const saved=LS.get('langar_orders_v3',[]); const idx=saved.findIndex(x=>x.id===order.id); if(idx>=0){ saved[idx]=order; LS.set('langar_orders_v3',saved); } }
+      try{ const res=await window.LangarOrderCloud.submitOrder(order); cloudOk=!!res?.ok; if(res?.id) order.cloudId=res.id; if(res?.order_number) order.cloudOrderNumber=res.order_number; if(res?.order_token) order.cloudOrderToken=res.order_token; if(res?.status) order.status=res.status; const saved=customerOrders(); const idx=saved.findIndex(x=>x.id===order.id); if(idx>=0){ saved[idx]=order; saveCustomerOrders(saved); } }
       catch(err){ cloudError = err?.message || String(err); console.warn('Cloud order submit failed', err); }
       btn.disabled=false; btn.textContent=oldText;
     } else {
