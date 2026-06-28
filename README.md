@@ -1,4 +1,4 @@
-Langar Bar App V4.3.5 — Orders Delivery Fix
+Langar Bar App V4.3.6 — Dine-in Order Mode Fix
 
 Fixes:
 - Removed internal POS/courier instruction from customer Payment Method UI.
@@ -9,8 +9,10 @@ Fixes:
 - Admin sees payment method so courier knows whether to take the POS terminal.
 - Paid and Entered in Remaris stay internal admin controls.
 - Ready/reject notifications create customer inbox messages when possible.
-- Cache updated to V4.3.5.
+- Dine-in order mode restored.
+- Admin sees Dine-in orders and table number.
+- Cache updated to V4.3.6.
 
 Test URLs:
-App: https://langar-bar.github.io/Langar-Bar-Croatia/?v=435
-Admin: https://langar-bar.github.io/Langar-Bar-Croatia/admin.html?v=435
+App: https://langar-bar.github.io/Langar-Bar-Croatia/?v=436
+Admin: https://langar-bar.github.io/Langar-Bar-Croatia/admin.html?v=436

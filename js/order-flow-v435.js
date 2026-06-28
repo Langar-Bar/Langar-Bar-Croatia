@@ -1,4 +1,4 @@
-// Langar App V4.3.5 — stable online order submit, payment preference, ETA and feedback
+// Langar App V4.3.6 — stable orders with pickup, delivery and dine-in modes
 (function(){
   'use strict';
   const LS = window.LS || {get:(k,d)=>{try{return JSON.parse(localStorage.getItem(k)) ?? d}catch{return d}},set:(k,v)=>localStorage.setItem(k,JSON.stringify(v))};
@@ -29,7 +29,8 @@
       etaSentAt: pick('ETA_SENT_AT') || '',
       customerDecision: pick('CUSTOMER_DECISION') || '',
       remarisEntered: pick('REMARIS_ENTERED') === 'true',
-      cleanNote: s.replace(/\n?\[(PAYMENT_METHOD|ETA_MINUTES|ETA_SENT_AT|CUSTOMER_DECISION|REMARIS_ENTERED):[^\]]+\]/g,'').replace(/^Customer note:\s*/,'').trim()
+      tableNumber: pick('TABLE') || '',
+      cleanNote: s.replace(/\n?\[(PAYMENT_METHOD|ETA_MINUTES|ETA_SENT_AT|CUSTOMER_DECISION|REMARIS_ENTERED|TABLE):[^\]]+\]/g,'').replace(/^Customer note:\s*/,'').trim()
     };
   }
   function appendMarker(note,key,value){
@@ -51,16 +52,40 @@
     return `${m}:${String(s).padStart(2,'0')}`;
   }
 
+  function currentOrderType(){ return (window.state && state.orderType) || 'pickup'; }
+  function updateOrderModeFields(){
+    const mode=currentOrderType();
+    const addr=$('#orderAddress'); if(!addr) return;
+    const label=addr.closest('label'); if(!label) return;
+    const span=label.querySelector('span');
+    if(mode==='delivery'){
+      label.style.display='block';
+      if(span){ span.textContent=t('Adresa za dostavu','Delivery address'); span.dataset.hr='Adresa za dostavu'; span.dataset.en='Delivery address'; }
+      addr.placeholder=t('Ulica, broj, kat, napomena za dostavu','Street, number, floor, delivery note');
+    } else if(mode==='dine_in'){
+      label.style.display='block';
+      if(span){ span.textContent=t('Broj stola','Table number'); span.dataset.hr='Broj stola'; span.dataset.en='Table number'; }
+      addr.placeholder=t('Npr. stol 4 ili terasa','e.g. table 4 or terrace');
+    } else {
+      label.style.display='none';
+      addr.value='';
+    }
+  }
+  function orderTypeLabel(type){
+    return type==='delivery'?t('Delivery','Delivery'):(type==='dine_in'?t('Dine-in','Dine-in'):'Pick-up');
+  }
   function decorateOrderUI(){
     const oldPaymentNote = $('#orderPaymentMethod')?.closest('label')?.querySelector('small.muted');
     if(oldPaymentNote) oldPaymentNote.remove();
     const note=$('#orderNote');
     if(note && !$('#orderPaymentMethod')){
       const label=document.createElement('label');
-      // Do not show internal courier/POS instruction to customer.
+      // Internal courier/POS instruction is shown only in Admin, never to customers.
       label.innerHTML=`<span data-hr="Način plaćanja" data-en="Payment method">${t('Način plaćanja','Payment method')}</span><select id="orderPaymentMethod"><option value="cash">${t('Gotovina','Cash')}</option><option value="card_on_delivery">${t('Kartica pri dostavi/preuzimanju','Card on delivery / pickup')}</option></select>`;
       note.closest('label').before(label);
     }
+    $$('.segmented [data-order-type]').forEach(b=>{ if(!b.dataset.dineReady){ b.dataset.dineReady='1'; b.addEventListener('click',()=>setTimeout(updateOrderModeFields,0)); }});
+    updateOrderModeFields();
     const submit=$('#submitOrder');
     if(submit && !$('#customerOrderStatus')){
       const box=document.createElement('section');
@@ -120,7 +145,9 @@
       return `<article class="order-status-card ${esc(o.status)}">
         <b>${esc(o.id)}</b><small>${new Date(o.createdAt||o.created_at||Date.now()).toLocaleString()}</small>
         <p>${(o.items||[]).map(i=>`${i.qty||i.quantity||1}× ${esc((lang()==='hr'&&(i.nameSnapshotHr||i.item_name_hr))||i.nameSnapshot||i.item_name_en||i.name||'Item')}`).join('<br>')||'<span class="muted">Items loading...</span>'}</p>
+        <p><b>${t('Način','Mode')}:</b> ${esc(orderTypeLabel(o.type||'pickup'))}</p>
         <p><b>${t('Status','Status')}:</b> ${esc(orderLabel(o.status,meta))}</p>
+        ${(o.type==='delivery'&&o.address)?`<p><b>${t('Adresa','Address')}:</b> ${esc(o.address)}</p>`:''}${(o.type==='dine_in'&&(meta.tableNumber||o.address))?`<p><b>${t('Stol','Table')}:</b> ${esc(meta.tableNumber||o.address)}</p>`:''}
         <p><b>${t('Plaćanje','Payment')}:</b> ${meta.paymentMethod==='card_on_delivery'?t('Kartica','Card'):t('Gotovina','Cash')}</p>
         ${meta.etaMinutes?`<p class="eta-line"><b>${t('Procijenjeno vrijeme','Estimated time')}:</b> ${meta.etaMinutes} min · <span data-countdown-order="${esc(o.cloudId||o.id)}">${etaCountdownFrom(meta)}</span></p>`:''}
         ${waitingDecision?`<div class="toolbar"><button class="primary" data-accept-order="${esc(o.cloudId||o.id)}">${t('Prihvaćam vrijeme','Accept time')}</button><button class="danger" data-cancel-order="${esc(o.cloudId||o.id)}">${t('Otkaži narudžbu','Cancel order')}</button></div>`:''}
@@ -170,15 +197,20 @@
     const c=client(); if(!c) return null;
     const session=(await c.auth.getSession()).data.session; if(!session?.user) return null;
     const orderNumber=order.id;
-    const metaNote=`[PAYMENT_METHOD:${order.paymentMethod||'cash'}]${order.note?`\nCustomer note: ${order.note}`:''}`;
+    const type = ['delivery','pickup','dine_in'].includes(order.type) ? order.type : 'pickup';
+    let metaNote=`[PAYMENT_METHOD:${order.paymentMethod||'cash'}]`;
+    if(type==='dine_in' && order.tableNumber) metaNote += `
+[TABLE:${order.tableNumber}]`;
+    if(order.note) metaNote += `
+Customer note: ${order.note}`;
     const {data,error}=await c.from('orders').insert({
       user_id: session.user.id,
       order_number: orderNumber,
-      order_type: (order.type==='delivery'?'delivery':'pickup'),
+      order_type: type,
       status: 'submitted',
       customer_name: order.name||null,
       customer_phone: order.phone||null,
-      delivery_address: order.address||null,
+      delivery_address: type==='delivery' ? (order.address||null) : null,
       customer_note: metaNote,
       subtotal: order.subtotal ?? order.total ?? 0,
       delivery_fee: order.deliveryFee || 0,
@@ -199,9 +231,11 @@
       if(!window.state || !state.cart.length) return alert((window.T&&T[lang()]?.emptyCart)||'Cart is empty.');
       const total=state.cart.reduce((s,it)=>s+priceNum(it.price)*it.qty,0);
       const p=profile();
+      const orderType=state.orderType||'pickup';
+      const addressOrTable=$('#orderAddress')?.value||'';
       const order={
-        id:uid('ORD'),status:'new',paid:false,remarisEntered:false,type:state.orderType||'pickup',paymentMethod:$('#orderPaymentMethod')?.value||'cash',
-        name:$('#orderName')?.value||p?.firstName||'',phone:$('#orderPhone')?.value||p?.phone||'',address:$('#orderAddress')?.value||'',note:$('#orderNote')?.value||'',customerId:p?.id||null,
+        id:uid('ORD'),status:'new',paid:false,remarisEntered:false,type:orderType,paymentMethod:$('#orderPaymentMethod')?.value||'cash',
+        name:$('#orderName')?.value||p?.firstName||'',phone:$('#orderPhone')?.value||p?.phone||'',address:orderType==='delivery'?addressOrTable:'',tableNumber:orderType==='dine_in'?addressOrTable:'',note:$('#orderNote')?.value||'',customerId:p?.id||null,
         items:state.cart.map(it=>({...it, nameSnapshot:window.itemName?itemName(it,'en'):(it.name?.en||it.name||'Item'), nameSnapshotHr:window.itemName?itemName(it,'hr'):(it.name?.hr||it.name?.en||it.name||'Item')})),
         subtotal:+total.toFixed(2),total:+total.toFixed(2),referredBy:p?.referredBy||null,createdAt:new Date().toISOString()
       };
