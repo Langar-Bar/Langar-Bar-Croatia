@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Langar Bar App V4.4.0</title>
+  <title>Langar Bar App V4.2</title>
   <meta name="theme-color" content="#07120e" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="assets/icon-192.png" />
@@ -72,28 +72,58 @@
   </main>
 
   <main id="order" class="view">
-    <section class="section-head compact-head"><h2 data-hr="Online narudžba" data-en="Online Order">Online narudžba</h2><p data-hr="Odaberite Delivery, Pick-up ili Dine-in, zatim kategoriju." data-en="Choose Delivery, Pick-up or Dine-in, then choose a category.">Odaberite Delivery, Pick-up ili Dine-in, zatim kategoriju.</p></section>
-    <div class="segmented order-mode-segment"><button class="active" data-order-type="pickup">Pick-up</button><button data-order-type="delivery">Delivery</button><button data-order-type="dine_in">Dine-in</button></div>
+    <section class="section-head compact-head"><h2 data-hr="Narudžba" data-en="Order">Narudžba</h2><p data-hr="Odaberite narudžbu za stol, pick-up ili delivery, zatim kategoriju." data-en="Choose dine-in table order, pick-up or delivery, then choose a category.">Odaberite narudžbu za stol, pick-up ili delivery, zatim kategoriju.</p></section>
+    <div class="segmented"><button class="active" data-order-type="dine_in">Dine-in</button><button data-order-type="pickup">Pick-up</button><button data-order-type="delivery">Delivery</button></div>
+    <p id="orderModeNote" class="order-mode-note">Za narudžbu u kafiću nije potrebna registracija. Dovoljan je broj stola.</p>
     <div class="swipe-hint" data-hr="Povucite kategorije lijevo/desno" data-en="Swipe categories left/right">Povucite kategorije lijevo/desno</div><div id="orderCategoryTabs" class="h-tabs"></div>
     <div class="order-layout">
       <section><div id="orderMenu"></div></section>
       <aside class="cart"><h3 data-hr="Košarica" data-en="Cart">Košarica</h3><div id="cartItems" class="muted"></div><div class="cart-total"><span>Total</span><b id="cartTotal">€0.00</b></div>
+        <label id="orderTableWrap"><span data-hr="Broj stola" data-en="Table number">Broj stola</span><input id="orderTable" placeholder="Table 1 / Stol 1"></label>
         <label><span data-hr="Ime" data-en="Name">Ime</span><input id="orderName" placeholder="Name"></label>
         <label><span data-hr="Telefon" data-en="Phone">Telefon</span><input id="orderPhone" placeholder="+385..."></label>
-        <label><span data-hr="Adresa za dostavu" data-en="Delivery address">Adresa za dostavu</span><input id="orderAddress" placeholder="Address"></label>
+        <label id="orderAddressWrap" class="hidden"><span data-hr="Adresa za dostavu" data-en="Delivery address">Adresa za dostavu</span><input id="orderAddress" placeholder="Address"></label>
         <label><span data-hr="Napomena" data-en="Note">Napomena</span><textarea id="orderNote" placeholder="No onion, sauce separate..."></textarea></label>
         <button id="submitOrder" class="primary full" data-hr="Pošalji narudžbu" data-en="Submit order">Pošalji narudžbu</button>
+        <div id="customerOrderStatus" class="customer-order-status"></div>
         <p class="legal mini" data-hr="Kredit i referral nagrade dodaju se tek nakon plaćene i završene narudžbe s fiskaliziranim računom." data-en="Credit and referral rewards are added only after a paid completed order with fiscalized receipt.">Kredit i referral nagrade dodaju se tek nakon plaćene i završene narudžbe s fiskaliziranim računom.</p>
       </aside>
     </div>
   </main>
 
   <main id="club" class="view">
-    <section class="section-head"><h2>Langar Club</h2><p data-hr="Registrirajte se, primite espresso karticu, QR i skupljajte Langar Credit." data-en="Register, receive an espresso card, QR and earn Langar Credit.">Registrirajte se, primite espresso karticu, QR i skupljajte Langar Credit.</p></section>
+    <section class="section-head"><h2>Langar Club</h2><p data-hr="Registrirajte se, spremite profil u Cloud, primite espresso karticu, QR i skupljajte Langar Credit." data-en="Register, save your profile in Cloud, receive an espresso card, QR and earn Langar Credit.">Registrirajte se, spremite profil u Cloud, primite espresso karticu, QR i skupljajte Langar Credit.</p></section>
     <div class="club-rule"><b data-hr="Poklon dobrodošlice" data-en="Welcome Gift">Welcome Gift</b><span data-hr="Besplatni espresso za nove članove — jednokratna digitalna kartica" data-en="Free espresso for new members — one-time digital card">Besplatni espresso za nove članove — jednokratna digitalna kartica</span></div>
-    <form id="clubForm" class="form-card">
-      <label><span data-hr="Ime" data-en="First name">Ime</span><input required name="firstName"></label><label><span data-hr="Prezime" data-en="Last name">Prezime</span><input name="lastName"></label><label><span data-hr="Telefon" data-en="Phone">Telefon</span><input required name="phone"></label><label>Email<input type="email" name="email"></label><label><span data-hr="Datum rođenja" data-en="Birth date">Datum rođenja</span><input type="date" name="birthDate"></label><label><span data-hr="Referral code" data-en="Referral code">Referral code</span><input name="referralCode" placeholder="Optional"></label><button class="primary full" data-hr="Spremi profil" data-en="Save profile">Spremi profil</button>
-    </form>
+    <div id="clubAuthBox" class="club-auth-box form-card">
+      <div class="club-auth-tabs" role="tablist" aria-label="Langar Club login and registration">
+        <button type="button" id="clubLoginTab" class="active" data-hr="Prijava" data-en="Login">Prijava</button>
+        <button type="button" id="clubSignupTab" data-hr="Registracija" data-en="Register">Registracija</button>
+      </div>
+      <form id="clubLoginForm" class="club-auth-panel">
+        <h3 data-hr="Prijava člana" data-en="Member login">Prijava člana</h3>
+        <p class="muted" data-hr="Prijavite se istim emailom i lozinkom kako bi se profil, kredit i digitalne kartice vratili iz Clouda." data-en="Log in with the same email and password to restore your profile, credit and digital cards from Cloud.">Prijavite se istim emailom i lozinkom kako bi se profil, kredit i digitalne kartice vratili iz Clouda.</p>
+        <label>Email / Login ID<input type="email" name="loginEmail" autocomplete="email" placeholder="name@example.com"></label>
+        <label><span data-hr="Lozinka" data-en="Password">Lozinka</span><input type="password" name="loginPassword" autocomplete="current-password" minlength="6"></label>
+        <div class="or-divider"><span data-hr="ili" data-en="or">ili</span></div>
+        <label><span data-hr="Telefon za SMS kod" data-en="Phone for SMS code">Telefon za SMS kod</span><input name="loginPhone" autocomplete="tel" placeholder="+385..."></label>
+        <button class="primary full" data-hr="Prijavi se" data-en="Login">Prijavi se</button>
+        <p class="legal mini" data-hr="Ako ste već član, nemojte se ponovno registrirati. Samo se prijavite istim emailom." data-en="If you are already a member, do not register again. Log in with the same email.">Ako ste već član, nemojte se ponovno registrirati. Samo se prijavite istim emailom.</p>
+      </form>
+      <form id="clubForm" class="club-auth-panel hidden">
+        <h3 data-hr="Nova registracija" data-en="New registration">Nova registracija</h3>
+        <label><span data-hr="Ime" data-en="First name">Ime</span><input required name="firstName" autocomplete="given-name"></label>
+        <label><span data-hr="Prezime" data-en="Last name">Prezime</span><input name="lastName" autocomplete="family-name"></label>
+        <label><span data-hr="Telefon" data-en="Phone">Telefon</span><input required name="phone" autocomplete="tel" placeholder="+385..."></label>
+        <label>Email / Login ID<input type="email" name="email" autocomplete="email" required placeholder="name@example.com"></label>
+        <label><span data-hr="Lozinka" data-en="Password">Lozinka</span><input type="password" name="password" autocomplete="new-password" minlength="6" required></label>
+        <label><span data-hr="Ponovite lozinku" data-en="Repeat password">Ponovite lozinku</span><input type="password" name="passwordConfirm" autocomplete="new-password" minlength="6" required></label>
+        <label><span data-hr="Datum rođenja" data-en="Birth date">Datum rođenja</span><input type="date" name="birthDate" required></label>
+        <label><span data-hr="Referral code" data-en="Referral code">Referral code</span><input name="referralCode" placeholder="Optional"></label>
+        <label class="checkline"><input type="checkbox" name="terms" required> <span data-hr="Prihvaćam Langar Club uvjete i spremanje profila u Cloud." data-en="I accept Langar Club terms and Cloud profile storage.">Prihvaćam Langar Club uvjete i spremanje profila u Cloud.</span></label>
+        <button class="primary full" data-hr="Registriraj se" data-en="Register">Registriraj se</button>
+        <p class="legal mini" data-hr="Profil se sprema u Supabase Cloud. Email i telefon koriste se za zaštitu od duplih profila. Ako je email potvrda uključena, potvrdite email prije prve prijave." data-en="Profile is saved in Supabase Cloud. Email and phone protect against duplicate profiles. If email confirmation is enabled, confirm your email before the first login.">Profil se sprema u Supabase Cloud. Email i telefon koriste se za zaštitu od duplih profila. Ako je email potvrda uključena, potvrdite email prije prve prijave.</p>
+      </form>
+    </div>
     <div id="clubSuccess" class="success-card hidden"></div><div id="clubResult" class="qr-card hidden"></div>
   </main>
 
@@ -160,6 +190,6 @@
 <div id="modal" class="modal hidden"><div class="modal-card"><button id="closeModal" class="close">×</button><div id="modalBody"></div></div></div>
 <div id="welcomePopup" class="modal hidden"><div class="modal-card popup-card"><button id="closePopup" class="close">×</button><h2 data-hr="Pridružite se Opening Guest List" data-en="Join our Opening Guest List">Pridružite se Opening Guest List</h2><p data-hr="Registrirajte se sada, primite pozivnicu za otvorenje, skupljajte nagrade i preuzmite digitalnu karticu za besplatan espresso." data-en="Register now, receive an opening invitation, collect rewards and get a digital free espresso card.">Registrirajte se sada, primite pozivnicu za otvorenje, skupljajte nagrade i preuzmite digitalnu karticu za besplatan espresso.</p><button class="primary full" data-go="club" id="popupJoin" data-hr="Registriraj se" data-en="Register now">Registriraj se</button><button class="secondary full" id="popupLater" data-hr="Kasnije" data-en="Maybe later">Kasnije</button></div></div>
 <div id="inboxPanel" class="drawer hidden"><div><button id="closeInbox" class="close">×</button><h2>Inbox</h2><div id="inboxList"></div></div></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script><script>window.OneSignalDeferred = window.OneSignalDeferred || [];</script><script src="js/menu-data.js"></script><script src="js/app.js"></script><script src="js/cloud.js"></script><script src="js/order-flow-v440.js?v=440"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script><script>window.OneSignalDeferred = window.OneSignalDeferred || [];</script><script src="js/menu-data.js"></script><script src="js/app.js"></script><script src="js/cloud.js"></script>
 </body>
 </html>

@@ -1,24 +1,18 @@
-Langar Bar App V4.4.0 — Stable Order Alarm + Status Tracking + Daily Archive
+# Langar Bar Croatia
 
-Base: V4.3.9.
+Version: V4.4.0 Breakfast Menu Update
 
-Main fixes:
-- Admin order alarm is persistent and louder.
-- Alarm repeats and gradually increases until staff acknowledges/stops it.
-- Enable loud alarm must be tapped once on the admin device/browser.
-- Admin Orders / Delivery shows live order monitor, order cards, ETA controls, status controls and daily order archive.
-- Admin can enter any custom ETA minutes, not only preset buttons.
-- ETA countdown starts only after the customer accepts the proposed time.
-- Customer order cards now show a clear order progress tracker.
-- Customer can accept or cancel the ETA offer.
-- Order status updates can send Inbox messages to the customer when cloud is available.
-- Customer order history is also shown in the Club area.
-- Delivered/completed orders can receive feedback; admin can publish positive reviews and keep low ratings private.
+Changes in this package:
+- Updated full customer menu data.
+- Added Breakfast category with egg/omelette items, breakfast combos and included drink choices.
+- Added Breakfast Add-ons & Upgrades.
+- Updated tacos, tapas, focaccia pizza, desserts, soft serve, matcha/tea pricing and extra sauces.
+- Bumped local menu storage key to `langar_menu_v7` so users receive the updated menu instead of old cached localStorage.
+- Bumped service worker cache to `langar-bar-v4-4-0-breakfast-menu`.
+- Added Supabase SQL seed file for cloud menu update.
 
-Supabase:
-- If customer Accept/Cancel, order feedback, or cloud order visibility does not work across devices, run:
-  langar_bar_v440_orders_alarm_status_feedback_policies.sql
+After upload to GitHub Pages, ask users/admin to refresh once. If using Supabase cloud menu, run the new seed SQL or open Admin > Settings/Cloud Menu and upload local menu after logging in as admin.
 
-Test URLs after upload:
-- App: https://langar-bar.github.io/Langar-Bar-Croatia/?v=440
-- Admin: https://langar-bar.github.io/Langar-Bar-Croatia/admin.html?v=440
+
+## V4.5.1 Order fix
+Run `langar_bar_v451_order_rpc_return_type_fix.sql` in Supabase SQL Editor. Customer app submits guest dine-in/pickup/delivery orders through RPC, saves an order token on the device for status tracking, and Admin Orders uses secure RPC plus 5-second polling/realtime and alarm sound.

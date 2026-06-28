@@ -154,6 +154,9 @@
     const status=$('#cloudMenuStatus');
     try{
       const user=await requireAdminSession();
+      if(status) status.textContent='Cleaning old cloud menu...';
+      try{ await client.from('menu_items').update({active:false,available_in_menu:false}).neq('id','00000000-0000-0000-0000-000000000000'); }catch(_e){ console.warn('Menu item cleanup skipped', _e?.message||_e); }
+      try{ await client.from('menu_categories').update({active:false}).neq('id','00000000-0000-0000-0000-000000000000'); }catch(_e){ console.warn('Menu category cleanup skipped', _e?.message||_e); }
       if(status) status.textContent='Uploading categories...';
       const menu=getLocalMenu();
       const catRows=menu.map((c,idx)=>({
@@ -653,4 +656,163 @@
     });
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',install); else install();
+})();
+
+
+
+// =============================
+// V4.5.1 — Cloud customer orders: RPC admin panel + auto refresh + persistent alarm
+// =============================
+(function(){
+  'use strict';
+  const CONFIG = { supabaseUrl:'https://fkanccgigogbxodiljqt.supabase.co', supabaseKey:'sb_publishable_WbWIWgu9R2AKepJiRrygCw_1oWrdwG7' };
+  if(!window.supabase?.createClient) return;
+  const client = window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey, { auth:{ persistSession:true, autoRefreshToken:true } });
+  const $ = s=>document.querySelector(s);
+  const safe = v=>String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  const euro = n=>'€'+Number(n||0).toFixed(2);
+  const statusLabels = {new:'New',accepted:'Accepted',preparing:'Preparing',ready:'Ready',completed:'Completed',cancelled:'Cancelled',rejected:'Rejected'};
+  const statuses = ['new','accepted','preparing','ready','completed','cancelled','rejected'];
+  const terminalStatuses = ['completed','cancelled','rejected'];
+  let pollTimer=null, realtimeChannel=null, alarmTimer=null, alarmCtx=null;
+  let alarmUnlocked=false;
+  let lastRenderedSignature='';
+  let orderFilter = localStorage.langar_admin_order_filter || 'live';
+  let lastBrowserNotifyKey='';
+
+  function ackedOrders(){ try{return JSON.parse(localStorage.langar_admin_order_ack_ids||'{}')}catch{return {}} }
+  function saveAckedOrders(map){ localStorage.langar_admin_order_ack_ids = JSON.stringify(map||{}); }
+  function currentNewUnacked(allRows){ const ack=ackedOrders(); return (allRows||[]).filter(o=>String(o.status||'new')==='new' && !ack[o.id]); }
+  function ackOrderIds(ids){ const ack=ackedOrders(); (ids||[]).forEach(id=>{ if(id) ack[id]=new Date().toISOString(); }); saveAckedOrders(ack); stopOrderAlarm(); }
+  function terminalStatus(st){ return terminalStatuses.includes(String(st||'').toLowerCase()); }
+  function typeLabel(t){ return t==='dine_in'?'Dine-in':(t==='delivery'?'Delivery':'Pick-up'); }
+  function normalizeItems(items){ if(Array.isArray(items)) return items; try{return JSON.parse(items||'[]')}catch{return []} }
+  function todayKey(d){ const x=new Date(d); x.setMinutes(x.getMinutes()-x.getTimezoneOffset()); return x.toISOString().slice(0,10); }
+  function localToday(){ const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
+
+  async function requireAdmin(){
+    const {data}=await client.auth.getSession();
+    if(!data.session?.user) throw new Error('Login as Cloud Admin first. Use the Cloud Admin Login at the top of admin.html.');
+    // SQL V4.5.1 has RPC functions that verify admin_members server-side.
+    return data.session.user;
+  }
+
+  async function unlockAlarmSound(){
+    try{
+      alarmCtx = alarmCtx || new (window.AudioContext||window.webkitAudioContext)();
+      if(alarmCtx.state==='suspended') await alarmCtx.resume();
+      alarmUnlocked = true;
+      localStorage.langar_admin_alarm_unlocked='1';
+      if('Notification' in window && Notification.permission==='default') await Notification.requestPermission().catch(()=>{});
+      beepPattern();
+      return true;
+    }catch(e){ alert('Alarm sound could not be enabled: '+(e.message||e)); return false; }
+  }
+  function beepOnce(freq=920, dur=0.38){
+    try{
+      if(!alarmCtx || alarmCtx.state==='suspended') return;
+      const osc=alarmCtx.createOscillator(); const gain=alarmCtx.createGain();
+      osc.type='sine'; osc.frequency.setValueAtTime(freq, alarmCtx.currentTime);
+      gain.gain.setValueAtTime(0.0001, alarmCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.22, alarmCtx.currentTime+0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, alarmCtx.currentTime+dur);
+      osc.connect(gain); gain.connect(alarmCtx.destination); osc.start(); osc.stop(alarmCtx.currentTime+dur+0.02);
+    }catch(e){}
+  }
+  function beepPattern(){ beepOnce(880,.28); setTimeout(()=>beepOnce(1180,.32),360); }
+  function browserNotifyNewOrders(unacked){
+    if(!unacked?.length) return;
+    const key=unacked.map(o=>o.id).sort().join('|');
+    if(key===lastBrowserNotifyKey) return;
+    lastBrowserNotifyKey=key;
+    try{
+      if('Notification' in window && Notification.permission==='granted'){
+        const first=unacked[0];
+        new Notification('Langar Bar — New order', { body:`${unacked.length} new order(s). First: ${first.order_number||String(first.id).slice(0,8)} · ${typeLabel(first.fulfillment_type)}`, icon:'assets/admin-icon-192.png', badge:'assets/admin-icon-192.png', tag:'langar-admin-new-order' });
+      }
+    }catch(e){}
+  }
+  function startOrderAlarm(unacked){
+    if(!unacked?.length){ stopOrderAlarm(); return; }
+    browserNotifyNewOrders(unacked);
+    if(!alarmUnlocked) return;
+    if(alarmTimer) return;
+    beepPattern();
+    alarmTimer=setInterval(beepPattern, 1600);
+  }
+  function stopOrderAlarm(){ if(alarmTimer){ clearInterval(alarmTimer); alarmTimer=null; } }
+
+  async function fetchOrders(){
+    await requireAdmin();
+    const {data,error}=await client.rpc('admin_get_customer_orders',{p_limit:120});
+    if(error) throw error;
+    return data||[];
+  }
+
+  async function renderCloudOrders(force=false){
+    const box=$('#ordersAdmin'); if(!box) return;
+    try{
+      const allRows=await fetchOrders();
+      const signature=JSON.stringify(allRows.map(o=>[o.id,o.status,o.paid,o.updated_at,o.created_at]));
+      const live=allRows.filter(o=>!terminalStatus(o.status));
+      const today=allRows.filter(o=>todayKey(o.created_at)===localToday());
+      const archive=allRows.filter(o=>terminalStatus(o.status) || todayKey(o.created_at)!==localToday());
+      let rows=allRows;
+      if(orderFilter==='live') rows=live; else if(orderFilter==='today') rows=today; else if(orderFilter==='archive') rows=archive;
+      const unacked=currentNewUnacked(allRows);
+      startOrderAlarm(unacked);
+      if(!force && signature===lastRenderedSignature && !unacked.length) return;
+      lastRenderedSignature=signature;
+      const alarmBanner = unacked.length
+        ? `<div class="order-alarm-banner"><div><b>🔔 ${unacked.length} NEW ORDER${unacked.length>1?'S':''}</b><small>Leave this page open on the tablet. Alarm continues until staff checks or accepts the order.</small></div><button id="enableOrderAlarm" class="primary">${alarmUnlocked?'Alarm enabled':'Enable alarm sound'}</button><button id="ackOrderAlarm" class="secondary">I checked / stop alarm</button></div>`
+        : `<div class="order-alarm-quiet"><span>✓ No unchecked new orders</span><button id="enableOrderAlarm" class="secondary">${alarmUnlocked?'Alarm enabled':'Enable alarm sound'}</button></div>`;
+      box.innerHTML = `${alarmBanner}<div class="cloud-orders-toolbar ${unacked.length?'order-alert-flash':''}"><span class="order-pill">Open: ${live.length}</span><span class="order-pill">New: ${allRows.filter(o=>o.status==='new').length}</span><span class="order-pill">Today total: ${euro(today.reduce((s,o)=>s+Number(o.total||0),0))}</span><span class="order-pill">Auto-refresh: ON</span><button id="refreshCloudOrders" class="secondary">Refresh now</button></div><div class="order-filter-tabs"><button data-order-filter="live" class="secondary ${orderFilter==='live'?'active':''}">Live Queue</button><button data-order-filter="today" class="secondary ${orderFilter==='today'?'active':''}">Today</button><button data-order-filter="archive" class="secondary ${orderFilter==='archive'?'active':''}">Archive</button><button data-order-filter="all" class="secondary ${orderFilter==='all'?'active':''}">All 120</button></div>` +
+        (rows.length?`<div class="cloud-orders-list">${rows.map(o=>{
+          const items=normalizeItems(o.items);
+          return `<article class="cloud-order-card ${o.status==='new'?'new':''} ${terminalStatus(o.status)?'terminal':''}"><div class="cloud-order-head"><div><h3>${safe(o.order_number||String(o.id).slice(0,8))} <span class="order-source-badge">${typeLabel(o.fulfillment_type)}</span></h3><div class="cloud-order-meta">${new Date(o.created_at).toLocaleString()}${o.table_number?` · Table: <b>${safe(o.table_number)}</b>`:''}${o.customer_name?` · ${safe(o.customer_name)}`:''}${o.customer_phone?` · ${safe(o.customer_phone)}`:''}</div>${o.delivery_address?`<div class="cloud-order-meta">Address: ${safe(o.delivery_address)}</div>`:''}</div><div><b>${euro(o.total)}</b><br><small>${safe(statusLabels[o.status]||o.status)}</small></div></div><div class="cloud-order-items">${items.map(i=>`<div><span>${safe(i.qty||1)} × ${safe(i.name_hr||i.name_en||i.name||'Item')}</span><b>${euro(i.line_total ?? ((i.qty||1)*(i.price||0)))}</b></div>`).join('')||'<p class="muted">No items</p>'}</div>${o.note?`<p class="muted"><b>Note:</b> ${safe(o.note)}</p>`:''}<div class="cloud-order-actions"><select data-order-status="${safe(o.id)}">${statuses.map(st=>`<option value="${st}" ${o.status===st?'selected':''}>${statusLabels[st]}</option>`).join('')}</select><label class="checkline"><input type="checkbox" data-order-paid="${safe(o.id)}" ${o.paid?'checked':''}> Paid / entered in Remaris</label></div></article>`;
+        }).join('')}</div>`:`<p class="muted">Connected to Cloud. No orders in this filter yet.</p><div class="legal-block"><b>Tablet workflow</b><p>Keep this panel open. Orders auto-refresh every 5 seconds and also use Realtime when available. Click “Enable alarm sound” once after opening the tablet.</p></div>`);
+      $('#refreshCloudOrders')?.addEventListener('click',()=>renderCloudOrders(true));
+      $('#enableOrderAlarm')?.addEventListener('click',async()=>{ await unlockAlarmSound(); renderCloudOrders(true); });
+      $('#ackOrderAlarm')?.addEventListener('click',()=>{ ackOrderIds(unacked.map(o=>o.id)); renderCloudOrders(true); });
+      document.querySelectorAll('[data-order-filter]').forEach(btn=>btn.onclick=()=>{ orderFilter=btn.dataset.orderFilter; localStorage.langar_admin_order_filter=orderFilter; renderCloudOrders(true); });
+      document.querySelectorAll('[data-order-status]').forEach(sel=>sel.onchange=()=>updateOrder(sel.dataset.orderStatus,{status:sel.value}));
+      document.querySelectorAll('[data-order-paid]').forEach(ch=>ch.onchange=()=>updateOrder(ch.dataset.orderPaid,{paid:ch.checked}));
+    }catch(err){
+      box.innerHTML = `<p style="color:#ffb1a8">Cloud orders error: ${safe(err.message||err)}</p><p class="muted">Run <b>langar_bar_v451_order_rpc_return_type_fix.sql</b> in Supabase SQL Editor. Then login with a user that exists in <b>admin_members</b>.</p><button id="refreshCloudOrders" class="secondary">Try again</button>`;
+      $('#refreshCloudOrders')?.addEventListener('click',()=>renderCloudOrders(true));
+    }
+  }
+
+  async function updateOrder(id, patch){
+    try{
+      const args={p_order_id:id, p_status:Object.prototype.hasOwnProperty.call(patch,'status')?patch.status:null, p_paid:Object.prototype.hasOwnProperty.call(patch,'paid')?patch.paid:null};
+      const {error}=await client.rpc('admin_update_customer_order', args);
+      if(error) throw error;
+      if(patch.status && patch.status!=='new') ackOrderIds([id]);
+      await renderCloudOrders(true);
+    }catch(err){ alert('Order update error: '+(err.message||err)); }
+  }
+
+  function setupRealtime(){
+    if(realtimeChannel || !client.channel) return;
+    try{
+      realtimeChannel = client.channel('langar-admin-orders-v451')
+        .on('postgres_changes',{event:'INSERT',schema:'public',table:'customer_orders'}, payload=>{ renderCloudOrders(true); if(payload?.new) startOrderAlarm([payload.new]); })
+        .on('postgres_changes',{event:'UPDATE',schema:'public',table:'customer_orders'}, ()=>renderCloudOrders(true))
+        .subscribe();
+    }catch(e){ console.warn('Realtime setup failed; polling remains active.', e); }
+  }
+
+  function install(){
+    if(window.__langarCloudOrdersInstalledV450) return; window.__langarCloudOrdersInstalledV450=true;
+    if(typeof window.renderOrders === 'function') window.renderOrders = ()=>renderCloudOrders(true);
+    const oldRenderAll = window.renderAll;
+    if(typeof oldRenderAll === 'function' && !oldRenderAll.__cloudOrdersV450){ window.renderAll=function(){ oldRenderAll(); renderCloudOrders(true); }; window.renderAll.__cloudOrdersV450=true; }
+    setupRealtime();
+    renderCloudOrders(true);
+    if(pollTimer) clearInterval(pollTimer);
+    pollTimer=setInterval(()=>renderCloudOrders(false), 5000);
+    document.addEventListener('visibilitychange',()=>{ if(!document.hidden) renderCloudOrders(true); });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>setTimeout(install,500)); else setTimeout(install,500);
 })();
