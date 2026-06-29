@@ -12,6 +12,13 @@
     return;
   }
   const client = window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey, { auth:{ persistSession:true, autoRefreshToken:true } });
+  // V4.5.10 hotfix: expose the exact Cloud Admin client used for login so later admin modules
+  // (especially Reviews & Insights) read the same persisted admin session.
+  window.LangarAdminCloud = Object.assign(window.LangarAdminCloud || {}, {
+    client,
+    getSession: () => client.auth.getSession(),
+    signOut: () => client.auth.signOut()
+  });
 
   function lockAdmin(){
     document.body.classList.add('admin-locked');
@@ -33,6 +40,7 @@
     const badge=$('#adminCloudBadge');
     if(badge) badge.innerHTML = `<div class="admin-lock-banner"><b>Cloud Admin verified</b><br>User: ${safe(user.email || user.id)}<br>Role: ${safe(role)}</div>`;
     if(typeof window.renderAllAdmin === 'function') window.renderAllAdmin();
+    try{ window.dispatchEvent(new CustomEvent('langar-admin-unlocked', { detail:{ userId:user.id, role } })); }catch(_e){}
   }
   async function checkAdmin(user){
     const { data, error } = await client.from('admin_members').select('role,active').eq('user_id', user.id).eq('active', true).maybeSingle();
@@ -254,7 +262,8 @@
   const statuses = ['pending','confirmed','supplier_ordered','ready','delivered','served','cancelled','rejected'];
   async function requireAdmin(){
     if(!client) throw new Error('Supabase SDK not loaded');
-    const {data}=await client.auth.getSession();
+    const {data,error}=await client.auth.getSession();
+    if(error) throw error;
     if(!data.session?.user) throw new Error('Please login as Cloud Admin first.');
     return data.session.user;
   }
@@ -1073,7 +1082,9 @@
 (function(){
   'use strict';
   const CONFIG = { supabaseUrl:'https://fkanccgigogbxodiljqt.supabase.co', supabaseKey:'sb_publishable_WbWIWgu9R2AKepJiRrygCw_1oWrdwG7' };
-  const client = window.LangarCloud?.client || (window.supabase?.createClient ? window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey, { auth:{ persistSession:true, autoRefreshToken:true, storageKey:'langar_bar_supabase_auth_v442' } }) : null);
+  // Use the admin-login client first. Do not use the customer-app storageKey here, otherwise
+  // Reviews & Insights can show “Please login as Cloud Admin first” even while the top badge says owner.
+  const client = window.LangarAdminCloud?.client || window.LangarCloud?.client || (window.supabase?.createClient ? window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey, { auth:{ persistSession:true, autoRefreshToken:true } }) : null);
   const $=s=>document.querySelector(s);
   const safe=v=>String(v||'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
   const stars=n=>'★'.repeat(Math.max(0,Math.min(5,+n||0)))+'☆'.repeat(Math.max(0,5-(+n||0)));
@@ -1141,6 +1152,10 @@
       document.querySelectorAll('[data-review-action]').forEach(btn=>btn.addEventListener('click',()=>moderateReview(btn.dataset.reviewId, btn.dataset.reviewAction)));
     }catch(err){ content.innerHTML=`<span style="color:#ffb1a8">Reviews error: ${safe(err.message||err)}<br>Run <b>langar_v459_sql_only.sql</b> in Supabase SQL Editor.</span>`; }
   }
-  function boot(){ ensureBox(); setTimeout(()=>renderReviewsAdmin(false),1200); }
+  function boot(){
+    ensureBox();
+    setTimeout(()=>renderReviewsAdmin(false),1200);
+    window.addEventListener('langar-admin-unlocked',()=>setTimeout(()=>renderReviewsAdmin(true),250));
+  }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
 })();

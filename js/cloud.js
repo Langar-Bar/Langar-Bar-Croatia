@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  const CLOUD_VERSION = 'V4.5.9 Reviews + Cancellation Modal + Inbox Modal Fix';
+  const CLOUD_VERSION = 'V4.5.10 Mobile Order Tabs + Admin Reviews Login Hotfix';
   const CONFIG = {
     supabaseUrl: 'https://fkanccgigogbxodiljqt.supabase.co',
     supabaseKey: 'sb_publishable_WbWIWgu9R2AKepJiRrygCw_1oWrdwG7',

@@ -166,3 +166,38 @@
 
 /* V4.5.9 Reviews + cancellation + Inbox modal fix */
 .modal.inbox-detail-open,.modal.review-modal-open,.modal.cancel-modal-open{z-index:140!important}.drawer{z-index:90}.message-detail-modal p{line-height:1.65;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:18px;padding:14px}.message-detail-modal small{display:block;color:var(--muted);margin:10px 0 14px}.order-card-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.review-done{background:rgba(76,201,120,.15);border-color:rgba(76,201,120,.35);color:#bff3ce}.order-review-modal h3,.cancel-request-modal h2{margin-top:18px}.review-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin:14px 0}.review-metrics label,.item-review-list article{background:rgba(255,255,255,.045);border:1px solid var(--line);border-radius:18px;padding:12px}.review-metrics label span{display:block;font-weight:900;margin-bottom:6px}.item-review-list{display:grid;gap:10px;margin:10px 0 14px}.item-review-list article b{display:block;color:var(--gold2);margin-bottom:8px}.order-review-modal textarea,.order-review-modal select,.cancel-request-modal textarea,.cancel-request-modal select{width:100%;border:1px solid var(--line);background:#08140f;color:var(--cream);border-radius:14px;padding:12px;margin-top:6px}.cancel-request-modal .danger{margin-top:12px}.reviews-insight-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:12px 0}.reviews-insight-grid button{min-height:92px;border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.05);color:var(--cream)}.reviews-insight-grid b{display:block;font-size:1.8rem;color:var(--gold2)}.reviews-insight-grid small{color:var(--muted)}.review-insights-two{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}.review-insights-two section,.admin-review-card{background:rgba(255,255,255,.045);border:1px solid var(--line);border-radius:22px;padding:14px;margin:10px 0}.admin-review-card.low-rating{border-color:rgba(255,120,95,.45);box-shadow:0 0 0 1px rgba(255,120,95,.12)}.review-card-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.review-metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin:10px 0}.review-metric-grid span{background:rgba(0,0,0,.18);border:1px solid var(--line);border-radius:14px;padding:8px}.admin-review-items{margin:10px 0;padding-left:18px}.admin-review-card textarea{width:100%;min-height:74px;border:1px solid var(--line);background:#08140f;color:var(--cream);border-radius:14px;padding:10px}@media(max-width:760px){.review-insights-two{grid-template-columns:1fr}.review-card-head{display:block}.reviews-insight-grid{grid-template-columns:1fr 1fr}}
+
+
+/* V4.5.10 Hotfix — mobile order mode tabs + admin review panel visibility */
+#order > .segmented,
+#order > #orderModeNote{
+  width:100%!important;
+  max-width:100%!important;
+  margin-left:0!important;
+  margin-right:0!important;
+}
+#order > .segmented{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  align-items:center!important;
+  gap:0!important;
+}
+#order > .segmented button{
+  width:100%!important;
+  min-width:0!important;
+  text-align:center!important;
+  white-space:nowrap!important;
+}
+@media(max-width:760px){
+  html,body{max-width:100%!important;overflow-x:hidden!important;}
+  .app-shell,.view,#order{width:100%!important;max-width:100%!important;min-width:0!important;overflow-x:hidden!important;}
+  #order > .segmented{border-radius:20px!important;padding:6px!important;margin:0 0 12px 0!important;}
+  #order > .segmented button{font-size:.88rem!important;padding:12px 4px!important;border-radius:15px!important;line-height:1.1!important;}
+  #orderModeNote{display:block!important;font-size:.92rem!important;line-height:1.38!important;}
+  #order .menu-category-landing,#order .menu-category-grid{width:100%!important;max-width:100%!important;min-width:0!important;}
+  #order .menu-category-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important;}
+  #order .menu-category-card{width:100%!important;min-width:0!important;overflow:hidden!important;}
+}
+@media(max-width:360px){
+  #order > .segmented button{font-size:.8rem!important;padding-left:2px!important;padding-right:2px!important;}
+}

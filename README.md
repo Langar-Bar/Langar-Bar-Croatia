@@ -48,3 +48,18 @@ Run `langar_bar_v458_account_authoritative_sync_fix.sql` in Supabase after uploa
 ## V4.5.9 — Reviews + Cancellation Modal + Inbox Modal Fix
 
 Run `langar_v459_sql_only.sql` in Supabase after the V4.5.8 SQL. Upload the full ZIP to replace the app files. This version adds completed-order reviews, admin review moderation/insights, required cancellation reason modal, admin cancellation messaging, and a foreground Inbox message detail modal.
+
+
+## V4.5.10 — Mobile Order Tabs + Admin Reviews Login Hotfix
+
+This hotfix is built on V4.5.9.
+
+### Fixed
+- Mobile Order page: Dine-in / Pick-up / Delivery segmented tabs now render full-width and aligned with the rest of the page.
+- Mobile Order page: order category cards are protected from horizontal overflow.
+- Admin Reviews & Insights: review panel now uses the same Supabase session as Cloud Admin Login, fixing the false login error while owner/admin is already verified.
+- Service worker cache name updated so installed iPhone/iPad PWA refreshes CSS/JS.
+
+### SQL
+- No new SQL is required after V4.5.9.
+- Run `langar_v459_sql_only.sql` only if the V4.5.9 review/cancellation tables and RPCs have not been installed yet.
