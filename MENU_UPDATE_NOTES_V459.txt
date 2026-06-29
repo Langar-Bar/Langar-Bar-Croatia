@@ -1,0 +1,16 @@
+V4.5.9 — Reviews + Cancellation Modal + Inbox Modal Fix
+
+Customer app
+- Completed + paid Cloud orders show one review form in My recent orders.
+- Review includes Service, Food quality, Portion size, Price value, Overall experience, whole-order comment, and per-item rating/comment.
+- Each Cloud order can receive only one review. Cancelled, rejected and test orders are excluded.
+- Request cancellation now opens a required-reason modal instead of prompt/direct cancellation.
+- Inbox message detail now opens above the drawer as a foreground modal and marks only the opened message as read.
+
+Admin
+- Reviews & Insights panel added for pending reviews, approved public reviews, private complaints, low ratings, item ratings, loved items and items needing improvement.
+- Admin can approve public, keep private, reject, reply, and send coupon/credit.
+- Cancellation request box now shows reason, note, request time, order status, elapsed time, and customer message action.
+
+SQL
+- Run langar_v459_sql_only.sql after V4.5.8 SQL.

@@ -889,7 +889,7 @@
         <div class="cloud-order-total"><b>${euro(o.total)}</b><br><small>${safe(statusLabels[o.status]||o.status)}</small></div></div>
       <div class="cloud-order-items enhanced-items">${items.map(i=>`<div><span><b class="order-line-name">${safe(i.qty||1)} × ${safe(i.name_hr||i.name_en||i.name||'Item')}</b>${i.addOns?.length?`<small>${safe(i.addOns.map(a=>a.name||a.id).join(', '))}</small>`:''}</span><b>${euro(i.line_total ?? ((i.qty||1)*(i.price||0)))}</b></div>`).join('')||'<p class="muted">No items</p>'}</div>
       ${o.note?`<p class="muted"><b>Note:</b> ${safe(o.note)}</p>`:''}
-      ${o.cancel_requested_at?`<div class="cancel-request-box ${o.cancel_status==='rejected'?'rejected':(o.cancel_status==='approved'?'approved':'pending')}"><b>Customer cancellation request</b><small>${new Date(o.cancel_requested_at).toLocaleString()}${o.cancel_reason?` · ${safe(o.cancel_reason)}`:''}</small><span>Status: ${safe(o.cancel_status||'requested')}</span>${(!terminalStatus(o.status) && (!o.cancel_status || o.cancel_status==='requested'))?`<div class="toolbar mini"><button class="danger subtle" data-cancel-approve="${safe(o.id)}">Approve cancel</button><button class="secondary" data-cancel-reject="${safe(o.id)}">Reject request</button></div>`:''}</div>`:''}
+      ${o.cancel_requested_at?`<div class="cancel-request-box ${o.cancel_status==='rejected'?'rejected':(o.cancel_status==='approved'?'approved':'pending')}"><b>Customer cancellation request</b><small><b>Requested:</b> ${new Date(o.cancel_requested_at).toLocaleString()} · <b>Elapsed:</b> ${Math.max(0,Math.round((Date.now()-new Date(o.cancel_requested_at).getTime())/60000))} min · <b>Order status:</b> ${safe(o.status||'new')}</small><small><b>Reason:</b> ${safe(o.cancel_reason_code||o.cancel_reason||'not specified')}${o.cancel_reason_note?` · <b>Note:</b> ${safe(o.cancel_reason_note)}`:''}</small><span>Status: ${safe(o.cancel_status||'requested')}${o.cancel_admin_note?` · Admin note: ${safe(o.cancel_admin_note)}`:''}</span>${(!terminalStatus(o.status) && (!o.cancel_status || o.cancel_status==='requested'))?`<div class="toolbar mini"><button class="danger subtle" data-cancel-approve="${safe(o.id)}">Approve cancel</button><button class="secondary" data-cancel-reject="${safe(o.id)}">Reject request</button><button class="secondary" data-cancel-message="${safe(o.id)}">Message customer</button></div>`:''}</div>`:''}
       <div class="cloud-order-actions"><select data-order-status="${safe(o.id)}"><option value="new" ${o.status==='new'?'selected':''}>New</option><option value="accepted" ${o.status==='accepted'?'selected':''}>Accept order${(draft.preset||draft.custom)?' + send time':''}</option><option value="preparing" ${o.status==='preparing'?'selected':''}>Preparing${(draft.preset||draft.custom)?' + send time':''}</option><option value="ready" ${o.status==='ready'?'selected':''}>Ready</option><option value="completed" ${o.status==='completed'?'selected':''}>Completed</option><option value="cancelled" ${o.status==='cancelled'?'selected':''}>Cancelled</option><option value="rejected" ${o.status==='rejected'?'selected':''}>Rejected</option></select><label class="checkline"><input type="checkbox" data-order-paid="${safe(o.id)}" ${o.paid?'checked':''}> Paid / entered in Remaris</label></div>
       <div class="order-eta-controls v458"><label>Set time before accepting</label><select data-order-eta-minutes="${safe(o.id)}"><option value="">Preset</option>${standardEtaMinutes.map(m=>`<option value="${m}" ${String(draft.preset)===String(m)?'selected':''}>${m<60?m+' min':(m===60?'1 hour':'1.5 hours')}</option>`).join('')}</select><input type="number" min="1" max="240" step="1" inputmode="numeric" data-order-eta-custom="${safe(o.id)}" placeholder="Custom min" value="${safe(draft.custom||'')}"><input data-order-customer-note="${safe(o.id)}" placeholder="Optional message to customer" value="${safe(draft.note||'')}"><button class="secondary" data-order-save-eta="${safe(o.id)}">Send time only</button></div>
       ${delayControls}
@@ -901,7 +901,7 @@
     const box=$('#ordersAdmin'); if(!box) return;
     try{
       const [allRows, healthRows] = await Promise.all([fetchOrders(), getCloudHealth(force)]);
-      const signature=JSON.stringify([orderFilter, customDateFilter, allRows.map(o=>[o.id,o.status,o.paid,o.is_test,o.estimated_minutes,o.estimated_ready_at,o.admin_customer_note,o.cancel_requested_at,o.cancel_status,o.cancel_reason,o.updated_at,o.created_at,o.archived_at])]);
+      const signature=JSON.stringify([orderFilter, customDateFilter, allRows.map(o=>[o.id,o.status,o.paid,o.is_test,o.estimated_minutes,o.estimated_ready_at,o.admin_customer_note,o.cancel_requested_at,o.cancel_status,o.cancel_reason,o.cancel_reason_code,o.cancel_reason_note,o.updated_at,o.created_at,o.archived_at])]);
       const groups=buildOrderRows(allRows);
       const {rows, live, todayRows, yesterdayRows, archive, testRows, dateRows}=groups;
       const unacked=currentNewUnacked(allRows.filter(o=>!o.is_test));
@@ -928,6 +928,7 @@
       document.querySelectorAll('[data-order-delete-test]').forEach(btn=>btn.onclick=()=>deleteTestOrder(btn.dataset.orderDeleteTest));
       document.querySelectorAll('[data-cancel-approve]').forEach(btn=>btn.onclick=()=>decideCancellation(btn.dataset.cancelApprove,'approved'));
       document.querySelectorAll('[data-cancel-reject]').forEach(btn=>btn.onclick=()=>decideCancellation(btn.dataset.cancelReject,'rejected'));
+      document.querySelectorAll('[data-cancel-message]').forEach(btn=>btn.onclick=()=>messageCancellationCustomer(btn.dataset.cancelMessage));
       document.querySelectorAll('[data-order-eta-minutes]').forEach(sel=>sel.onchange=()=>{ const id=sel.dataset.orderEtaMinutes; const input=document.querySelector(`[data-order-eta-custom="${cssEscape(id)}"]`); if(input && sel.value) input.value=''; saveEtaDraft(id,{preset:sel.value||'', custom: sel.value ? '' : (input?.value||'')}); });
       document.querySelectorAll('[data-order-eta-custom]').forEach(inp=>inp.oninput=()=>{ const id=inp.dataset.orderEtaCustom; const sel=document.querySelector(`[data-order-eta-minutes="${cssEscape(id)}"]`); if(inp.value.trim() && sel) sel.value=''; saveEtaDraft(id,{custom:inp.value.trim(), preset: inp.value.trim()? '' : (sel?.value||'')}); });
       document.querySelectorAll('[data-order-customer-note]').forEach(inp=>inp.oninput=()=>saveEtaDraft(inp.dataset.orderCustomerNote,{note:inp.value||''}));
@@ -966,7 +967,8 @@
     const msg = decision==='approved' ? 'Approve cancellation and mark this order as Cancelled?' : 'Reject the customer cancellation request and keep the order active?';
     if(!confirm(msg)) return;
     try{
-      const note = decision==='rejected' ? 'Order is already being prepared. Please contact Langar Bar staff.' : 'Cancellation approved by Langar Bar.';
+      const defaultNote = decision==='rejected' ? 'Order is already being prepared. Please contact Langar Bar staff.' : 'Cancellation approved by Langar Bar.';
+      const note = prompt('Message/note for customer:', defaultNote) || defaultNote;
       const {error}=await client.rpc('admin_decide_order_cancellation', { p_order_id:id, p_decision:decision, p_admin_note:note });
       if(error) throw error;
       adminStatus(`Cancellation request ${decision} at ${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'})}.`);
@@ -974,6 +976,19 @@
       lastRenderedSignature='';
       await renderCloudOrders(true);
     }catch(err){ alert('Cancellation decision error: '+(err.message||err)); }
+  }
+
+
+  async function messageCancellationCustomer(id){
+    const message = prompt('Message to customer about this cancellation request:', 'We received your cancellation request. Please contact Langar Bar staff if you need urgent help.');
+    if(!message) return;
+    try{
+      const {error}=await client.rpc('admin_message_order_customer_v459',{p_order_id:id, p_message:message});
+      if(error) throw error;
+      adminStatus('Cancellation message sent to customer Inbox.');
+      lastRenderedSignature='';
+      await renderCloudOrders(true);
+    }catch(err){ alert('Customer message error: '+(err.message||err)); }
   }
 
   async function updateOrderWithCurrentDraft(id, status){
@@ -1029,7 +1044,7 @@
   function setupRealtime(){
     if(realtimeChannel || !client.channel) return;
     try{
-      realtimeChannel = client.channel('langar-admin-orders-v458')
+      realtimeChannel = client.channel('langar-admin-orders-v459')
         .on('postgres_changes',{event:'INSERT',schema:'public',table:'customer_orders'}, payload=>{ renderCloudOrders(true); if(payload?.new) startOrderAlarm([payload.new]); })
         .on('postgres_changes',{event:'UPDATE',schema:'public',table:'customer_orders'}, ()=>renderCloudOrders(true))
         .on('postgres_changes',{event:'DELETE',schema:'public',table:'customer_orders'}, ()=>renderCloudOrders(true))
@@ -1049,4 +1064,83 @@
     document.addEventListener('visibilitychange',()=>{ if(!document.hidden) renderCloudOrders(true); });
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>setTimeout(install,500)); else setTimeout(install,500);
+})();
+
+
+// =============================
+// V4.5.9 — Admin Reviews & Insights
+// =============================
+(function(){
+  'use strict';
+  const CONFIG = { supabaseUrl:'https://fkanccgigogbxodiljqt.supabase.co', supabaseKey:'sb_publishable_WbWIWgu9R2AKepJiRrygCw_1oWrdwG7' };
+  const client = window.LangarCloud?.client || (window.supabase?.createClient ? window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey, { auth:{ persistSession:true, autoRefreshToken:true, storageKey:'langar_bar_supabase_auth_v442' } }) : null);
+  const $=s=>document.querySelector(s);
+  const safe=v=>String(v||'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  const stars=n=>'★'.repeat(Math.max(0,Math.min(5,+n||0)))+'☆'.repeat(Math.max(0,5-(+n||0)));
+  const cssEsc=v=>window.CSS?.escape ? CSS.escape(v) : String(v).replace(/[^a-zA-Z0-9_-]/g, '\\$&');
+  async function requireAdmin(){
+    if(!client) throw new Error('Supabase SDK not loaded');
+    const {data}=await client.auth.getSession();
+    if(!data.session?.user) throw new Error('Please login as Cloud Admin first.');
+    return data.session.user;
+  }
+  function ensureBox(){
+    const panel=$('#feedbackPanel'); if(!panel) return null;
+    let box=$('#orderReviewsAdminBox');
+    if(!box){
+      box=document.createElement('div');
+      box.id='orderReviewsAdminBox';
+      box.className='legal-block reviews-admin-shell';
+      box.innerHTML=`<div class="section-head compact-head"><h2>Completed Order Reviews</h2><p>Moderation + item-level insights from paid completed orders.</p></div><button id="refreshOrderReviews" class="secondary">Refresh Reviews & Insights</button><div id="orderReviewsAdminContent"><p class="muted">Click refresh to load reviews.</p></div>`;
+      panel.insertBefore(box, panel.firstElementChild?.nextSibling || null);
+    }
+    const btn=$('#refreshOrderReviews'); if(btn && !btn.dataset.v459){ btn.dataset.v459='1'; btn.addEventListener('click',()=>renderReviewsAdmin(true)); }
+    return box;
+  }
+  function flattenItems(rows){
+    const map={};
+    (rows||[]).forEach(r=>(r.item_reviews||[]).forEach(it=>{
+      const id=it.item_id||it.item_name_en||it.item_name_hr||'unknown';
+      if(!map[id]) map[id]={id,name:it.item_name_en||it.item_name_hr||id,count:0,sum:0,low:0,positive:0,comments:[]};
+      map[id].count++; map[id].sum+=(+it.rating||0); if((+it.rating||0)<=3) map[id].low++; if((+it.rating||0)>=4) map[id].positive++; if(it.comment) map[id].comments.push(it.comment);
+    }));
+    return Object.values(map).map(x=>({...x,avg:x.count?x.sum/x.count:0})).sort((a,b)=>b.avg-a.avg || b.count-a.count);
+  }
+  function reviewCard(r){
+    const status=r.status||'pending';
+    const low=(+r.overall_rating||0)<=3 || (+r.food_quality_rating||0)<=3 || (+r.service_rating||0)<=3;
+    const itemList=(r.item_reviews||[]).map(it=>`<li><b>${safe(it.item_name_en||it.item_name_hr||it.item_id)}</b> — ${stars(it.rating)}${it.comment?`<br><small>${safe(it.comment)}</small>`:''}</li>`).join('');
+    return `<article class="admin-review-card ${safe(status)} ${low?'low-rating':''}"><div class="review-card-head"><div><h3>${safe(r.order_number||String(r.order_id||'').slice(0,8))} · ${stars(r.overall_rating)}</h3><small>${new Date(r.created_at).toLocaleString()} · ${safe(r.customer_name||r.display_name||'Guest')} · ${safe(r.order_status||'')}</small></div><span class="tag">${safe(status)}${r.is_public?' · public':''}</span></div><p>${safe(r.comment||'')}</p><div class="review-metric-grid"><span>Service <b>${r.service_rating}</b></span><span>Food <b>${r.food_quality_rating}</b></span><span>Portion <b>${r.portion_size_rating}</b></span><span>Value <b>${r.price_value_rating}</b></span></div>${itemList?`<ul class="admin-review-items">${itemList}</ul>`:''}${r.admin_reply?`<div class="legal mini"><b>Reply:</b> ${safe(r.admin_reply)}</div>`:''}<textarea data-review-reply="${safe(r.review_id)}" placeholder="Reply to customer...">${safe(r.admin_reply||'')}</textarea><div class="toolbar mini"><button class="primary" data-review-action="approve_public" data-review-id="${safe(r.review_id)}">Approve public</button><button class="secondary" data-review-action="keep_private" data-review-id="${safe(r.review_id)}">Keep private</button><button class="secondary" data-review-action="reply" data-review-id="${safe(r.review_id)}">Reply</button><button class="secondary" data-review-action="send_coupon" data-review-id="${safe(r.review_id)}">Send coupon / €1 credit</button><button class="danger subtle" data-review-action="reject" data-review-id="${safe(r.review_id)}">Reject</button></div></article>`;
+  }
+  async function moderateReview(id, action){
+    const reply=$(`[data-review-reply="${cssEsc(id)}"]`)?.value || '';
+    let coupon=0;
+    if(action==='send_coupon') coupon=Number(prompt('Coupon / credit amount in EUR:', '1.00') || '0');
+    try{
+      const {error}=await client.rpc('admin_moderate_order_review_v459',{p_review_id:id,p_action:action,p_reply:reply||null,p_coupon_amount:coupon||null});
+      if(error) throw error;
+      await renderReviewsAdmin(true);
+    }catch(err){ alert('Review action error: '+(err.message||err)); }
+  }
+  async function renderReviewsAdmin(force=false){
+    const box=ensureBox(); const content=$('#orderReviewsAdminContent'); if(!content) return;
+    try{
+      await requireAdmin();
+      content.innerHTML='Loading reviews...';
+      const {data,error}=await client.rpc('admin_get_order_reviews_v459',{p_limit:300});
+      if(error) throw error;
+      const rows=data||[];
+      const pending=rows.filter(r=>(r.status||'pending')==='pending');
+      const approved=rows.filter(r=>r.is_public || r.status==='approved_public');
+      const privateComplaints=rows.filter(r=>!r.is_public && ((+r.overall_rating||0)<=3 || r.status==='private'));
+      const low=rows.filter(r=>+r.overall_rating<=3 || +r.food_quality_rating<=3 || +r.service_rating<=3);
+      const items=flattenItems(rows);
+      const loved=items.filter(i=>i.avg>=4).slice(0,8);
+      const improve=items.filter(i=>i.avg<4 || i.low>0).sort((a,b)=>b.low-a.low || a.avg-b.avg).slice(0,8);
+      content.innerHTML=`<div class="reviews-insight-grid"><button><b>${pending.length}</b><small>Pending reviews</small></button><button><b>${approved.length}</b><small>Approved public</small></button><button><b>${privateComplaints.length}</b><small>Private complaints</small></button><button><b>${low.length}</b><small>Low rating reviews</small></button><button><b>${items.length}</b><small>Item ratings</small></button></div><div class="review-insights-two"><section><h3>Most loved items</h3>${loved.length?loved.map(i=>`<p><b>${safe(i.name)}</b><br><small>${i.avg.toFixed(1)}★ · ${i.count} rating(s)</small></p>`).join(''):'<p class="muted">No item ratings yet.</p>'}</section><section><h3>Items needing improvement</h3>${improve.length?improve.map(i=>`<p><b>${safe(i.name)}</b><br><small>${i.avg.toFixed(1)}★ · ${i.low} low · ${i.count} total</small></p>`).join(''):'<p class="muted">No weak item signals yet.</p>'}</section></div><h3>Pending reviews</h3>${pending.length?pending.map(reviewCard).join(''):'<p class="muted">No pending reviews.</p>'}<h3>Approved public</h3>${approved.length?approved.map(reviewCard).join(''):'<p class="muted">No approved public reviews.</p>'}<h3>Private complaints / low ratings</h3>${privateComplaints.length?privateComplaints.map(reviewCard).join(''):'<p class="muted">No private complaints.</p>'}`;
+      document.querySelectorAll('[data-review-action]').forEach(btn=>btn.addEventListener('click',()=>moderateReview(btn.dataset.reviewId, btn.dataset.reviewAction)));
+    }catch(err){ content.innerHTML=`<span style="color:#ffb1a8">Reviews error: ${safe(err.message||err)}<br>Run <b>langar_v459_sql_only.sql</b> in Supabase SQL Editor.</span>`; }
+  }
+  function boot(){ ensureBox(); setTimeout(()=>renderReviewsAdmin(false),1200); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
 })();

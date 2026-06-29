@@ -830,7 +830,7 @@ async function syncCustomerOrderStatuses(){
       const oldCancel=(o.cancelStatus||'')+'|'+(o.cancelRequestedAt||'')+'|'+(o.cancelAdminNote||'');
       o.status=row.status||old; o.paid=!!row.paid; o.updatedAt=row.updated_at||o.updatedAt; o.completedAt=row.completed_at||o.completedAt; o.cloudOrderNumber=row.order_number||o.cloudOrderNumber;
       o.estimatedMinutes=(row.estimated_minutes ?? o.estimatedMinutes ?? null); o.estimatedReadyAt=(row.estimated_ready_at ?? o.estimatedReadyAt ?? null); o.adminCustomerNote=(row.admin_customer_note ?? o.adminCustomerNote ?? '');
-      o.cancelRequestedAt=row.cancel_requested_at||o.cancelRequestedAt||null; o.cancelReason=row.cancel_reason||o.cancelReason||''; o.cancelStatus=row.cancel_status||o.cancelStatus||''; o.cancelDecidedAt=row.cancel_decided_at||o.cancelDecidedAt||null; o.cancelAdminNote=row.cancel_admin_note||o.cancelAdminNote||'';
+      o.cancelRequestedAt=row.cancel_requested_at||o.cancelRequestedAt||null; o.cancelReason=row.cancel_reason||o.cancelReason||''; o.cancelReasonCode=row.cancel_reason_code||o.cancelReasonCode||''; o.cancelReasonNote=row.cancel_reason_note||o.cancelReasonNote||''; o.cancelStatus=row.cancel_status||o.cancelStatus||''; o.cancelDecidedAt=row.cancel_decided_at||o.cancelDecidedAt||null; o.cancelAdminNote=row.cancel_admin_note||o.cancelAdminNote||''; o.isTest=!!(row.is_test||o.isTest); o.hasReview=!!(row.has_review||o.hasReview); o.reviewId=row.review_id||o.reviewId||null; o.reviewSummary=row.review_summary||o.reviewSummary||null;
       const newEta=(o.estimatedReadyAt||'')+'|'+(o.estimatedMinutes||'')+'|'+(o.adminCustomerNote||'');
       const newCancel=(o.cancelStatus||'')+'|'+(o.cancelRequestedAt||'')+'|'+(o.cancelAdminNote||'');
       if(o.status!==old){ notifyOrderStatusIfNeeded(o,o.status); changed=true; }
@@ -940,3 +940,209 @@ function setupEvents(){
   updateBackButton();
 }
 const urlRef=new URLSearchParams(location.search).get('ref'); if(urlRef) localStorage.langar_pending_referral=urlRef; ensureWelcomeInbox(); setupEvents(); setLang(state.lang); setInterval(syncCustomerOrderStatuses, 10000); setInterval(()=>{ if(hasActiveOrderCountdown()) renderCustomerOrderStatus(); }, 1000); setTimeout(syncCustomerOrderStatuses, 1200); if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(()=>{})); }
+
+
+// =============================
+// V4.5.9 — Reviews, cancellation modal and Inbox detail modal fix
+// =============================
+(function(){
+  const V459_CANCEL_REASONS = [
+    ['ordered_by_mistake','Ordered by mistake','Naručeno greškom'],
+    ['wait_time_too_long','Wait time is too long','Vrijeme čekanja je predugo'],
+    ['change_order','I need to change my order','Moram promijeniti narudžbu'],
+    ['wrong_item','I chose the wrong item','Odabrao/la sam krivi artikl'],
+    ['cant_come','I can’t come / I can’t pick it up','Ne mogu doći / ne mogu preuzeti'],
+    ['wrong_table_pickup','I entered wrong table / pickup info','Unio/la sam krivi stol / pickup podatke'],
+    ['duplicate_order','Duplicate order','Dupla narudžba'],
+    ['payment_issue','Payment issue','Problem s plaćanjem'],
+    ['changed_mind','I changed my mind','Predomislio/la sam se'],
+    ['other','Other reason','Drugi razlog']
+  ];
+  const reviewMetricLabels = [
+    ['service','Service','Usluga'],
+    ['food_quality','Food quality','Kvaliteta hrane'],
+    ['portion_size','Portion size','Veličina porcije'],
+    ['price_value','Price value','Omjer cijene i vrijednosti'],
+    ['overall','Overall experience','Ukupni dojam']
+  ];
+  const t459=(hr,en)=>state.lang==='hr'?hr:en;
+  const ratingSelect=(name, value='')=>`<select name="${escapeHtml(name)}" required><option value="">${t459('Ocjena','Rating')}</option>${[1,2,3,4,5].map(n=>`<option value="${n}" ${String(value)===String(n)?'selected':''}>${'★'.repeat(n)}${'☆'.repeat(5-n)} — ${n}</option>`).join('')}</select>`;
+  const reviewKey=()=> 'langar_reviewed_order_tokens';
+  const reviewedMap=()=>LS.get(reviewKey(),{});
+  function markOrderReviewed(order, reviewId){
+    const map=reviewedMap();
+    if(order?.cloudOrderToken) map[order.cloudOrderToken]=reviewId || true;
+    if(order?.cloudId) map[order.cloudId]=reviewId || true;
+    LS.set(reviewKey(), map);
+    const orders=customerOrders().map(o=>(o.id===order.id || o.cloudId===order.cloudId || o.cloudOrderToken===order.cloudOrderToken)?{...o,hasReview:true,reviewId:reviewId||o.reviewId||true}:o);
+    saveCustomerOrders(orders);
+  }
+  function hasOrderReview(order){
+    const map=reviewedMap();
+    return !!(order?.hasReview || order?.reviewId || (order?.cloudOrderToken && map[order.cloudOrderToken]) || (order?.cloudId && map[order.cloudId]));
+  }
+  function reviewEligible(order){
+    const status=String(order?.status||'').toLowerCase();
+    return !!(order?.cloudOrderToken && status==='completed' && !!order.paid && !order.isTest && !order.is_test && !['cancelled','rejected'].includes(status));
+  }
+  function cleanOrderItems(order){
+    const seen=new Map();
+    (order.items||[]).forEach((it,idx)=>{
+      const id=String(it.id||it.item_id||('item-'+idx));
+      const key=id+'|'+(it.nameSnapshot||it.name_en||it.name||idx);
+      const prev=seen.get(key)||{...it, qty:0, itemKey:key};
+      prev.qty=(+prev.qty||0)+(+it.qty||1);
+      seen.set(key,prev);
+    });
+    return Array.from(seen.values());
+  }
+  function openOrderReviewModal(orderId){
+    const order=customerOrders().find(o=>o.id===orderId || o.cloudId===orderId || o.cloudOrderToken===orderId);
+    if(!order) return alert(t459('Narudžba nije pronađena.','Order not found.'));
+    if(!reviewEligible(order)) return alert(t459('Recenzija je dostupna samo za plaćenu i završenu narudžbu.','Review is available only for a paid and completed order.'));
+    if(hasOrderReview(order)) return alert(t459('Već ste poslali recenziju za ovu narudžbu.','You already submitted a review for this order.'));
+    const items=cleanOrderItems(order);
+    $('#modal').classList.add('review-modal-open');
+    $('#modalBody').innerHTML=`<div class="order-review-modal"><h2>${t459('Ocijenite narudžbu','Review your order')}</h2><p class="muted">${escapeHtml(order.cloudOrderNumber||order.id)} · ${new Date(order.createdAt).toLocaleString()}</p><form id="orderReviewForm"><div class="review-metrics">${reviewMetricLabels.map(([key,en,hr])=>`<label><span>${state.lang==='hr'?hr:en}</span>${ratingSelect(key)}</label>`).join('')}</div><label>${t459('Komentar za cijelu narudžbu','Comment for the whole order')}<textarea name="comment" rows="3" placeholder="${t459('Što vam se svidjelo? Što možemo poboljšati?','What did you like? What can we improve?')}"></textarea></label><h3>${t459('Ocjena po artiklu','Item ratings')}</h3><div class="item-review-list">${items.map((it,idx)=>`<article><b>${escapeHtml((it.qty||1)+' × '+(it.nameSnapshot||it.nameSnapshotHr||it.name_en||it.name||it.id||'Item'))}</b><label>${t459('Ocjena artikla','Item rating')}${ratingSelect('item_rating_'+idx)}</label><label>${t459('Komentar za artikl','Item comment')}<textarea name="item_comment_${idx}" rows="2"></textarea></label><input type="hidden" name="item_id_${idx}" value="${escapeHtml(it.id||it.item_id||'')}"><input type="hidden" name="item_name_en_${idx}" value="${escapeHtml(it.nameSnapshot||it.name_en||it.name||'')}"><input type="hidden" name="item_name_hr_${idx}" value="${escapeHtml(it.nameSnapshotHr||it.name_hr||it.nameSnapshot||it.name||'')}"><input type="hidden" name="item_qty_${idx}" value="${escapeHtml(it.qty||1)}"></article>`).join('')}</div><button class="primary full" id="submitOrderReviewBtn">${t459('Pošalji recenziju','Submit review')}</button><button type="button" class="secondary full" id="cancelOrderReviewBtn">${t459('Zatvori','Close')}</button></form></div>`;
+    $('#modal').classList.remove('hidden');
+    $('#cancelOrderReviewBtn').onclick=()=>{ $('#modal').classList.add('hidden'); $('#modal').classList.remove('review-modal-open'); };
+    $('#orderReviewForm').onsubmit=async e=>{
+      e.preventDefault();
+      const fd=new FormData(e.target);
+      const payload={
+        service_rating:+fd.get('service'),
+        food_quality_rating:+fd.get('food_quality'),
+        portion_size_rating:+fd.get('portion_size'),
+        price_value_rating:+fd.get('price_value'),
+        overall_rating:+fd.get('overall'),
+        comment:String(fd.get('comment')||'').trim(),
+        item_reviews:items.map((it,idx)=>({
+          item_id:String(fd.get('item_id_'+idx)||it.id||''),
+          item_name_en:String(fd.get('item_name_en_'+idx)||it.nameSnapshot||''),
+          item_name_hr:String(fd.get('item_name_hr_'+idx)||it.nameSnapshotHr||''),
+          qty:+fd.get('item_qty_'+idx)||(+it.qty||1),
+          rating:+fd.get('item_rating_'+idx),
+          comment:String(fd.get('item_comment_'+idx)||'').trim()
+        }))
+      };
+      if(![payload.service_rating,payload.food_quality_rating,payload.portion_size_rating,payload.price_value_rating,payload.overall_rating].every(n=>n>=1&&n<=5)) return alert(t459('Molimo odaberite sve glavne ocjene.','Please choose all main ratings.'));
+      if(payload.item_reviews.some(x=>!(x.rating>=1&&x.rating<=5))) return alert(t459('Molimo ocijenite svaki artikl.','Please rate every item.'));
+      const btn=$('#submitOrderReviewBtn'); const old=btn.textContent; btn.disabled=true; btn.textContent=t459('Šaljem...','Sending...');
+      try{
+        const api=window.LangarReviewCloud || window.LangarOrderCloud;
+        if(!api?.submitOrderReview) throw new Error('Review Cloud module is not loaded.');
+        const res=await api.submitOrderReview(order.cloudOrderToken, payload);
+        markOrderReviewed(order, res?.id || res?.review_id);
+        await window.LangarReviewCloud?.refreshReviews?.();
+        $('#modal').classList.add('hidden'); $('#modal').classList.remove('review-modal-open');
+        addInbox({id:uid('msg'),type:'message',title:t459('Recenzija poslana','Review submitted'),body:t459('Hvala. Vaša recenzija je poslana i čeka pregled Langar Bara.','Thank you. Your review was sent and is waiting for Langar Bar review.'),unread:true,createdAt:new Date().toISOString()});
+        renderCustomerOrderStatus(); renderInboxBadge();
+        if(typeof maybeGoogleReviewPrompt==='function') maybeGoogleReviewPrompt(payload.overall_rating);
+      }catch(err){
+        const msg=String(err.message||err);
+        if(msg.toLowerCase().includes('already') || msg.toLowerCase().includes('duplicate')){ markOrderReviewed(order,true); renderCustomerOrderStatus(); alert(t459('Recenzija za ovu narudžbu već postoji.','A review for this order already exists.')); }
+        else alert('Review error: '+msg);
+      }finally{ btn.disabled=false; btn.textContent=old; }
+    };
+  }
+
+  function openCancellationReasonModal(order){
+    const ageMin=Math.max(0, Math.round((Date.now()-new Date(order.createdAt).getTime())/60000));
+    $('#modal').classList.add('cancel-modal-open');
+    $('#modalBody').innerHTML=`<div class="cancel-request-modal"><h2>${t459('Zahtjev za otkazivanje','Cancellation request')}</h2><p class="muted">${escapeHtml(order.cloudOrderNumber||order.id)} · ${ageMin} min ${t459('od slanja','since order')}</p><p>${t459('Otkazivanje nije automatsko. Osoblje mora odobriti ili odbiti zahtjev.','Cancellation is not automatic. Staff must approve or reject the request.')}</p><form id="cancelRequestForm"><label>${t459('Razlog je obavezan','Reason is required')}<select name="reason" required><option value="">${t459('Odaberite razlog','Choose a reason')}</option>${V459_CANCEL_REASONS.map(([key,en,hr])=>`<option value="${key}">${state.lang==='hr'?hr:en}</option>`).join('')}</select></label><label>${t459('Dodatno objašnjenje — opcionalno','Additional explanation — optional')}<textarea name="note" rows="3" placeholder="${t459('Napišite dodatne detalje ako je potrebno.','Write extra details if needed.')}"></textarea></label><button class="danger full" id="submitCancelRequest">${t459('Pošalji zahtjev','Send request')}</button><button type="button" class="secondary full" id="closeCancelRequest">${t459('Zatvori','Close')}</button></form></div>`;
+    $('#modal').classList.remove('hidden');
+    $('#closeCancelRequest').onclick=()=>{ $('#modal').classList.add('hidden'); $('#modal').classList.remove('cancel-modal-open'); };
+    $('#cancelRequestForm').onsubmit=async e=>{
+      e.preventDefault();
+      const fd=new FormData(e.target); const reasonCode=String(fd.get('reason')||'').trim(); const note=String(fd.get('note')||'').trim();
+      if(!reasonCode) return alert(t459('Odaberite razlog otkazivanja.','Choose a cancellation reason.'));
+      const btn=$('#submitCancelRequest'); const old=btn.textContent; btn.disabled=true; btn.textContent=t459('Šaljem...','Sending...');
+      try{
+        if(!window.LangarOrderCloud?.requestOrderCancellation) throw new Error('Cancellation cloud function is not loaded.');
+        await window.LangarOrderCloud.requestOrderCancellation(order.cloudOrderToken, reasonCode, note);
+        const label=(V459_CANCEL_REASONS.find(r=>r[0]===reasonCode)||[])[state.lang==='hr'?2:1]||reasonCode;
+        const orders=customerOrders().map(o=>(o.id===order.id || o.cloudId===order.cloudId)?{...o,cancelRequestedAt:new Date().toISOString(),cancelReason:label+(note?' — '+note:''),cancelReasonCode:reasonCode,cancelReasonNote:note,cancelStatus:'requested'}:o);
+        saveCustomerOrders(orders);
+        $('#modal').classList.add('hidden'); $('#modal').classList.remove('cancel-modal-open');
+        addInbox({id:uid('msg'),type:'message',title:t459('Zahtjev za otkazivanje poslan','Cancellation request sent'),body:t459('Vaš zahtjev je poslan osoblju. Narudžba nije otkazana dok admin ne odobri zahtjev.','Your request was sent to staff. The order is not cancelled until admin approves it.'),unread:true,createdAt:new Date().toISOString()});
+        renderCustomerOrderStatus(); renderInboxBadge();
+      }catch(err){ alert('Cancellation request error: '+(err.message||err)); }
+      finally{ btn.disabled=false; btn.textContent=old; }
+    };
+  }
+
+  requestOrderCancellation = async function(orderId){
+    const order=customerOrders().find(o=>o.id===orderId || o.cloudId===orderId || o.cloudOrderToken===orderId);
+    if(!order || !order.cloudOrderToken) return alert(t459('Narudžba se ne može pronaći.','Order cannot be found.'));
+    if(!canRequestCancel(order)) return alert(t459('Za ovu narudžbu više nije moguće poslati zahtjev.','This order can no longer receive a cancellation request.'));
+    openCancellationReasonModal(order);
+  };
+
+  const oldMarkInboxItemRead = markInboxItemRead;
+  markInboxItemRead = function(item){
+    if(item?.type==='card'){
+      LS.set('langar_cards', cards().map(c=>c.id===item.id?{...c,unread:false}:c));
+    } else {
+      LS.set('langar_inbox', inbox().map(m=>m.id===item.id?{...m,unread:false}:m));
+      if(item?.cloudId && window.LangarCloud?.markCloudMessageRead){ window.LangarCloud.markCloudMessageRead(item.cloudId).catch(()=>{}); }
+    }
+    renderInboxBadge();
+    if(typeof renderInbox==='function') renderInbox();
+  };
+
+  openInboxItem = function(item){
+    markInboxItemRead(item);
+    $('#modal').classList.add('inbox-detail-open');
+    if(item.type==='card'){
+      const card=cards().find(c=>c.id===item.id);
+      if(!card) return;
+      showDigitalCardModal(card, item);
+      return;
+    }
+    const looksLikeWelcomeCard = item.cloudWelcomeLocal || String(item.title+' '+item.body).toLowerCase().includes('espresso card') || String(item.title+' '+item.body).toLowerCase().includes('free espresso');
+    if(looksLikeWelcomeCard){ const welcomeCard=findWelcomeCard(); if(welcomeCard){ showDigitalCardModal(welcomeCard,item); return; } }
+    $('#modalBody').innerHTML=`<div class="message-detail-modal"><h2>${escapeHtml(item.title||'Langar Bar')}</h2><p>${String(item.body||'').replace(/[&<>'"]/g, ch=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch])).replace(/\n/g,'<br>')}</p><small>${new Date(item.createdAt||Date.now()).toLocaleString()}</small><button class="primary full" id="doneInboxDetail">${t459('Gotovo / Zatvori','Done / Close')}</button><button class="secondary full" id="deleteInboxModal">${t459('Obriši poruku','Delete message')}</button></div>`;
+    $('#modal').classList.remove('hidden');
+    $('#doneInboxDetail').onclick=()=>{ $('#modal').classList.add('hidden'); $('#modal').classList.remove('inbox-detail-open'); };
+    const del=$('#deleteInboxModal'); if(del) del.onclick=()=>{ deleteInboxItem(item); $('#modal').classList.add('hidden'); $('#modal').classList.remove('inbox-detail-open'); };
+  };
+
+  const oldCommentCounts = commentCounts;
+  commentCounts = function(){
+    const counts = oldCommentCounts ? oldCommentCounts() : {};
+    const reviewStats=LS.get('langar_review_item_stats',{});
+    Object.keys(reviewStats||{}).forEach(id=>{ counts[id]=(counts[id]||0)+(+reviewStats[id].positive||0); });
+    return counts;
+  };
+  const oldOrderCounts = orderCounts;
+  orderCounts = function(){
+    const counts = oldOrderCounts ? oldOrderCounts() : {};
+    ['langar_orders_v3','langar_orders_guest',...Object.keys(localStorage).filter(k=>k.startsWith('langar_orders_user_'))].forEach(k=>{
+      (LS.get(k,[])||[]).filter(o=>String(o.status||'').toLowerCase()==='completed' && o.paid && !o.isTest).forEach(o=>(o.items||[]).forEach(it=>{ counts[it.id]=(counts[it.id]||0)+(+it.qty||1); }));
+    });
+    return counts;
+  };
+
+  renderCustomerOrderStatus = function(){
+    const box=document.getElementById('customerOrderStatus'); if(!box) return;
+    const orders=customerOrders().filter(o=>o.cloudId||o.cloudOrderToken).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,8);
+    if(!orders.length){ box.innerHTML=''; return; }
+    const notifState = ('Notification' in window) ? Notification.permission : 'unsupported';
+    const notifLabel = notifState==='granted' ? t459('Order alerts enabled','Order alerts enabled') : t459('Enable order alerts','Enable order alerts');
+    box.innerHTML=`<div class="my-orders-card enhanced-orders"><h4>${t459('Moje zadnje narudžbe','My recent orders')}</h4><p class="muted mini">${t459('Recenzije se otvaraju samo za plaćene i završene narudžbe.','Reviews open only for paid and completed orders.')}</p><div class="order-status-actions"><button type="button" class="secondary" id="enableOrderAlerts">${notifLabel}</button></div>${orders.map(o=>{ const eta=formatOrderEta(o); const c=orderCountdownInfo(o); const visibleItems=(o.items||[]).slice(0,3).map(i=>escapeHtml((i.qty||1)+' × '+(i.nameSnapshot||i.name||i.id))).join('<br>'); const cancelText=orderCancelText(o); const canReview=reviewEligible(o); const reviewed=hasOrderReview(o); return `<div class="my-order-line enhanced ${isTerminalOrder(o.status)?'terminal':''}"><div class="my-order-main"><b class="my-order-number">${escapeHtml(o.cloudOrderNumber||o.id)}</b><small>${new Date(o.createdAt).toLocaleString()}${o.tableNumber?` · Table ${escapeHtml(o.tableNumber)}`:''}${o.type?` · ${escapeHtml(o.type)}`:''}</small>${visibleItems?`<small class="my-order-items">${visibleItems}</small>`:''}${eta?`<small class="order-eta-line">${escapeHtml(eta)}</small>`:''}${c?`<div class="order-countdown ${c.expired?'expired':''}">⏱ ${escapeHtml(c.text)}</div>`:''}${cancelText?`<small class="order-cancel-line ${escapeHtml(o.cancelStatus||'requested')}">${escapeHtml(cancelText)}</small>`:''}<div class="order-card-actions">${canRequestCancel(o)?`<button type="button" class="secondary subtle order-cancel-btn" data-request-cancel="${escapeHtml(o.id)}">${t459('Zatraži otkazivanje','Request cancellation')}</button>`:''}${canReview&&!reviewed?`<button type="button" class="primary subtle order-review-btn" data-review-order="${escapeHtml(o.id)}">${t459('Ocijeni narudžbu','Review order')}</button>`:''}${reviewed?`<span class="tag review-done">${t459('Recenzija poslana','Review submitted')}</span>`:''}</div></div><span class="status-badge ${escapeHtml(o.status||'new')}">${orderStatusText(o.status||'new')}</span></div>`; }).join('')}<button type="button" class="secondary full" id="refreshMyOrders">${t459('Osvježi status','Refresh status')}</button></div>`;
+    const btn=document.getElementById('refreshMyOrders'); if(btn) btn.onclick=async()=>{ await syncCustomerOrderStatuses(); await window.LangarReviewCloud?.syncOrderReviews?.(); renderCustomerOrderStatus(); alert(t459('Status je osvježen.','Status refreshed.')); };
+    const alertBtn=document.getElementById('enableOrderAlerts'); if(alertBtn) alertBtn.onclick=async()=>{ await requestOrderStatusNotifications({}); renderCustomerOrderStatus(); alert(t459('Ako je dozvola uključena, obavijesti za narudžbu su aktivne na ovom uređaju.','If permission is enabled, order alerts are active on this device.')); };
+    document.querySelectorAll('[data-request-cancel]').forEach(b=>b.onclick=()=>requestOrderCancellation(b.dataset.requestCancel));
+    document.querySelectorAll('[data-review-order]').forEach(b=>b.onclick=()=>openOrderReviewModal(b.dataset.reviewOrder));
+  };
+  window.renderCustomerOrderStatus = renderCustomerOrderStatus;
+  window.openOrderReviewModal = openOrderReviewModal;
+
+  function patchInboxButton(){
+    const inboxBtn=$('#inboxBtn');
+    if(inboxBtn){ inboxBtn.onclick=()=>{ renderInbox(); $('#inboxPanel').classList.remove('hidden'); }; }
+    const close=$('#closeModal'); if(close && !close.dataset.v459){ close.dataset.v459='1'; close.addEventListener('click',()=>$('#modal').classList.remove('inbox-detail-open','review-modal-open','cancel-modal-open')); }
+  }
+  patchInboxButton();
+  setTimeout(()=>{ patchInboxButton(); renderCustomerOrderStatus(); window.LangarReviewCloud?.refreshReviews?.(); }, 1000);
+})();

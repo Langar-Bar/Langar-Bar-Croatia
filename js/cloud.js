@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  const CLOUD_VERSION = 'V4.5.8 Account Sync + Tapas/Ice Cream Fix';
+  const CLOUD_VERSION = 'V4.5.9 Reviews + Cancellation Modal + Inbox Modal Fix';
   const CONFIG = {
     supabaseUrl: 'https://fkanccgigogbxodiljqt.supabase.co',
     supabaseKey: 'sb_publishable_WbWIWgu9R2AKepJiRrygCw_1oWrdwG7',
@@ -701,7 +701,7 @@
       currency: 'EUR',
       status: 'new',
       paid: false,
-      app_version: 'v458'
+      app_version: 'v459'
     };
 
     // V4.5.4: submit through a single JSON RPC. This is the reliable path for guest orders.
@@ -779,9 +779,15 @@
       adminCustomerNote:row.admin_customer_note || '',
       cancelRequestedAt:row.cancel_requested_at || null,
       cancelReason:row.cancel_reason || '',
+      cancelReasonCode:row.cancel_reason_code || '',
+      cancelReasonNote:row.cancel_reason_note || '',
       cancelStatus:row.cancel_status || '',
       cancelDecidedAt:row.cancel_decided_at || null,
       cancelAdminNote:row.cancel_admin_note || '',
+      isTest:!!row.is_test,
+      hasReview:!!row.has_review,
+      reviewId:row.review_id || null,
+      reviewSummary:row.review_summary || null,
       syncedFromAccount:true
     };
   }
@@ -818,21 +824,107 @@
     if(error) throw error;
     const rows = Array.isArray(data) ? data : [];
     const local = await readOrders();
-    const before = JSON.stringify(local.map(o=>({cloudId:o.cloudId, token:o.cloudOrderToken, status:o.status, eta:o.estimatedReadyAt, updated:o.updatedAt, cancel:o.cancelStatus, cancelAt:o.cancelRequestedAt})));
+    const before = JSON.stringify(local.map(o=>({cloudId:o.cloudId, token:o.cloudOrderToken, status:o.status, eta:o.estimatedReadyAt, updated:o.updatedAt, cancel:o.cancelStatus, cancelAt:o.cancelRequestedAt, review:o.reviewId||o.hasReview})));
     const merged = rows.map(mapCloudOrderRow).sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0)).slice(0,200);
     await writeOrders(merged);
     localStorage.langar_orders_last_cloud_sync = new Date().toISOString();
-    const after = JSON.stringify(merged.map(o=>({cloudId:o.cloudId, token:o.cloudOrderToken, status:o.status, eta:o.estimatedReadyAt, updated:o.updatedAt, cancel:o.cancelStatus, cancelAt:o.cancelRequestedAt})));
+    const after = JSON.stringify(merged.map(o=>({cloudId:o.cloudId, token:o.cloudOrderToken, status:o.status, eta:o.estimatedReadyAt, updated:o.updatedAt, cancel:o.cancelStatus, cancelAt:o.cancelRequestedAt, review:o.reviewId||o.hasReview})));
     return { ok:true, count:rows.length, changed:before!==after, authoritative:true };
   }
-  async function requestOrderCancellation(token, reason=''){
+  async function requestOrderCancellation(token, reason='', note=''){
     if(!token) throw new Error('Missing order tracking token.');
     const c = activeClient();
-    const {data,error}=await c.rpc('request_order_cancellation_by_token',{p_token:token, p_reason:reason||null});
-    if(error) throw error;
-    return Array.isArray(data)?data[0]:data;
+    const reasonCode = String(reason||'').trim();
+    const reasonNote = String(note||'').trim();
+    let r = await c.rpc('request_order_cancellation_v459',{p_token:token, p_reason_code:reasonCode||null, p_reason_note:reasonNote||null});
+    if(r.error && String(r.error.message||'').toLowerCase().includes('request_order_cancellation_v459')){
+      const combined = [reasonCode, reasonNote].filter(Boolean).join(' — ');
+      r = await c.rpc('request_order_cancellation_by_token',{p_token:token, p_reason:combined||null});
+    }
+    if(r.error) throw r.error;
+    return Array.isArray(r.data)?r.data[0]:r.data;
   }
   window.LangarOrderCloud = { submitOrder, getOrderByToken, syncAccountOrders, claimLocalOrderTokens, requestOrderCancellation, requestCustomerPushPermission:()=>window.LangarCloud?.requestCustomerPushPermission?.(), client: activeClient() };
   // After a logged-in member opens the app on a second device, pull their Cloud orders into local view.
   setTimeout(()=>syncAccountOrders().then(r=>{ if(r?.changed && typeof window.renderCustomerOrderStatus==='function') window.renderCustomerOrderStatus(); }).catch(()=>{}), 1500);
+})();
+
+
+// =============================
+// V4.5.9 — Completed-order reviews + public review stats
+// =============================
+(function(){
+  'use strict';
+  const CONFIG = { supabaseUrl:'https://fkanccgigogbxodiljqt.supabase.co', supabaseKey:'sb_publishable_WbWIWgu9R2AKepJiRrygCw_1oWrdwG7' };
+  if(!window.supabase?.createClient) return;
+  const client = window.LangarCloud?.client || window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey, { auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:true, storageKey:'langar_bar_supabase_auth_v442' } });
+  const readLS = (k,d)=>{ try{return JSON.parse(localStorage.getItem(k)) ?? d}catch{return d} };
+  const writeLS = (k,v)=>localStorage.setItem(k, JSON.stringify(v));
+
+  async function submitOrderReview(token, review){
+    if(!token) throw new Error('Missing order tracking token.');
+    const {data,error}=await client.rpc('submit_order_review_v459',{p_token:token, p_review:review||{}});
+    if(error) throw error;
+    return Array.isArray(data)?data[0]:data;
+  }
+
+  async function syncOrderReviews(){
+    try{
+      const {data,error}=await client.rpc('get_my_order_reviews_v459',{p_limit:200});
+      if(error) throw error;
+      const map=readLS('langar_reviewed_order_tokens',{});
+      const reviews=[];
+      (data||[]).forEach(r=>{
+        if(r.order_token) map[r.order_token]=r.review_id || r.id || true;
+        reviews.push(r);
+      });
+      writeLS('langar_reviewed_order_tokens', map);
+      writeLS('langar_my_order_reviews', reviews);
+      return {ok:true,count:reviews.length};
+    }catch(e){ console.warn('Order review sync failed', e.message||e); return {ok:false,error:e}; }
+  }
+
+  async function loadPublicOrderReviews(){
+    try{
+      const {data,error}=await client.from('v_public_order_reviews').select('id,order_number,overall_rating,comment,display_name,admin_reply,created_at').order('created_at',{ascending:false}).limit(40);
+      if(error) throw error;
+      const mapped=(data||[]).map(r=>({id:r.id,rating:r.overall_rating,message:r.comment,name:r.display_name||'Langar guest',adminReply:r.admin_reply||'',createdAt:r.created_at,status:'public',source:'order_review'}));
+      if(mapped.length){
+        const existing=readLS('langar_feedback',[]).filter(x=>x.source!=='order_review');
+        writeLS('langar_feedback',[...mapped,...existing].slice(0,80));
+      }
+      return {ok:true,count:mapped.length};
+    }catch(e){ console.warn('Public order reviews load failed', e.message||e); return {ok:false,error:e}; }
+  }
+
+  async function loadItemReviewStats(){
+    try{
+      const {data,error}=await client.from('v_menu_item_review_stats').select('item_id,item_name,item_reviews_count,item_average_rating,positive_item_reviews,low_item_reviews').limit(300);
+      if(error) throw error;
+      const stats={};
+      (data||[]).forEach(r=>{ stats[r.item_id]={count:+r.item_reviews_count||0, avg:+r.item_average_rating||0, positive:+r.positive_item_reviews||0, low:+r.low_item_reviews||0, name:r.item_name||r.item_id}; });
+      writeLS('langar_review_item_stats', stats);
+      return {ok:true,count:Object.keys(stats).length};
+    }catch(e){ console.warn('Item review stats load failed', e.message||e); return {ok:false,error:e}; }
+  }
+
+  async function refreshReviews(){
+    const result = await Promise.allSettled([syncOrderReviews(), loadPublicOrderReviews(), loadItemReviewStats()]);
+    if(typeof window.renderCustomerOrderStatus==='function') window.renderCustomerOrderStatus();
+    if(typeof renderPublicFeedback==='function') renderPublicFeedback();
+    if(typeof renderHomeMarketing==='function') renderHomeMarketing();
+    return result;
+  }
+
+  function install(){
+    window.LangarReviewCloud = { submitOrderReview, syncOrderReviews, loadPublicOrderReviews, loadItemReviewStats, refreshReviews, client };
+    if(window.LangarOrderCloud){
+      window.LangarOrderCloud.submitOrderReview = submitOrderReview;
+      window.LangarOrderCloud.syncOrderReviews = syncOrderReviews;
+      window.LangarOrderCloud.refreshReviews = refreshReviews;
+    }
+    setTimeout(refreshReviews, 1800);
+    setInterval(()=>{ if(!document.hidden) refreshReviews(); }, 60000);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>setTimeout(install,800)); else setTimeout(install,800);
 })();

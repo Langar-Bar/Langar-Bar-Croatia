@@ -43,3 +43,8 @@ No new SQL is required if V4.5.4/V4.5.5 SQL was already run. This version keeps 
 
 ## V4.5.8 — Account Sync + Tapas + Ice Cream Fix
 Run `langar_bar_v458_account_authoritative_sync_fix.sql` in Supabase after upload. Logged-in My Recent Orders is now Cloud/account-authoritative and uses account-specific local cache. Tapas is normalized to the full Duo/Trio/Quartet flavor chooser, and Ice Cream is separated from Desserts with its own cone icon.
+
+
+## V4.5.9 — Reviews + Cancellation Modal + Inbox Modal Fix
+
+Run `langar_v459_sql_only.sql` in Supabase after the V4.5.8 SQL. Upload the full ZIP to replace the app files. This version adds completed-order reviews, admin review moderation/insights, required cancellation reason modal, admin cancellation messaging, and a foreground Inbox message detail modal.
