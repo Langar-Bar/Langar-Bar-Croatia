@@ -1,0 +1,13 @@
+Langar Bar V5.1.3 Layout Hotfix
+
+Upload and replace ONLY these files in the repository root:
+1. styles.css
+2. service-worker.js
+
+No SQL is required.
+
+After GitHub Pages deploys, open:
+Customer app: https://langar-bar.github.io/Langar-Bar-Croatia/?v=513
+Admin panel: https://langar-bar.github.io/Langar-Bar-Croatia/admin.html?v=513
+
+If installed on Home Screen, remove the old shortcut/app once and reinstall after opening the v=513 link.
