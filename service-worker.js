@@ -1,8 +1,8 @@
-const CACHE_NAME = 'langar-v554';
+const CACHE_NAME = 'langar-v555';
 const ASSETS = ['./','./index.html','./admin.html','./styles.css',
-  './css/gallery-v552.css','./css/admin-final-ui-v553.css','./css/admin-release-fixes-v554.css',
+  './css/gallery-v552.css','./css/admin-final-ui-v553.css','./css/admin-release-fixes-v555.css',
   './js/client-gallery-v552.js',
-  './js/admin-gallery-v552.js','./js/admin-final-ui-v553.js','./js/admin-release-fixes-v554.js','./js/client-reservation-v554.js','./manifest.webmanifest','./admin-manifest.webmanifest','./js/menu-data.js','./js/app.js','./js/cloud.js','./js/auth-v500.js','./privacy.html','./terms.html','./js/admin.js','./js/admin-cloud.js','./js/admin-stable-v433.js','./js/order-print-v510.js','./README_V510_START_HERE.md','./assets/logo.jpeg','./assets/icecream_cone.svg','./assets/icon-192.png','./assets/icon-512.png','./assets/admin-icon-192.png','./assets/admin-icon-512.png','js/stabilization-v520.js'
+  './js/admin-gallery-v552.js','./js/admin-final-ui-v553.js','./js/admin-release-fixes-v555.js','./js/client-reservation-v555.js','./manifest.webmanifest','./admin-manifest.webmanifest','./js/menu-data.js','./js/app.js','./js/cloud.js','./js/auth-v500.js','./privacy.html','./terms.html','./js/admin.js','./js/admin-cloud.js','./js/admin-stable-v433.js','./js/order-print-v510.js','./README_V510_START_HERE.md','./assets/logo.jpeg','./assets/icecream_cone.svg','./assets/icon-192.png','./assets/icon-512.png','./assets/admin-icon-192.png','./assets/admin-icon-512.png','js/stabilization-v520.js'
 ,'js/admin-stabilization-v520.js'
 ,'js/order-print-v520.js'
 ,'css/stabilization-v520.css',
