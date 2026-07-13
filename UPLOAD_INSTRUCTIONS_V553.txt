@@ -1,0 +1,19 @@
+Langar Bar V5.5.3 – Final Admin Settings & Gallery Fix
+
+Upload/replace only:
+- admin.html
+- service-worker.js
+- js/admin-final-ui-v553.js
+- css/admin-final-ui-v553.css
+
+No SQL is required.
+
+Test admin:
+https://langar-bar.github.io/Langar-Bar-Croatia/admin.html?v=553
+
+What changed:
+- Menu categories and exact products are loaded into Gallery Manager from Supabase, with local menu fallback.
+- Gallery Refresh reloads newly published menu categories.
+- Volume percentage is shown and previewed.
+- Each alert sound can be previewed immediately and also plays when changed.
+- Admin themes preview immediately before saving and persist locally after refresh.
