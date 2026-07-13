@@ -57,3 +57,5 @@ self.addEventListener('push', event => {
 // V5.5.0 assets
 
 // V5.5.6 release assets are network-first and loaded by HTML.
+
+// V5.5.7 network-first assets.

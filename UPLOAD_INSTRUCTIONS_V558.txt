@@ -1,0 +1,3 @@
+Upload/replace: index.html, admin.html, service-worker.js, js/reservation-v558.js, css/reservation-v558.css
+Run langar_bar_v558_FINAL_SELF_SERVICE_RESERVATIONS.sql once in Supabase SQL Editor.
+Test app with ?v=558 and admin with admin.html?v=558.
