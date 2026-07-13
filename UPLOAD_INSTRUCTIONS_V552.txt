@@ -1,0 +1,20 @@
+Langar Bar V5.5.2 Dynamic Gallery + Product Photos
+
+Upload/replace:
+admin.html
+index.html
+service-worker.js
+js/admin-gallery-v552.js
+js/client-gallery-v552.js
+css/gallery-v552.css
+
+Then run once in Supabase SQL Editor:
+langar_bar_v552_dynamic_gallery_product_photos.sql
+
+Use Gallery Manager:
+- Manage gallery categories: add future categories without app updates.
+- Gallery photo only: appears only in public Gallery.
+- Main product photo only: appears on that menu item and its detail screen.
+- Gallery + main product photo: does both.
+- Select the exact cloud menu category and product.
+- Sort order: lower number appears earlier; recommended 10,20,30.
