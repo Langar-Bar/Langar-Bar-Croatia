@@ -1,0 +1,15 @@
+Langar Bar V5.5.0 Final Operations Settings
+
+Upload/replace:
+- admin.html
+- js/admin-settings-v550.js
+- js/order-print-v550.js
+- css/settings-v550.css
+
+Run once in Supabase SQL Editor:
+- langar_bar_v550_final_operations_settings.sql
+
+Important printer note:
+- 58 mm and 80 mm receipt layout works now through the system print dialog.
+- A normal web/PWA page cannot reliably connect directly to every Bluetooth thermal printer, especially on iPad.
+- For automatic direct printing later, choose either a supported native Android admin app or a local network print bridge.
