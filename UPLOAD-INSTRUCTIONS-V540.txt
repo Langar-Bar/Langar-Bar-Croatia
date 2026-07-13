@@ -1,0 +1,4 @@
+Langar Bar V5.4.0 Smart Drink Knowledge Base
+1. Upload/replace: index.html, admin.html, service-worker.js, js/client-knowledge-v540.js, js/admin-knowledge-v540.js, css/knowledge-v540.css
+2. Run langar_bar_v540_smart_drink_knowledge.sql once in Supabase SQL Editor.
+3. Test customer app with ?v=540 and admin with admin.html?v=540.
