@@ -1,0 +1,8 @@
+(()=>{
+'use strict';
+const panelForTitle=t=>/review/i.test(t)?'feedbackPanel':/reservation/i.test(t)?'reservationsPanel':/sushi/i.test(t)?'sushiPanel':/message|inbox/i.test(t)?'notificationsPanel':'ordersPanel';
+function openPanel(id){try{window.showPanel?.(id)}catch{}setTimeout(()=>document.getElementById(id)?.scrollIntoView({behavior:'smooth',block:'start'}),80)}
+document.addEventListener('click',e=>{const b=e.target.closest('.v520-alert .primary');if(!b)return;const a=b.closest('.v520-alert');const title=a?.querySelector('h3')?.textContent||'';e.preventDefault();e.stopImmediatePropagation();a?.remove();openPanel(panelForTitle(title));},true);
+function decorateOrders(){document.querySelectorAll('.cloud-order-card').forEach(card=>{if(card.dataset.v530)return;card.dataset.v530='1';const head=card.querySelector('.cloud-order-head');if(!head)return;const btn=document.createElement('button');btn.type='button';btn.className='v530-order-toggle secondary';btn.textContent='Details';head.appendChild(btn);const detail=document.createElement('div');detail.className='v530-order-detail';const selectors=['.cancel-request-box','.internal-print-actions','.cloud-order-actions','.order-eta-controls','.eta-overdue-box','.order-admin-maintenance'];selectors.forEach(sel=>card.querySelectorAll(sel).forEach(el=>detail.appendChild(el)));card.appendChild(detail);btn.onclick=()=>{const open=card.classList.toggle('v530-expanded');btn.textContent=open?'Hide details':'Details'};});}
+const obs=new MutationObserver(decorateOrders);obs.observe(document.documentElement,{subtree:true,childList:true});window.addEventListener('load',()=>setTimeout(decorateOrders,900));
+})();

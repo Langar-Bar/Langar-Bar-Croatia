@@ -1,8 +1,12 @@
-const CACHE_NAME = 'langar-bar-v520-layout-hotfix';
+const CACHE_NAME = 'langar-bar-v530-production-polish';
 const ASSETS = ['./','./index.html','./admin.html','./styles.css','./manifest.webmanifest','./admin-manifest.webmanifest','./js/menu-data.js','./js/app.js','./js/cloud.js','./js/auth-v500.js','./privacy.html','./terms.html','./js/admin.js','./js/admin-cloud.js','./js/admin-stable-v433.js','./js/order-print-v510.js','./README_V510_START_HERE.md','./assets/logo.jpeg','./assets/icecream_cone.svg','./assets/icon-192.png','./assets/icon-512.png','./assets/admin-icon-192.png','./assets/admin-icon-512.png','js/stabilization-v520.js'
 ,'js/admin-stabilization-v520.js'
 ,'js/order-print-v520.js'
-,'css/stabilization-v520.css'
+,'css/stabilization-v520.css',
+'js/order-print-v530.js',
+'js/admin-polish-v530.js',
+'js/client-polish-v530.js',
+'css/production-polish-v530.css'
 ];
 self.addEventListener('install', event => { event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)).then(()=>self.skipWaiting())); });
 self.addEventListener('activate', event => { event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE_NAME).map(k=>caches.delete(k)))).then(()=>self.clients.claim())); });
