@@ -1,0 +1,9 @@
+Langar Bar V5.5.6 Release Candidate
+Upload/replace:
+- index.html
+- admin.html
+- service-worker.js
+- js/client-reservation-gallery-v556.js
+- js/admin-release-v556.js
+- css/release-v556.css
+Then run langar_bar_v556_RELEASE_FINAL_RESERVATION_MEDIA.sql once in Supabase SQL Editor.

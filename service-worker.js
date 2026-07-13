@@ -1,4 +1,4 @@
-const CACHE_NAME = 'langar-v555';
+const CACHE_NAME = 'langar-v556';
 const ASSETS = ['./','./index.html','./admin.html','./styles.css',
   './css/gallery-v552.css','./css/admin-final-ui-v553.css','./css/admin-release-fixes-v555.css',
   './js/client-gallery-v552.js',
@@ -55,3 +55,5 @@ self.addEventListener('push', event => {
   event.waitUntil(self.registration.showNotification(title, options));
 });
 // V5.5.0 assets
+
+// V5.5.6 release assets are network-first and loaded by HTML.
