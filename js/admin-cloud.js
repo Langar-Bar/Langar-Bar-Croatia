@@ -244,7 +244,19 @@
     const old=window.renderAll || (typeof renderAll==='function'?renderAll:null);
     if(old){ window.renderAll=function(){ old(); ensureCloudBoxes(); }; }
   }
-  function boot(){ ensureCloudBoxes(); wrapRenderAll(); setTimeout(ensureCloudBoxes,800); }
+  let menuSyncTimer=null;
+  function scheduleMenuCloudSync(){
+    clearTimeout(menuSyncTimer);
+    menuSyncTimer=setTimeout(()=>seedCloudMenu(),250);
+  }
+  function boot(){
+    ensureCloudBoxes(); wrapRenderAll(); setTimeout(ensureCloudBoxes,800);
+    document.addEventListener('click',e=>{
+      if(e.target.closest('#publishPrices,.saveItem,.delItem,#addItemBtn,#resetMenu')) scheduleMenuCloudSync();
+    });
+    document.addEventListener('change',e=>{ if(e.target.matches('[data-cat-icon]')) scheduleMenuCloudSync(); });
+    window.LangarAdminMenuCloudSync={syncNow:seedCloudMenu,schedule:scheduleMenuCloudSync};
+  }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
 })();
 
@@ -710,12 +722,18 @@
   function ackOrderIds(ids){ const ack=ackedOrders(); (ids||[]).forEach(id=>{ if(id) ack[id]=new Date().toISOString(); }); saveAckedOrders(ack); stopOrderAlarm(); }
   function terminalStatus(st){ return terminalStatuses.includes(String(st||'').toLowerCase()); }
   function liveStatus(st){ return !terminalStatus(st); }
-  function typeLabel(t){ return t==='dine_in'?'Dine-in':(t==='delivery'?'Delivery':'Pick-up'); }
+  function typeLabel(t){ const v=String(t||'pickup').toLowerCase().replace(/[- ]/g,'_'); return ['dine_in','dinein','table','inside'].includes(v)?'Dine-in':(v==='delivery'?'Delivery':'Pick-up'); }
   function normalizeItems(items){ if(Array.isArray(items)) return items; try{return JSON.parse(items||'[]')}catch{return []} }
   function localDateKey(value){
     const d = value instanceof Date ? new Date(value) : new Date(value);
     if(Number.isNaN(d.getTime())) return '';
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    try{
+      const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Zagreb',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(d);
+      const map=Object.fromEntries(parts.map(x=>[x.type,x.value]));
+      return `${map.year}-${map.month}-${map.day}`;
+    }catch(_e){
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
   }
   function offsetDateKey(days){ const d=new Date(); d.setDate(d.getDate()+days); return localDateKey(d); }
   function sameLocalDate(value,key){ return localDateKey(value)===key; }
@@ -885,6 +903,14 @@
     return {rows, live, todayRows, yesterdayRows, archive, testRows, dateRows};
   }
 
+  function orderDateSummary(allRows){
+    const counts={};
+    (allRows||[]).filter(o=>!o.is_test).forEach(o=>{ const k=localDateKey(o.created_at); if(k) counts[k]=(counts[k]||0)+1; });
+    const keys=Object.keys(counts).sort().reverse();
+    if(!keys.length) return '';
+    return `<div class="order-date-shortcuts"><b>Available archive dates:</b>${keys.slice(0,31).map(k=>`<button class="secondary" data-open-order-date="${safe(k)}">${safe(k)} (${counts[k]})</button>`).join('')}</div>`;
+  }
+
   function cardForOrder(o){
     const items=normalizeItems(o.items);
     const eta=etaText(o);
@@ -899,7 +925,7 @@
       <div class="cloud-order-items enhanced-items">${items.map(i=>`<div><span><b class="order-line-name">${safe(i.qty||1)} × ${safe(i.name_hr||i.name_en||i.name||'Item')}</b>${i.addOns?.length?`<small>${safe(i.addOns.map(a=>a.name||a.id).join(', '))}</small>`:''}</span><b>${euro(i.line_total ?? ((i.qty||1)*(i.price||0)))}</b></div>`).join('')||'<p class="muted">No items</p>'}</div>
       ${o.note?`<p class="muted"><b>Note:</b> ${safe(o.note)}</p>`:''}
       ${o.cancel_requested_at?`<div class="cancel-request-box ${o.cancel_status==='rejected'?'rejected':(o.cancel_status==='approved'?'approved':'pending')}"><b>Customer cancellation request</b><small><b>Requested:</b> ${new Date(o.cancel_requested_at).toLocaleString()} · <b>Elapsed:</b> ${Math.max(0,Math.round((Date.now()-new Date(o.cancel_requested_at).getTime())/60000))} min · <b>Order status:</b> ${safe(o.status||'new')}</small><small><b>Reason:</b> ${safe(o.cancel_reason_code||o.cancel_reason||'not specified')}${o.cancel_reason_note?` · <b>Note:</b> ${safe(o.cancel_reason_note)}`:''}</small><span>Status: ${safe(o.cancel_status||'requested')}${o.cancel_admin_note?` · Admin note: ${safe(o.cancel_admin_note)}`:''}</span>${(!terminalStatus(o.status) && (!o.cancel_status || o.cancel_status==='requested'))?`<div class="toolbar mini"><button class="danger subtle" data-cancel-approve="${safe(o.id)}">Approve cancel</button><button class="secondary" data-cancel-reject="${safe(o.id)}">Reject request</button><button class="secondary" data-cancel-message="${safe(o.id)}">Message customer</button></div>`:''}</div>`:''}
-      <div class="toolbar mini internal-print-actions"><button class="secondary" data-print-order="${safe(o.id)}">🖨 Print internal ticket</button><button class="secondary" data-print-delivery="${safe(o.id)}">🚚 Print delivery copy</button></div>
+      <div class="toolbar mini internal-print-actions"><button class="secondary" data-print-order="${safe(o.id)}">🖨 Print internal ticket</button><button class="secondary" data-print-delivery="${safe(o.id)}">🧾 Print ${safe(typeLabel(o.fulfillment_type))} copy</button></div>
       <div class="cloud-order-actions"><select data-order-status="${safe(o.id)}"><option value="new" ${o.status==='new'?'selected':''}>New</option><option value="accepted" ${o.status==='accepted'?'selected':''}>Accept order${(draft.preset||draft.custom)?' + send time':''}</option><option value="preparing" ${o.status==='preparing'?'selected':''}>Preparing${(draft.preset||draft.custom)?' + send time':''}</option><option value="ready" ${o.status==='ready'?'selected':''}>Ready</option><option value="completed" ${o.status==='completed'?'selected':''}>Completed</option><option value="cancelled" ${o.status==='cancelled'?'selected':''}>Cancelled</option><option value="rejected" ${o.status==='rejected'?'selected':''}>Rejected</option></select><label class="checkline"><input type="checkbox" data-order-paid="${safe(o.id)}" ${o.paid?'checked':''}> Paid / recorded in fiscal system</label></div>
       <div class="order-eta-controls v458"><label>Set time before accepting</label><select data-order-eta-minutes="${safe(o.id)}"><option value="">Preset</option>${standardEtaMinutes.map(m=>`<option value="${m}" ${String(draft.preset)===String(m)?'selected':''}>${m<60?m+' min':(m===60?'1 hour':'1.5 hours')}</option>`).join('')}</select><input type="number" min="1" max="240" step="1" inputmode="numeric" data-order-eta-custom="${safe(o.id)}" placeholder="Custom min" value="${safe(draft.custom||'')}"><input data-order-customer-note="${safe(o.id)}" placeholder="Optional message to customer" value="${safe(draft.note||'')}"><button class="secondary" data-order-save-eta="${safe(o.id)}">Send time only</button></div>
       ${delayControls}
@@ -924,13 +950,15 @@
         ? `<div class="order-alarm-banner"><div><b>${unacked.length?'🔔 '+unacked.length+' NEW ORDER'+(unacked.length>1?'S':''):''}${unacked.length&&overdueOrders.length?' · ':''}${overdueOrders.length?'⏰ '+overdueOrders.length+' ETA OVERDUE':''}</b><small>Alarm gets louder until new orders are checked and overdue orders are marked Ready or extended.</small></div><button id="enableOrderAlarm" class="primary">${alarmUnlocked?'Alarm enabled':'Enable alarm sound'}</button>${unacked.length?`<button id="ackOrderAlarm" class="secondary">I checked new order(s)</button>`:''}</div>`
         : `<div class="order-alarm-quiet"><span>✓ No unchecked new orders or overdue ETA</span><button id="enableOrderAlarm" class="secondary">${alarmUnlocked?'Alarm enabled':'Enable alarm sound'}</button></div>`;
       const dateInput = `<span class="date-filter-wrap"><input id="orderCustomDate" type="date" value="${safe(customDateFilter)}"><button id="applyOrderDate" class="secondary">Open date</button></span>`;
-      box.innerHTML = `${alarmBanner}${renderHealthBlock(healthRows)}${renderAdminStatus()}<div class="cloud-orders-toolbar ${unacked.length?'order-alert-flash':''}"><span class="order-pill">Live: ${live.length}</span><span class="order-pill">New: ${allRows.filter(o=>o.status==='new' && !o.is_test).length}</span><span class="order-pill">Today total: ${euro(todayRows.reduce((s,o)=>s+Number(o.total||0),0))}</span><span class="order-pill">Overdue: ${overdueOrders.length}</span><span class="order-pill">Auto-refresh: ON</span><button id="refreshCloudOrders" class="secondary">Refresh now</button>${testRows.length?`<button id="deleteAllTestOrders" class="danger subtle">Delete ${testRows.length} test order(s)</button>`:''}</div><div class="order-filter-tabs"><button data-order-filter="live" class="secondary ${orderFilter==='live'?'active':''}">Live Queue</button><button data-order-filter="today" class="secondary ${orderFilter==='today'?'active':''}">Today</button><button data-order-filter="yesterday" class="secondary ${orderFilter==='yesterday'?'active':''}">Yesterday</button><button data-order-filter="archive" class="secondary ${orderFilter==='archive'?'active':''}">Archive</button><button data-order-filter="date" class="secondary ${orderFilter==='date'?'active':''}">By date</button><button data-order-filter="test" class="secondary ${orderFilter==='test'?'active':''}">Test</button><button data-order-filter="all" class="secondary ${orderFilter==='all'?'active':''}">All 500</button>${dateInput}</div>` +
-        (rows.length?`<div class="cloud-orders-list">${rows.map(cardForOrder).join('')}</div>`:`<p class="muted">Connected to Cloud. No orders in this filter yet.</p><div class="legal-block"><b>Tablet workflow</b><p>Keep this panel open. Orders auto-refresh every 5 seconds and also use Realtime when available. Click “Enable alarm sound” once after opening the tablet.</p></div>`);
+      const dateSummary=orderDateSummary(allRows);
+      box.innerHTML = `${alarmBanner}${renderHealthBlock(healthRows)}${renderAdminStatus()}<div class="cloud-orders-toolbar ${unacked.length?'order-alert-flash':''}"><span class="order-pill">Live: ${live.length}</span><span class="order-pill">New: ${allRows.filter(o=>o.status==='new' && !o.is_test).length}</span><span class="order-pill">Today total: ${euro(todayRows.reduce((s,o)=>s+Number(o.total||0),0))}</span><span class="order-pill">Overdue: ${overdueOrders.length}</span><span class="order-pill">Auto-refresh: ON</span><button id="refreshCloudOrders" class="secondary">Refresh now</button>${testRows.length?`<button id="deleteAllTestOrders" class="danger subtle">Delete ${testRows.length} test order(s)</button>`:''}</div><div class="order-filter-tabs"><button data-order-filter="live" class="secondary ${orderFilter==='live'?'active':''}">Live Queue</button><button data-order-filter="today" class="secondary ${orderFilter==='today'?'active':''}">Today</button><button data-order-filter="yesterday" class="secondary ${orderFilter==='yesterday'?'active':''}">Yesterday</button><button data-order-filter="archive" class="secondary ${orderFilter==='archive'?'active':''}">Archive</button><button data-order-filter="date" class="secondary ${orderFilter==='date'?'active':''}">By date</button><button data-order-filter="test" class="secondary ${orderFilter==='test'?'active':''}">Test</button><button data-order-filter="all" class="secondary ${orderFilter==='all'?'active':''}">All 500</button>${dateInput}</div>${dateSummary}` +
+        (rows.length?`<div class="cloud-orders-list">${rows.map(cardForOrder).join('')}</div>`:`<p class="muted">${orderFilter==='date' ? `No orders found for ${safe(customDateFilter)}. Choose one of the available dates above.` : 'Connected to Cloud. No orders in this filter yet.'}</p><div class="legal-block"><b>Tablet workflow</b><p>Keep this panel open. Orders auto-refresh every 5 seconds and also use Realtime when available. Click “Enable alarm sound” once after opening the tablet.</p></div>`);
       $('#refreshCloudOrders')?.addEventListener('click',async()=>{ adminStatus('Refreshing orders now...'); lastRenderedSignature=''; await renderCloudOrders(true); adminStatus('Orders refreshed at '+new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'})); setTimeout(()=>renderCloudOrders(true),350); });
       $('#refreshCloudHealth')?.addEventListener('click',async()=>{ adminStatus('Checking Cloud Health now...'); healthFetchedAt=0; healthCache=null; lastRenderedSignature=''; await renderCloudOrders(true); adminStatus('Cloud Health checked at '+new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'})); setTimeout(()=>renderCloudOrders(true),350); });
       $('#enableOrderAlarm')?.addEventListener('click',async()=>{ await unlockAlarmSound(); renderCloudOrders(true); });
       $('#ackOrderAlarm')?.addEventListener('click',()=>{ ackOrderIds(unacked.map(o=>o.id)); renderCloudOrders(true); });
       $('#applyOrderDate')?.addEventListener('click',()=>{ const v=$('#orderCustomDate')?.value || localDateKey(new Date()); customDateFilter=v; localStorage.langar_admin_order_date_filter=v; orderFilter='date'; localStorage.langar_admin_order_filter=orderFilter; renderCloudOrders(true); });
+      document.querySelectorAll('[data-open-order-date]').forEach(btn=>btn.addEventListener('click',()=>{ const v=btn.dataset.openOrderDate; customDateFilter=v; localStorage.langar_admin_order_date_filter=v; orderFilter='date'; localStorage.langar_admin_order_filter=orderFilter; renderCloudOrders(true); }));
       $('#deleteAllTestOrders')?.addEventListener('click',()=>deleteAllTestOrders());
       document.querySelectorAll('[data-order-filter]').forEach(btn=>btn.onclick=()=>{ orderFilter=btn.dataset.orderFilter; localStorage.langar_admin_order_filter=orderFilter; renderCloudOrders(true); });
       document.querySelectorAll('[data-order-status]').forEach(sel=>sel.onchange=()=>updateOrderWithCurrentDraft(sel.dataset.orderStatus, sel.value));
@@ -1130,7 +1158,7 @@
     let coupon=0;
     if(action==='send_coupon') coupon=Number(prompt('Coupon / credit amount in EUR:', '1.00') || '0');
     try{
-      const {error}=await client.rpc('admin_moderate_order_review_v459',{p_review_id:id,p_action:action,p_reply:reply||null,p_coupon_amount:coupon||null});
+      const {error}=await client.rpc('admin_moderate_order_review_v512',{p_review_id:id,p_action:action,p_reply:reply||null,p_coupon_amount:coupon||null});
       if(error) throw error;
       await renderReviewsAdmin(true);
     }catch(err){ alert('Review action error: '+(err.message||err)); }
@@ -1160,4 +1188,36 @@
     window.addEventListener('langar-admin-unlocked',()=>setTimeout(()=>renderReviewsAdmin(true),250));
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
+})();
+
+// =============================
+// V5.1.2 — Review recovery + full Sushi catalogue/order manager
+// =============================
+(function(){
+  'use strict';
+  const client=window.LangarAdminCloud?.client||window.LangarCloud?.client;
+  const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+  const esc=v=>String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  const statuses=['pending','confirmed','supplier_ordered','preparing','ready','served','delivered','cancelled','rejected'];
+  async function admin(){ const {data,error}=await client.auth.getSession(); if(error) throw error; if(!data.session?.user) throw new Error('Please login as Cloud Admin first.'); return data.session.user; }
+  async function catalog(){ const {data,error}=await client.from('sushi_catalog').select('*').order('sort_order'); if(error) throw error; return data||[]; }
+  async function orders(){ const {data,error}=await client.from('sushi_preorders').select('id,user_id,preorder_number,status,fulfillment_type,requested_date,requested_time,customer_name,customer_phone,delivery_address,note,total,created_at,sushi_preorder_items(item_name_en,item_name_hr,quantity,total_price)').order('created_at',{ascending:false}).limit(200); if(error) throw error; return data||[]; }
+  function itemRows(r){ return (r.sushi_preorder_items||[]).map(i=>`${esc(i.item_name_en||i.item_name_hr)} × ${i.quantity}`).join('<br>')||'<small>No items</small>'; }
+  async function render(){
+    const box=$('#sushiAdmin'); if(!box||!client) return; box.innerHTML='<p class="muted">Loading sushi manager...</p>';
+    try{
+      await admin(); const [cats,rows]=await Promise.all([catalog(),orders()]);
+      const demand={}; rows.forEach(r=>(r.sushi_preorder_items||[]).forEach(i=>{const k=i.item_name_en||i.item_name_hr||'Sushi';demand[k]=(demand[k]||0)+Number(i.quantity||1);}));
+      box.innerHTML=`<section class="legal-block"><h3>Sushi Catalogue</h3><p class="muted">Add, edit, price, sort, activate or hide the sushi choices shown to customers.</p><form id="sushiCatalogForm" class="form-card"><input type="hidden" name="id"><div class="edit-grid"><label>Name EN<input name="name_en" required></label><label>Name HR<input name="name_hr" required></label><label>Price €<input name="price" type="number" min="0" step="0.01" required></label><label>Sort<input name="sort_order" type="number" value="100"></label></div><label>Description EN<textarea name="description_en"></textarea></label><label>Description HR<textarea name="description_hr"></textarea></label><label>Active<select name="active"><option value="true">Visible</option><option value="false">Hidden</option></select></label><button class="primary">Save sushi item</button><button type="button" class="secondary" id="clearSushiCatalog">Clear</button></form><div class="table-wrap"><table class="table"><thead><tr><th>Item</th><th>Price</th><th>Status</th><th>Actions</th></tr></thead><tbody>${cats.map(x=>`<tr><td><b>${esc(x.name_en)}</b><br><small>${esc(x.name_hr||'')}</small></td><td>€${Number(x.price||0).toFixed(2)}</td><td>${x.active?'Visible':'Hidden'}</td><td><button class="secondary" data-edit-sushi-item="${esc(x.id)}">Edit</button><button class="danger subtle" data-delete-sushi-item="${esc(x.id)}">Delete</button></td></tr>`).join('')}</tbody></table></div></section><section class="legal-block"><h3>Sushi Pre-orders</h3><div class="table-wrap"><table class="table"><thead><tr><th>Order</th><th>Date / Customer</th><th>Mode</th><th>Status</th><th>Actions</th></tr></thead><tbody>${rows.map(r=>`<tr><td><b>${esc(r.preorder_number||r.id.slice(0,8))}</b><br>${itemRows(r)}<br><small>€${Number(r.total||0).toFixed(2)}</small></td><td>${esc(r.requested_date||'')} ${esc((r.requested_time||'').slice(0,5))}<br><b>${esc(r.customer_name||'Guest')}</b><br><small>${esc(r.customer_phone||'')}</small>${r.delivery_address?`<br><small>${esc(r.delivery_address)}</small>`:''}${r.note?`<br><small>Note: ${esc(r.note)}</small>`:''}</td><td>${esc(r.fulfillment_type||'')}</td><td><select data-sushi-status="${esc(r.id)}" data-user-id="${esc(r.user_id||'')}">${statuses.map(s=>`<option value="${s}" ${r.status===s?'selected':''}>${s}</option>`).join('')}</select></td><td><button class="secondary" data-print-sushi="${esc(r.id)}">Print</button></td></tr>`).join('')}</tbody></table></div><h4>Demand summary</h4><p>${Object.entries(demand).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${esc(k)}: <b>${v}</b>`).join('<br>')||'No demand yet.'}</p></section>`;
+      const form=$('#sushiCatalogForm');
+      form.onsubmit=async e=>{e.preventDefault(); const fd=Object.fromEntries(new FormData(form).entries()); const payload={name_en:fd.name_en.trim(),name_hr:fd.name_hr.trim(),description_en:fd.description_en||null,description_hr:fd.description_hr||null,price:Number(fd.price),sort_order:Number(fd.sort_order||100),active:fd.active==='true',updated_at:new Date().toISOString()}; let q=fd.id?client.from('sushi_catalog').update(payload).eq('id',fd.id):client.from('sushi_catalog').insert(payload); const {error}=await q; if(error)return alert('Sushi item save error: '+error.message); render();};
+      $('#clearSushiCatalog').onclick=()=>form.reset();
+      $$('[data-edit-sushi-item]').forEach(b=>b.onclick=()=>{const x=cats.find(i=>i.id===b.dataset.editSushiItem); if(!x)return; Object.entries(x).forEach(([k,v])=>{if(form.elements[k])form.elements[k].value=String(v??'');}); form.scrollIntoView({behavior:'smooth'});});
+      $$('[data-delete-sushi-item]').forEach(b=>b.onclick=async()=>{if(!confirm('Delete this sushi item?'))return; const {error}=await client.from('sushi_catalog').delete().eq('id',b.dataset.deleteSushiItem); if(error)return alert(error.message); render();});
+      $$('[data-sushi-status]').forEach(sel=>sel.onchange=async()=>{const {error}=await client.rpc('admin_update_sushi_status_v512',{p_preorder_id:sel.dataset.sushiStatus,p_status:sel.value}); if(error){alert('Sushi status error: '+error.message); render();} });
+      $$('[data-print-sushi]').forEach(b=>b.onclick=()=>{const r=rows.find(x=>x.id===b.dataset.printSushi); if(!r)return; const w=open('','_blank','width=460,height=700'); w.document.write(`<html><body style="font-family:monospace;width:76mm"><h2>LANGAR BAR — SUSHI PRE-ORDER</h2><b>${esc(r.preorder_number)}</b><hr>${itemRows(r)}<hr>${esc(r.requested_date)} ${esc((r.requested_time||'').slice(0,5))}<br>${esc(r.fulfillment_type)}<br>${esc(r.customer_name)}<br>${esc(r.customer_phone)}<br>${esc(r.delivery_address||'')}<br>${esc(r.note||'')}<hr>Total €${Number(r.total||0).toFixed(2)}<p>INTERNAL ORDER RECEIPT — NOT A FISCAL INVOICE</p><script>print()<\/script></body></html>`); w.document.close();});
+    }catch(e){box.innerHTML=`<p style="color:#ffb1a8">Sushi manager error: ${esc(e.message||e)}</p><p>Run langar_bar_v512_reviews_sushi_fix.sql in Supabase.</p>`;}
+  }
+  function boot(){ window.renderSushiAdmin=render; setTimeout(render,1200); window.addEventListener('langar-admin-unlocked',()=>setTimeout(render,300)); }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot); else boot();
 })();

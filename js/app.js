@@ -1146,3 +1146,69 @@ const urlRef=new URLSearchParams(location.search).get('ref'); if(urlRef) localSt
   patchInboxButton();
   setTimeout(()=>{ patchInboxButton(); renderCustomerOrderStatus(); window.LangarReviewCloud?.refreshReviews?.(); }, 1000);
 })();
+
+// =============================
+// V5.1.2 — Dynamic Sushi catalogue + customer pre-order history/cancellation
+// =============================
+(function(){
+  'use strict';
+  const fallback=[
+    {id:'nigiri-salmon',name_en:'Salmon Nigiri',name_hr:'Nigiri s lososom',description_en:'2 pieces salmon nigiri',description_hr:'2 komada nigirija s lososom',price:4.50,active:true,sort_order:10},
+    {id:'maki-salmon',name_en:'Salmon Maki',name_hr:'Maki s lososom',description_en:'8 pieces salmon maki',description_hr:'8 komada makija s lososom',price:8.50,active:true,sort_order:20},
+    {id:'maki-avocado',name_en:'Avocado Maki',name_hr:'Maki s avokadom',description_en:'8 pieces avocado maki',description_hr:'8 komada makija s avokadom',price:7.50,active:true,sort_order:30},
+    {id:'california-roll',name_en:'California Roll',name_hr:'California Roll',description_en:'8 pieces crab, avocado and cucumber',description_hr:'8 komada s rakom, avokadom i krastavcem',price:10.50,active:true,sort_order:40},
+    {id:'philadelphia-roll',name_en:'Philadelphia Roll',name_hr:'Philadelphia Roll',description_en:'8 pieces salmon, cream cheese and cucumber',description_hr:'8 komada s lososom, krem sirom i krastavcem',price:11.50,active:true,sort_order:50},
+    {id:'spicy-tuna-roll',name_en:'Spicy Tuna Roll',name_hr:'Ljuti tuna roll',description_en:'8 pieces spicy tuna roll',description_hr:'8 komada ljutog tuna rolla',price:12.00,active:true,sort_order:60},
+    {id:'veggie-roll',name_en:'Veggie Roll',name_hr:'Povrtni roll',description_en:'8 pieces avocado, cucumber and carrot',description_hr:'8 komada s avokadom, krastavcem i mrkvom',price:8.50,active:true,sort_order:70},
+    {id:'sushi-mix-16',name_en:'Sushi Mix Box 16',name_hr:'Sushi Mix Box 16',description_en:'Mixed selection of 16 pieces',description_hr:'Miješani izbor od 16 komada',price:19.90,active:true,sort_order:80},
+    {id:'sushi-mix-32',name_en:'Sushi Party Box 32',name_hr:'Sushi Party Box 32',description_en:'Mixed party selection of 32 pieces',description_hr:'Miješani party izbor od 32 komada',price:36.90,active:true,sort_order:90}
+  ];
+  const esc=v=>String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  const tr=(hr,en)=>window.state?.lang==='hr'?hr:en;
+  let catalog=fallback;
+  async function loadCatalog(){
+    try{
+      const c=window.LangarCloud?.client;
+      if(!c) return;
+      const {data,error}=await c.from('sushi_catalog').select('id,name_en,name_hr,description_en,description_hr,price,active,sort_order').eq('active',true).order('sort_order');
+      if(error) throw error;
+      if(data?.length){ catalog=data; localStorage.setItem('langar_sushi_catalog_cache',JSON.stringify(data)); }
+    }catch(e){ try{ const x=JSON.parse(localStorage.getItem('langar_sushi_catalog_cache')||'null'); if(x?.length) catalog=x; }catch(_){} }
+  }
+  function currentUser(){ return window.LangarCloud?.getSession?.(); }
+  async function loadMine(userId){
+    const c=window.LangarCloud?.client; if(!c||!userId) return [];
+    const {data,error}=await c.from('sushi_preorders').select('id,preorder_number,status,fulfillment_type,requested_date,requested_time,total,created_at,sushi_preorder_items(item_name_en,item_name_hr,quantity,total_price)').eq('user_id',userId).order('created_at',{ascending:false}).limit(30);
+    if(error) throw error; return data||[];
+  }
+  async function cancelPreorder(id){
+    const c=window.LangarCloud?.client; if(!c) return;
+    const {error}=await c.rpc('customer_cancel_sushi_preorder_v512',{p_preorder_id:id});
+    if(error) throw error;
+  }
+  window.renderSushiPreorder = renderSushiPreorder = async function(){
+    const box=document.querySelector('#sushiPreorderView'); if(!box) return;
+    await loadCatalog();
+    const session=await currentUser();
+    let mine=[]; try{ if(session?.user) mine=await loadMine(session.user.id); }catch(e){ console.warn(e); }
+    const tomorrow=new Date(); tomorrow.setDate(tomorrow.getDate()+1); tomorrow.setMinutes(tomorrow.getMinutes()-tomorrow.getTimezoneOffset()); const min=tomorrow.toISOString().slice(0,10);
+    const profile=JSON.parse(localStorage.getItem('langar_profile')||'{}');
+    const products=catalog.filter(x=>x.active!==false).map(x=>`<label class="sushi-product-choice"><input type="checkbox" name="sushi_item" value="${esc(x.id)}"><span><b>${esc(window.state?.lang==='hr'?(x.name_hr||x.name_en):x.name_en)}</b><small>${esc(window.state?.lang==='hr'?(x.description_hr||x.description_en):x.description_en||'')}</small><strong>€${Number(x.price||0).toFixed(2)}</strong><input class="sushi-qty" type="number" min="1" value="1" data-sushi-qty="${esc(x.id)}"></span></label>`).join('');
+    const rows=mine.map(o=>{ const can=['pending','confirmed'].includes(o.status); const items=(o.sushi_preorder_items||[]).map(i=>`${esc(window.state?.lang==='hr'?(i.item_name_hr||i.item_name_en):i.item_name_en)} × ${i.quantity}`).join('<br>'); return `<article class="legal-block"><b>${esc(o.preorder_number||o.id.slice(0,8))}</b><span class="tag">${esc(o.status)}</span><p>${items}</p><small>${esc(o.requested_date||'')} ${esc((o.requested_time||'').slice(0,5))} · ${esc(o.fulfillment_type||'')} · €${Number(o.total||0).toFixed(2)}</small>${can?`<button class="danger subtle" data-cancel-sushi="${esc(o.id)}">${tr('Otkaži rezervaciju','Cancel pre-order')}</button>`:''}</article>`; }).join('');
+    box.innerHTML=`<section class="form-card sushi-preorder-card"><h3>${tr('Rezervacija sushija','Sushi Pre-order')}</h3><p class="muted">${tr('Odaberite jednu ili više vrsta. Rezervacija je potrebna najmanje jedan dan ranije.','Choose one or more sushi types. Pre-order at least one day in advance.')}</p><form id="sushiFormV512"><div class="sushi-product-grid">${products}</div><label>${tr('Datum','Date')}<input type="date" name="date" min="${min}" value="${min}" required></label><label>${tr('Vrijeme','Time')}<input type="time" name="time" value="18:00" required></label><label>${tr('Način','Mode')}<select name="mode"><option value="dine_in">${tr('Posluživanje u lokalu','Dine-in')}</option><option value="pickup">Pick-up</option><option value="delivery">Delivery</option></select></label><label>${tr('Ime','Name')}<input name="name" value="${esc((profile.firstName||'')+' '+(profile.lastName||''))}" required></label><label>${tr('Telefon','Phone')}<input name="phone" value="${esc(profile.phone||'')}" required></label><label>${tr('Adresa za dostavu','Delivery address')}<input name="delivery_address"></label><label>${tr('Napomena / alergije','Note / allergies')}<textarea name="note"></textarea></label><button class="primary full">${tr('Pošalji rezervaciju','Send pre-order')}</button></form></section><section><h3>${tr('Moje sushi rezervacije','My sushi pre-orders')}</h3>${rows||`<p class="muted">${tr('Nema rezervacija.','No pre-orders yet.')}</p>`}</section>`;
+    document.querySelectorAll('[data-cancel-sushi]').forEach(b=>b.onclick=async()=>{ if(!confirm(tr('Otkazati ovu rezervaciju?','Cancel this pre-order?'))) return; try{ await cancelPreorder(b.dataset.cancelSushi); await window.renderSushiPreorder(); }catch(e){ alert('Cancel error: '+(e.message||e)); } });
+    const f=document.querySelector('#sushiFormV512'); if(f) f.onsubmit=async e=>{
+      e.preventDefault();
+      const selected=[...f.querySelectorAll('input[name="sushi_item"]:checked')]; if(!selected.length) return alert(tr('Odaberite barem jednu vrstu sushija.','Choose at least one sushi type.'));
+      const session=await currentUser(); if(!session?.user) return alert(tr('Prvo se prijavite u Langar Club.','Please sign in to Langar Club first.'));
+      const fd=new FormData(f); const items=selected.map(ch=>{ const p=catalog.find(x=>String(x.id)===ch.value); const qty=Math.max(1,Number(f.querySelector(`[data-sushi-qty="${CSS.escape(ch.value)}"]`)?.value||1)); return {p,qty,total:Number(p.price||0)*qty}; });
+      const total=items.reduce((s,x)=>s+x.total,0); const number='SUSHI-'+Date.now().toString(36).toUpperCase();
+      try{
+        const c=window.LangarCloud.client;
+        const {data:pre,error}=await c.from('sushi_preorders').insert({user_id:session.user.id,preorder_number:number,status:'pending',fulfillment_type:fd.get('mode'),requested_date:fd.get('date'),requested_time:fd.get('time'),customer_name:fd.get('name'),customer_phone:fd.get('phone'),delivery_address:fd.get('delivery_address')||null,note:fd.get('note')||null,total}).select('id').single(); if(error) throw error;
+        const payload=items.map(x=>({sushi_preorder_id:pre.id,item_id:null,item_name_en:x.p.name_en,item_name_hr:x.p.name_hr,quantity:x.qty,unit_price:x.p.price,total_price:x.total})); const {error:e2}=await c.from('sushi_preorder_items').insert(payload); if(e2) throw e2;
+        alert(tr('Sushi rezervacija je poslana.','Sushi pre-order sent.')); await window.renderSushiPreorder();
+      }catch(e){ alert('Sushi pre-order error: '+(e.message||e)); }
+    };
+  };
+})();
