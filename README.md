@@ -63,3 +63,10 @@ This hotfix is built on V4.5.9.
 ### SQL
 - No new SQL is required after V4.5.9.
 - Run `langar_v459_sql_only.sql` only if the V4.5.9 review/cancellation tables and RPCs have not been installed yet.
+
+
+## V5.1.0 Independent Ordering
+- Removed active Remaris dependency from the customer/admin workflow.
+- Added internal 80 mm order and delivery ticket printing.
+- Internal tickets are explicitly non-fiscal.
+- Fiscalization remains a future separate module.

@@ -201,3 +201,8 @@
 @media(max-width:360px){
   #order > .segmented button{font-size:.8rem!important;padding-left:2px!important;padding-right:2px!important;}
 }
+/* V5.0.0 auth and store readiness */
+.password-field-v500{position:relative}.password-field-v500 input{padding-right:48px!important}.password-toggle-v500{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:inherit;font-size:18px;padding:6px;cursor:pointer}.password-strength-v500{display:block;margin-top:5px;color:var(--muted)}.password-strength-v500[data-score="3"],.password-strength-v500[data-score="4"]{color:#8ee0a6}.link-button-v500{border:0;background:transparent;color:var(--gold,#eed38b);text-decoration:underline;padding:8px 0;cursor:pointer}.checkline a{color:var(--gold,#eed38b)}
+
+/* V5.1.0 independent order printing */
+.internal-print-actions{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.internal-print-actions button{min-height:42px}.cloud-order-card[data-printing="true"]{outline:2px solid currentColor}
