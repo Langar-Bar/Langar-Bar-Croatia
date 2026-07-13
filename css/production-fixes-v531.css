@@ -1,0 +1,19 @@
+/* Langar Bar V5.3.1 — Admin readability and persistent details */
+.cloud-order-card{color:#18251f!important}
+.cloud-order-card .cloud-order-head,.cloud-order-card .cloud-order-head *{color:#17231e!important}
+.cloud-order-card .cloud-order-items,.cloud-order-card .cloud-order-items *{color:#17231e!important}
+.cloud-order-card .muted,.cloud-order-card small,.cloud-order-card label{color:#4b5d54!important}
+.cloud-order-card .secondary,.cloud-order-card .v530-order-toggle,.cloud-order-card .internal-print-actions button{color:#173a2c!important;background:#f3f0e7!important;border:1px solid #aab8b0!important;font-weight:800!important;opacity:1!important}
+.cloud-order-card .secondary:hover,.cloud-order-card .v530-order-toggle:hover{background:#e7eee9!important}
+.cloud-order-card .primary{color:#fff!important;background:#195c43!important;opacity:1!important}
+.cloud-order-card .danger{color:#fff!important;background:#9c2f2f!important;opacity:1!important}
+.cloud-order-card input,.cloud-order-card select,.cloud-order-card textarea{color:#f8f7f0!important;background:#102219!important;border-color:#557265!important;opacity:1!important}
+.cloud-order-card button:disabled{opacity:.55!important}
+.cloud-order-card .order-eta-controls,.cloud-order-card .internal-print-actions,.cloud-order-card .cloud-order-actions{gap:8px!important}
+.cloud-order-card .order-eta-controls button,.cloud-order-card .internal-print-actions button{min-height:42px!important}
+.v530-order-detail{overflow:visible!important}
+.v531-barista-card{background:#fff;color:#17231e;border:1px solid #d8ded9;border-radius:18px;padding:14px;margin:10px 0;box-shadow:0 8px 22px rgba(0,0,0,.08)}
+.v531-barista-card p,.v531-barista-card small{color:#46594f}.v531-barista-card textarea{background:#f7f8f6!important;color:#17231e!important;border:1px solid #b9c5be!important}
+.v531-review h4{margin:.25rem 0;color:#153e2e}.v531-review .v531-review-author{font-weight:800;color:#385348}
+.v531-edit-review{margin-top:8px}
+@media(max-width:760px){.cloud-order-card .internal-print-actions,.cloud-order-card .order-eta-controls,.cloud-order-card .cloud-order-actions{display:grid!important;grid-template-columns:1fr 1fr!important}.cloud-order-card .internal-print-actions button,.cloud-order-card .order-eta-controls button{width:100%!important}.v530-order-toggle{min-width:110px!important}}

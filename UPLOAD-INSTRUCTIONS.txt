@@ -1,0 +1,10 @@
+Langar Bar V5.3.1
+Upload/replace only:
+admin.html
+index.html
+service-worker.js
+js/admin-fixes-v531.js
+js/client-fixes-v531.js
+css/production-fixes-v531.css
+Then run once in Supabase SQL Editor:
+langar_bar_v531_operational_fixes.sql
