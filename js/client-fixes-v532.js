@@ -1,0 +1,8 @@
+(()=>{
+'use strict';
+const cloud=()=>window.LangarCloud?.client||null;
+async function submitBarista(form){const c=cloud();if(!c)throw new Error('Cloud connection is not ready. Please try again.');const {data:{session},error:sErr}=await c.auth.getSession();if(sErr)throw sErr;if(!session)throw new Error('Please sign in before sending a question.');const fd=new FormData(form);const question=String(fd.get('question')||fd.get('message')||'').trim();if(!question)throw new Error('Please write your question.');const params={p_subject:String(fd.get('subject')||fd.get('topic')||'Barista question').trim(),p_question:question,p_customer_name:String(fd.get('name')||'').trim()||null,p_customer_phone:String(fd.get('contact')||session.user.phone||'').trim()||null};const {data,error}=await c.rpc('customer_submit_barista_question_v532',params);if(error)throw error;if(!data)throw new Error('Question was not saved.');form.reset();alert((localStorage.langar_lang||'hr')==='hr'?'Pitanje je poslano baristi.':'Question sent to the barista.');}
+function hookBarista(){const f=document.getElementById('askBaristaForm');if(!f||f.dataset.v532)return;f.dataset.v532='1';f.addEventListener('submit',async e=>{e.preventDefault();e.stopImmediatePropagation();const btn=f.querySelector('button[type="submit"],button:not([type])');if(btn){btn.disabled=true;btn.dataset.oldText=btn.textContent;btn.textContent='Sending…'}try{await submitBarista(f)}catch(err){alert('Barista question error: '+(err.message||err))}finally{if(btn){btn.disabled=false;btn.textContent=btn.dataset.oldText||'Send question'}}},true)}
+new MutationObserver(hookBarista).observe(document.documentElement,{subtree:true,childList:true});
+window.addEventListener('load',()=>setTimeout(hookBarista,700));
+})();
