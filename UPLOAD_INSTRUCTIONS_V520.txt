@@ -1,0 +1,19 @@
+LANGAR BAR V5.2.0 STABILIZATION PATCH
+
+UPLOAD/REPLACE:
+- index.html
+- admin.html
+- service-worker.js
+- js/stabilization-v520.js
+- js/admin-stabilization-v520.js
+- js/order-print-v520.js
+- css/stabilization-v520.css
+
+THEN RUN ONCE IN SUPABASE SQL EDITOR:
+- langar_bar_v520_stabilization.sql
+
+TEST LINKS:
+Customer: https://langar-bar.github.io/Langar-Bar-Croatia/?v=520
+Admin: https://langar-bar.github.io/Langar-Bar-Croatia/admin.html?v=520
+
+NOTE: Closed-app push, SMS OTP, and online card payments require provider credentials and server-side integration. This patch prepares database/settings/UI but does not activate those external services.
