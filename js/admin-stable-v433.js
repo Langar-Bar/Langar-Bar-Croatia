@@ -17,7 +17,7 @@
     {id:'baristaPanel',icon:'☕',title:'Barista Questions',note:'Coffee questions'},
     {id:'feedbackPanel',icon:'⭐',title:'Feedback / Reviews',note:'Reviews and replies'},
     {id:'galleryPanel',icon:'🖼️',title:'Gallery Manager',note:'Photos and categories'},
-    {id:'settingsPanel',icon:'⚙️',title:'Settings / Remaris',note:'Rules and integrations'}
+    {id:'settingsPanel',icon:'⚙️',title:'Settings / Operations',note:'Rules and integrations'}
   ];
   const order=['dashboardPanel',...modules.map(m=>m.id)];
   let current='dashboardPanel';

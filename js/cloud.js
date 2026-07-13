@@ -244,51 +244,23 @@
 
   async function ensureWelcomeRewards(){
     const session = await getSession();
-    if(session){
-      try{
-        const { data, error } = await client.from('reward_cards')
-          .select('id,status')
-          .eq('user_id', session.user.id)
-          .eq('reward_type', 'welcome_espresso')
-          .limit(1);
-        if(error) throw error;
-        if(!data || !data.length){
-          const qr = 'FREE-' + Math.floor(100000+Math.random()*900000);
-          const { error: insertError } = await client.from('reward_cards').insert({
-            user_id: session.user.id,
-            reward_type:'welcome_espresso',
-            title_en:'Free Espresso Card',
-            title_hr:'Besplatni espresso',
-            description_en:'One-time free espresso welcome gift. Show this card and let staff scan it.',
-            description_hr:'Jednokratni poklon dobrodošlice: besplatni espresso. Pokažite karticu osoblju za skeniranje.',
-            qr_code:qr,
-            status:'active'
-          });
-          if(insertError && !String(insertError.message||'').toLowerCase().includes('duplicate')) throw insertError;
-          await client.from('inbox_messages').insert({
-            user_id: session.user.id,
-            type:'reward',
-            title_en:'Free Espresso Card',
-            body_en:'Your one-time welcome espresso card is ready in Rewards.',
-            title_hr:'Besplatni espresso',
-            body_hr:'Vaša jednokratna espresso kartica je spremna u Rewards.',
-            data:{campaign_key:'welcome_espresso', reward_type:'welcome_espresso', qr_code:qr}
-          }).then(()=>{});
-        }
-        await syncRewardCards();
-        return;
-      }catch(e){ console.warn('Cloud welcome reward failed; using local fallback:', e.message); }
+    if(!session) return {ok:false,reason:'not_logged_in'};
+    const localProfile = readLS('langar_profile', {}) || {};
+    const installId = localStorage.langar_install_id_v500 || '';
+    if(!localProfile.phone || !installId){
+      await syncRewardCards();
+      return {ok:false,reason:'phone_or_install_missing'};
     }
     try{
-      const cards = readLS('langar_cards', []);
-      let welcomeCard = cards.find(c=>c.type==='welcome');
-      if(!welcomeCard){
-        const code = 'FREE-' + Math.floor(100000+Math.random()*900000);
-        welcomeCard = { id:'welcome-' + Date.now(), type:'welcome', title:'Free Espresso Card', body:'One-time free espresso welcome gift. Show this card and let staff scan it.', code, status:'active', unread:true, createdAt:new Date().toISOString() };
-        cards.unshift(welcomeCard); writeLS('langar_cards', cards);
-      }
-      const inbox = readLS('langar_inbox', []).filter(m=>!m.cloudWelcomeLocal); writeLS('langar_inbox', inbox);
-    }catch(e){ console.warn('Welcome reward local sync failed', e); }
+      const { data, error } = await client.rpc('claim_welcome_espresso_v500', { p_phone:localProfile.phone, p_install_id:installId });
+      if(error) throw error;
+      await syncRewardCards();
+      return data || {ok:true};
+    }catch(e){
+      console.warn('Secure welcome reward claim failed:', e.message);
+      await syncRewardCards();
+      return {ok:false,error:e};
+    }
   }
 
   function injectStyles(){

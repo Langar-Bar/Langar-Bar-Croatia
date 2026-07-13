@@ -21,7 +21,7 @@
     {id:'baristaPanel', icon:'☕', title:'Barista Questions', note:'Coffee questions'},
     {id:'feedbackPanel', icon:'⭐', title:'Feedback / Reviews', note:'Positive public, negative admin'},
     {id:'galleryPanel', icon:'🖼️', title:'Gallery Manager', note:'Photos and categories'},
-    {id:'settingsPanel', icon:'⚙️', title:'Settings / Remaris', note:'Rules and integrations'}
+    {id:'settingsPanel', icon:'⚙️', title:'Settings / Operations', note:'Rules and integrations'}
   ];
   let navStack=[]; let forwardStack=[]; let currentPanel='dashboardPanel';
   let suppressTrack=false;
