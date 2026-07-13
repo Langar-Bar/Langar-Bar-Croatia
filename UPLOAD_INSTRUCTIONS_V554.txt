@@ -1,0 +1,4 @@
+Langar Bar V5.5.4 Release Candidate Fix
+1. Upload/replace: admin.html, index.html, service-worker.js, js/admin-release-fixes-v554.js, js/client-reservation-v554.js, css/admin-release-fixes-v554.css
+2. Run langar_bar_v554_release_candidate_fix.sql once in Supabase SQL Editor.
+3. Test admin with admin.html?v=554 and customer app with ?v=554.
