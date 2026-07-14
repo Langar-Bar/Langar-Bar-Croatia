@@ -1,4 +1,4 @@
-const CACHE_NAME = 'langar-v559';
+const CACHE_NAME = 'langar-v560';
 const ASSETS = ['./','./index.html','./admin.html','./styles.css',
   './css/gallery-v552.css','./css/admin-final-ui-v553.css','./css/admin-release-fixes-v555.css',
   './js/client-gallery-v552.js',
@@ -61,3 +61,5 @@ self.addEventListener('push', event => {
 // V5.5.7 network-first assets.
 
 // V5.5.9 final reservation UI assets are network-first.
+
+// V5.6.0 gallery display hotfix assets are network-first.

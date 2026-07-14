@@ -1,0 +1,8 @@
+Langar Bar V5.6.0 Gallery Display Hotfix
+Upload/replace only:
+- index.html
+- service-worker.js
+- js/gallery-display-v560.js
+- css/gallery-display-v560.css
+No SQL required.
+Test: https://langar-bar.github.io/Langar-Bar-Croatia/?v=560
