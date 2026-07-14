@@ -1,1 +1,6 @@
-{"version": "6.0.6", "channel": "gold-master-opening-direct-rpc-fix", "released_at": "2026-07-14T15:30:00Z", "force_update": true}
+{
+  "version": "6.0.7",
+  "channel": "gold-master-hero-opening-dynamic-tapas",
+  "released_at": "2026-07-14T18:10:00Z",
+  "force_update": true
+}

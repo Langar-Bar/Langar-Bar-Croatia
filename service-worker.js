@@ -1,4 +1,4 @@
-const CACHE_NAME = 'langar-bar-v606';
+const CACHE_NAME = 'langar-bar-v607';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -11,7 +11,8 @@ const STATIC_ASSETS = [
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS).catch(() => undefined))
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(STATIC_ASSETS).catch(() => undefined))
   );
 });
 
@@ -35,22 +36,24 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
 
   const url = new URL(request.url);
-  const isFreshAsset =
+  const networkFirst =
     request.mode === 'navigate' ||
     url.pathname.endsWith('.js') ||
     url.pathname.endsWith('.css') ||
     url.pathname.endsWith('app-version.json') ||
     url.pathname.endsWith('index.html');
 
-  if (isFreshAsset) {
+  if (networkFirst) {
     event.respondWith(
       fetch(request, { cache: 'no-store' })
         .then((response) => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
           return response;
         })
-        .catch(() => caches.match(request).then((cached) => cached || caches.match('./index.html')))
+        .catch(() =>
+          caches.match(request).then((cached) => cached || caches.match('./index.html'))
+        )
     );
     return;
   }

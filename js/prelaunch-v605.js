@@ -1,58 +1,104 @@
 (() => {
   'use strict';
 
-  const VERSION = '6.0.6';
+  const VERSION = '6.0.7';
   const SUPABASE_URL = 'https://fkanccgigogbxodiljqt.supabase.co';
   const SUPABASE_ANON_KEY = 'sb_publishable_WbWIWgu9R2AKepJiRrygCw_1oWrdwG7';
   const OPENING_RPC_URL = `${SUPABASE_URL}/rest/v1/rpc/get_opening_public_v606`;
 
   let countdownTimer = null;
   let versionCheckBusy = false;
+  let tapasPatched = false;
 
-  const lang = () => {
-    const value = (localStorage.getItem('langar_lang') || document.documentElement.lang || 'hr').toLowerCase();
+  const language = () => {
+    const value = String(
+      localStorage.getItem('langar_lang') ||
+      document.documentElement.lang ||
+      'hr'
+    ).toLowerCase();
     return value.startsWith('en') ? 'en' : 'hr';
   };
 
-  const escapeHtml = (value) =>
-    String(value ?? '').replace(/[&<>"']/g, (char) => ({
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#039;'
-    }[char]));
-
-  function statusLabel(status) {
+  function statusText(status, lang = language()) {
     const labels = {
       opening_soon: { en: 'Opening Soon', hr: 'Uskoro otvaramo' },
       soft_opening: { en: 'Soft Opening', hr: 'Probno otvorenje' },
       grand_opening: { en: 'Grand Opening', hr: 'Svečano otvorenje' },
       open_now: { en: 'Open Now', hr: 'Otvoreno' }
     };
-    return (labels[status] || labels.opening_soon)[lang()];
+    return (labels[status] || labels.opening_soon)[lang];
   }
 
-  function ensureOpeningHost() {
-    let host = document.getElementById('langarOpeningV606');
-    if (host) return host;
-
+  function removeOldOpeningBlocks() {
     document.querySelectorAll(
-      '#langarOpeningV600,#langarOpeningV601,#langarOpeningV602,#langarOpeningV605'
+      '#langarOpeningV600,#langarOpeningV601,#langarOpeningV602,#langarOpeningV605,#langarOpeningV606,.opening-v606'
     ).forEach((node) => node.remove());
+  }
 
-    const home = document.getElementById('home');
-    if (!home) return null;
+  function heroNodes() {
+    const hero = document.querySelector('#home .hero-v3');
+    if (!hero) return {};
+    const copy = hero.querySelector('.hero-copy');
+    return {
+      hero,
+      copy,
+      topStatus: document.querySelector('.topbar .brand span'),
+      eyebrow: hero.querySelector('.eyebrow'),
+      title: hero.querySelector('h1'),
+      description: hero.querySelector('.hero-copy > p')
+    };
+  }
 
-    host = document.createElement('section');
-    host.id = 'langarOpeningV606';
-    host.className = 'opening-v606';
+  function ensureHeroOpeningElements() {
+    removeOldOpeningBlocks();
 
-    const hero = home.querySelector('.hero-v3, .hero, .home-hero') || home.firstElementChild;
-    if (hero) hero.insertAdjacentElement('afterend', host);
-    else home.prepend(host);
+    const nodes = heroNodes();
+    if (!nodes.copy) return null;
 
-    return host;
+    let announcement = document.getElementById('heroOpeningAnnouncementV607');
+    if (!announcement) {
+      announcement = document.createElement('p');
+      announcement.id = 'heroOpeningAnnouncementV607';
+      announcement.className = 'hero-opening-announcement-v607';
+      nodes.description?.insertAdjacentElement('afterend', announcement);
+    }
+
+    let countdown = document.getElementById('heroOpeningCountdownV607');
+    if (!countdown) {
+      countdown = document.createElement('div');
+      countdown.id = 'heroOpeningCountdownV607';
+      countdown.className = 'hero-opening-countdown-v607';
+      announcement.insertAdjacentElement('afterend', countdown);
+    }
+
+    return { ...nodes, announcement, countdown };
+  }
+
+  function restoreDefaultOpening() {
+    if (countdownTimer) {
+      clearInterval(countdownTimer);
+      countdownTimer = null;
+    }
+
+    removeOldOpeningBlocks();
+
+    const nodes = heroNodes();
+    const lang = language();
+
+    if (nodes.topStatus) {
+      nodes.topStatus.textContent = 'Opening Soon';
+      nodes.topStatus.dataset.en = 'Opening Soon';
+      nodes.topStatus.dataset.hr = 'Opening Soon';
+    }
+
+    if (nodes.eyebrow) {
+      nodes.eyebrow.textContent = lang === 'hr' ? 'USKORO OTVARAMO' : 'OPENING SOON';
+      nodes.eyebrow.dataset.en = 'OPENING SOON';
+      nodes.eyebrow.dataset.hr = 'USKORO OTVARAMO';
+    }
+
+    document.getElementById('heroOpeningAnnouncementV607')?.remove();
+    document.getElementById('heroOpeningCountdownV607')?.remove();
   }
 
   function renderOpening(settings) {
@@ -61,77 +107,78 @@
       countdownTimer = null;
     }
 
-    const host = ensureOpeningHost();
-    if (!host) return;
-
     if (!settings || settings.enabled === false) {
-      host.hidden = true;
+      restoreDefaultOpening();
+      try {
+        localStorage.removeItem('langar_opening_cache_v607');
+      } catch (_) {}
+      window.__langarOpeningV607 = null;
       return;
     }
 
-    host.hidden = false;
-    window.__langarOpeningV606 = settings;
+    const nodes = ensureHeroOpeningElements();
+    if (!nodes) return;
+
+    const lang = language();
+    const status = String(settings.status || 'opening_soon');
+    const statusLabel = statusText(status, lang);
+    const headline = lang === 'hr'
+      ? String(settings.headline_hr || statusLabel)
+      : String(settings.headline_en || statusLabel);
+    const announcement = lang === 'hr'
+      ? String(settings.announcement_hr || '')
+      : String(settings.announcement_en || '');
+
+    window.__langarOpeningV607 = settings;
 
     try {
-      localStorage.setItem('langar_opening_cache_v606', JSON.stringify(settings));
+      localStorage.setItem('langar_opening_cache_v607', JSON.stringify(settings));
     } catch (_) {}
 
-    const currentLang = lang();
-    const label = statusLabel(settings.status);
-    const headline = currentLang === 'hr'
-      ? (settings.headline_hr || label)
-      : (settings.headline_en || label);
-    const announcement = currentLang === 'hr'
-      ? (settings.announcement_hr || '')
-      : (settings.announcement_en || '');
+    if (nodes.topStatus) {
+      nodes.topStatus.textContent = headline;
+      nodes.topStatus.dataset.en = String(settings.headline_en || statusText(status, 'en'));
+      nodes.topStatus.dataset.hr = String(settings.headline_hr || statusText(status, 'hr'));
+    }
 
-    const heroImage = settings.hero_image_url
-      ? `<img class="opening-v606-image" src="${escapeHtml(settings.hero_image_url)}" alt="${escapeHtml(headline)}">`
-      : '';
+    if (nodes.eyebrow) {
+      nodes.eyebrow.textContent = headline.toUpperCase();
+      nodes.eyebrow.dataset.en = String(
+        settings.headline_en || statusText(status, 'en')
+      ).toUpperCase();
+      nodes.eyebrow.dataset.hr = String(
+        settings.headline_hr || statusText(status, 'hr')
+      ).toUpperCase();
+    }
 
-    host.innerHTML = `
-      ${heroImage}
-      <div class="opening-v606-content">
-        <span class="opening-v606-status">${escapeHtml(label)}</span>
-        <h2>${escapeHtml(headline)}</h2>
-        ${announcement ? `<p>${escapeHtml(announcement)}</p>` : ''}
-        <div id="openingCountdownV606" class="opening-v606-countdown"></div>
-      </div>
-    `;
+    nodes.announcement.textContent = announcement;
+    nodes.announcement.hidden = !announcement;
+    nodes.countdown.innerHTML = '';
 
-    const countdown = document.getElementById('openingCountdownV606');
-
-    if (!settings.opening_at || settings.status === 'open_now') {
-      if (countdown) {
-        countdown.innerHTML = settings.status === 'open_now'
-          ? `<strong>${escapeHtml(statusLabel('open_now'))}</strong>`
-          : `<span>${currentLang === 'hr'
-              ? 'Točan datum objavit ćemo uskoro.'
-              : 'The exact date will be announced soon.'}</span>`;
-      }
+    if (!settings.opening_at || status === 'open_now') {
+      nodes.countdown.innerHTML = status === 'open_now'
+        ? `<div class="hero-opening-live-v607">${statusText('open_now', lang)}</div>`
+        : '';
       return;
     }
 
     const target = new Date(settings.opening_at).getTime();
-    if (!Number.isFinite(target)) {
-      if (countdown) countdown.textContent = currentLang === 'hr'
-        ? 'Datum otvorenja nije ispravan.'
-        : 'The opening date is invalid.';
-      return;
-    }
+    if (!Number.isFinite(target)) return;
 
     const draw = () => {
-      const output = document.getElementById('openingCountdownV606');
+      const output = document.getElementById('heroOpeningCountdownV607');
       if (!output) return;
 
       const difference = target - Date.now();
+
       if (difference <= 0) {
-        output.innerHTML = `<strong>${escapeHtml(statusLabel('open_now'))}</strong>`;
-        clearInterval(countdownTimer);
+        output.innerHTML = `<div class="hero-opening-live-v607">${statusText('open_now', language())}</div>`;
+        if (countdownTimer) clearInterval(countdownTimer);
         countdownTimer = null;
         return;
       }
 
+      const currentLang = language();
       const days = Math.floor(difference / 86400000);
       const hours = Math.floor((difference % 86400000) / 3600000);
       const minutes = Math.floor((difference % 3600000) / 60000);
@@ -145,16 +192,16 @@
         [hours, labels[1]],
         [minutes, labels[2]],
         [seconds, labels[3]]
-      ].map(([number, unit]) => `
-        <div class="opening-v606-time">
+      ].map(([number, label]) => `
+        <div class="hero-opening-time-v607">
           <b>${number}</b>
-          <span>${unit}</span>
+          <span>${label}</span>
         </div>
       `).join('');
     };
 
     draw();
-    countdownTimer = setInterval(draw, 1000);
+    countdownTimer = window.setInterval(draw, 1000);
   }
 
   async function fetchOpening() {
@@ -172,25 +219,113 @@
       });
 
       if (!response.ok) {
-        throw new Error(`Opening request failed: ${response.status}`);
+        throw new Error(`Opening request failed with ${response.status}`);
       }
 
-      const data = await response.json();
-      const settings = Array.isArray(data) ? data[0] : data;
+      const payload = await response.json();
+      const settings = Array.isArray(payload) ? payload[0] : payload;
 
-      if (settings && typeof settings === 'object') {
-        renderOpening(settings);
-        return;
+      if (!settings || typeof settings !== 'object') {
+        throw new Error('Opening response was empty.');
       }
 
-      throw new Error('Opening response was empty.');
+      renderOpening(settings);
     } catch (error) {
-      console.warn('[Langar Opening] Cloud read failed:', error);
+      console.warn('[Langar Opening V607]', error);
       try {
-        const cached = JSON.parse(localStorage.getItem('langar_opening_cache_v606') || 'null');
+        const cached = JSON.parse(
+          localStorage.getItem('langar_opening_cache_v607') || 'null'
+        );
         if (cached) renderOpening(cached);
       } catch (_) {}
     }
+  }
+
+  function clone(value) {
+    try {
+      return JSON.parse(JSON.stringify(value));
+    } catch (_) {
+      return value;
+    }
+  }
+
+  function patchDynamicTapas() {
+    if (tapasPatched || typeof window.langarFixMenuV458 !== 'function') return;
+    tapasPatched = true;
+
+    const originalFix = window.langarFixMenuV458;
+
+    const improvedFix = function improvedLangarFixMenuV607(menu) {
+      const source = Array.isArray(menu) ? clone(menu) : [];
+      const sourceTapas = source.find((category) =>
+        String(category?.id || '').toLowerCase() === 'tapas'
+      );
+
+      const fixed = originalFix(source);
+
+      if (!sourceTapas || !Array.isArray(sourceTapas.items) || !sourceTapas.items.length) {
+        return fixed;
+      }
+
+      const normalizedTapas = {
+        ...sourceTapas,
+        id: 'tapas',
+        active: sourceTapas.active !== false,
+        title: sourceTapas.title || {
+          en: sourceTapas.title_en || 'Tapas',
+          hr: sourceTapas.title_hr || sourceTapas.title_en || 'Tapas'
+        },
+        description: sourceTapas.description || {
+          en: sourceTapas.description_en || '',
+          hr: sourceTapas.description_hr || sourceTapas.description_en || ''
+        },
+        items: sourceTapas.items.map((item) => ({
+          ...item,
+          name: item.name || {
+            en: item.name_en || '',
+            hr: item.name_hr || item.name_en || ''
+          },
+          desc: item.desc || {
+            en: item.description_en || '',
+            hr: item.description_hr || item.description_en || ''
+          },
+          ingredients: item.ingredients || {
+            en: item.ingredients_en || item.description_en || '',
+            hr: item.ingredients_hr || item.ingredients_en || item.description_hr || ''
+          },
+          available: item.available !== false,
+          orderable: item.orderable !== false
+        }))
+      };
+
+      const index = fixed.findIndex((category) =>
+        String(category?.id || '').toLowerCase() === 'tapas'
+      );
+
+      if (index >= 0) {
+        fixed[index] = {
+          ...fixed[index],
+          ...normalizedTapas,
+          items: normalizedTapas.items
+        };
+      } else {
+        fixed.push(normalizedTapas);
+      }
+
+      return fixed;
+    };
+
+    window.langarFixMenuV458 = improvedFix;
+    try {
+      langarFixMenuV458 = improvedFix;
+    } catch (_) {}
+
+    setTimeout(() => {
+      try {
+        window.renderMenu?.();
+        window.renderOrderMenu?.();
+      } catch (_) {}
+    }, 250);
   }
 
   function compareVersions(left, right) {
@@ -212,31 +347,33 @@
   function showUpdateDialog(remoteVersion) {
     removeUpdateDialog();
 
-    const currentLang = lang();
+    const lang = language();
     const overlay = document.createElement('div');
-    overlay.id = 'langarUpdateV606';
-    overlay.className = 'update-v606-overlay';
+    overlay.id = 'langarUpdateV607';
+    overlay.className = 'update-v607-overlay';
     overlay.innerHTML = `
-      <div class="update-v606-card">
-        <h2>${currentLang === 'hr' ? 'Dostupna je nova verzija' : 'A new version is available'}</h2>
-        <p>${currentLang === 'hr'
+      <div class="update-v607-card">
+        <h2>${lang === 'hr' ? 'Dostupna je nova verzija' : 'A new version is available'}</h2>
+        <p>${lang === 'hr'
           ? 'Ažurirajte aplikaciju kako biste dobili najnovija poboljšanja.'
           : 'Update the app to receive the latest improvements.'}</p>
-        <button id="langarUpdateNowV606" type="button">
-          ${currentLang === 'hr' ? 'Ažuriraj sada' : 'Update now'}
+        <button id="langarUpdateNowV607" type="button">
+          ${lang === 'hr' ? 'Ažuriraj sada' : 'Update now'}
         </button>
       </div>
     `;
     document.body.appendChild(overlay);
 
-    overlay.querySelector('#langarUpdateNowV606').addEventListener('click', async () => {
-      const button = overlay.querySelector('#langarUpdateNowV606');
-      button.disabled = true;
-      button.textContent = currentLang === 'hr' ? 'Ažuriranje…' : 'Updating…';
+    overlay.querySelector('#langarUpdateNowV607')?.addEventListener('click', async () => {
+      const button = overlay.querySelector('#langarUpdateNowV607');
+      if (button) {
+        button.disabled = true;
+        button.textContent = lang === 'hr' ? 'Ažuriranje…' : 'Updating…';
+      }
 
       try {
         localStorage.setItem('langar_applied_version', remoteVersion);
-        sessionStorage.setItem('langar_update_v606_done', String(Date.now()));
+        sessionStorage.setItem('langar_update_v607_done', String(Date.now()));
 
         if ('serviceWorker' in navigator) {
           const registrations = await navigator.serviceWorker.getRegistrations();
@@ -249,8 +386,8 @@
         }
 
         if ('caches' in window) {
-          const cacheNames = await caches.keys();
-          await Promise.all(cacheNames.map((name) => caches.delete(name)));
+          const names = await caches.keys();
+          await Promise.all(names.map((name) => caches.delete(name)));
         }
       } finally {
         removeUpdateDialog();
@@ -267,15 +404,19 @@
     versionCheckBusy = true;
 
     try {
-      const response = await fetch(`./app-version.json?_=${Date.now()}`, { cache: 'no-store' });
+      const response = await fetch(`./app-version.json?_=${Date.now()}`, {
+        cache: 'no-store'
+      });
       if (!response.ok) return;
 
       const manifest = await response.json();
       const remoteVersion = String(manifest.version || '');
 
       if (remoteVersion && compareVersions(remoteVersion, VERSION) > 0) {
-        const updatedAt = Number(sessionStorage.getItem('langar_update_v606_done') || 0);
-        if (!updatedAt || Date.now() - updatedAt > 120000) {
+        const recentUpdate = Number(
+          sessionStorage.getItem('langar_update_v607_done') || 0
+        );
+        if (!recentUpdate || Date.now() - recentUpdate > 120000) {
           showUpdateDialog(remoteVersion);
         }
       } else {
@@ -283,19 +424,23 @@
         localStorage.setItem('langar_applied_version', remoteVersion || VERSION);
       }
     } catch (error) {
-      console.warn('[Langar Update] Version check failed:', error);
+      console.warn('[Langar Update V607]', error);
     } finally {
       versionCheckBusy = false;
     }
   }
 
   function refreshLanguage() {
-    if (window.__langarOpeningV606) renderOpening(window.__langarOpeningV606);
+    if (window.__langarOpeningV607) renderOpening(window.__langarOpeningV607);
   }
 
   function init() {
+    patchDynamicTapas();
+
     try {
-      const cached = JSON.parse(localStorage.getItem('langar_opening_cache_v606') || 'null');
+      const cached = JSON.parse(
+        localStorage.getItem('langar_opening_cache_v607') || 'null'
+      );
       if (cached) renderOpening(cached);
     } catch (_) {}
 
@@ -304,20 +449,23 @@
 
     document.addEventListener('click', (event) => {
       if (event.target.closest('#langBtn,[data-language],[data-lang]')) {
-        setTimeout(refreshLanguage, 100);
+        window.setTimeout(refreshLanguage, 100);
       }
     }, true);
 
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) {
+        patchDynamicTapas();
         fetchOpening();
         checkVersion();
       }
     });
 
     window.addEventListener('online', fetchOpening);
-    setInterval(fetchOpening, 60000);
-    setInterval(checkVersion, 180000);
+
+    window.setInterval(fetchOpening, 15000);
+    window.setInterval(checkVersion, 180000);
+    window.setInterval(patchDynamicTapas, 5000);
   }
 
   if (document.readyState === 'loading') {
