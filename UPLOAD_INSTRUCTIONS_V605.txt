@@ -1,0 +1,8 @@
+Langar Bar V6.0.5 Opening Cloud Client Fix
+Upload/replace only:
+- index.html
+- service-worker.js
+- app-version.json
+- js/prelaunch-v605.js
+- css/prelaunch-v605.css
+No SQL required.
