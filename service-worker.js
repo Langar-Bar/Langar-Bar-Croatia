@@ -1,65 +1,8 @@
-const CACHE_NAME = 'langar-v560';
-const ASSETS = ['./','./index.html','./admin.html','./styles.css',
-  './css/gallery-v552.css','./css/admin-final-ui-v553.css','./css/admin-release-fixes-v555.css',
-  './js/client-gallery-v552.js',
-  './js/admin-gallery-v552.js','./js/admin-final-ui-v553.js','./js/admin-release-fixes-v555.js','./js/client-reservation-v555.js','./manifest.webmanifest','./admin-manifest.webmanifest','./js/menu-data.js','./js/app.js','./js/cloud.js','./js/auth-v500.js','./privacy.html','./terms.html','./js/admin.js','./js/admin-cloud.js','./js/admin-stable-v433.js','./js/order-print-v510.js','./README_V510_START_HERE.md','./assets/logo.jpeg','./assets/icecream_cone.svg','./assets/icon-192.png','./assets/icon-512.png','./assets/admin-icon-192.png','./assets/admin-icon-512.png','js/stabilization-v520.js'
-,'js/admin-stabilization-v520.js'
-,'js/order-print-v520.js'
-,'css/stabilization-v520.css',
-'js/order-print-v530.js',
-'js/admin-polish-v530.js',
-'js/client-polish-v530.js',
-'css/production-polish-v530.css',
-'js/admin-fixes-v532.js',
-'js/client-fixes-v532.js',
-'css/production-fixes-v532.css',
-  'css/knowledge-v541.css',
-  'js/admin-knowledge-v541.js',
-  'js/client-knowledge-v541.js'
-,
-  './js/admin-knowledge-fixes-v541.js',
-  './css/knowledge-fixes-v541.css',
-  './js/client-knowledge-v550.js',
-  './css/knowledge-fixes-v550.css'];
-self.addEventListener('install', event => { event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)).then(()=>self.skipWaiting())); });
-self.addEventListener('activate', event => { event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE_NAME).map(k=>caches.delete(k)))).then(()=>self.clients.claim())); });
-self.addEventListener('fetch', event => {
-  if(event.request.method !== 'GET') return;
-  const url=new URL(event.request.url);
-  const dynamic = event.request.mode==='navigate' || /\.(?:js|css|html)$/.test(url.pathname);
-  if(dynamic){
-    event.respondWith(fetch(event.request).then(response=>{ const copy=response.clone(); caches.open(CACHE_NAME).then(c=>c.put(event.request,copy)); return response; }).catch(()=>caches.match(event.request)));
-  }else{
-    event.respondWith(caches.match(event.request).then(cached=>cached || fetch(event.request)));
-  }
-});
-
-self.addEventListener('notificationclick', event => { event.notification.close(); event.waitUntil(clients.matchAll({type:'window', includeUncontrolled:true}).then(list => { for (const c of list) { if (c.url.includes('/Langar-Bar-Croatia/') && 'focus' in c) return c.focus(); } return clients.openWindow('./'); })); });
-
-
-self.addEventListener('message', event => {
-  const data = event.data || {};
-  if(data && data.type === 'langar-show-notification'){
-    const title = data.title || 'Langar Bar';
-    const options = data.options || { body: data.body || '' };
-    event.waitUntil(self.registration.showNotification(title, options));
-  }
-});
-
-self.addEventListener('push', event => {
-  let data = {};
-  try { data = event.data ? event.data.json() : {}; } catch(e) { data = { title:'Langar Bar', body: event.data ? event.data.text() : '' }; }
-  const title = data.title || data.headings?.en || 'Langar Bar';
-  const body = data.body || data.contents?.en || data.message || '';
-  const options = { body, icon:'assets/icon-192.png', badge:'assets/icon-192.png', tag:data.tag || 'langar-order-push', data:data.data || {} };
-  event.waitUntil(self.registration.showNotification(title, options));
-});
-// V5.5.0 assets
-
-// V5.5.6 release assets are network-first and loaded by HTML.
-
-// V5.5.7 network-first assets.
-
-// V5.5.9 final reservation UI assets are network-first.
-
-// V5.6.0 gallery display hotfix assets are network-first.
+const CACHE_NAME='langar-v600';
+const CORE=['./','./index.html','./admin.html','./styles.css','./manifest.webmanifest','./admin-manifest.webmanifest','./app-version.json','./js/prelaunch-v600.js','./js/admin-prelaunch-v600.js','./css/prelaunch-v600.css','./assets/icon-192.png','./assets/icon-512.png'];
+self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE_NAME).then(c=>Promise.allSettled(CORE.map(x=>c.add(x)))).then(()=>self.skipWaiting())));
+self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE_NAME).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
+self.addEventListener('message',e=>{if(e.data?.type==='SKIP_WAITING')self.skipWaiting();if(e.data?.type==='langar-show-notification')e.waitUntil(self.registration.showNotification(e.data.title||'Langar Bar',e.data.options||{body:e.data.body||''}))});
+self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;const u=new URL(e.request.url);const networkFirst=e.request.mode==='navigate'||/\.(?:js|css|html|json)$/.test(u.pathname);if(networkFirst){e.respondWith(fetch(e.request,{cache:'no-store'}).then(r=>{const copy=r.clone();caches.open(CACHE_NAME).then(c=>c.put(e.request,copy));return r}).catch(()=>caches.match(e.request).then(x=>x||caches.match('./index.html'))));}else{e.respondWith(caches.match(e.request).then(x=>x||fetch(e.request).then(r=>{const copy=r.clone();caches.open(CACHE_NAME).then(c=>c.put(e.request,copy));return r})));}});
+self.addEventListener('notificationclick',e=>{e.notification.close();const target=e.notification.data?.url||'./';e.waitUntil(clients.matchAll({type:'window',includeUncontrolled:true}).then(list=>{for(const c of list){if('focus'in c){c.navigate?.(target);return c.focus()}}return clients.openWindow(target)}))});
+self.addEventListener('push',e=>{let d={};try{d=e.data?e.data.json():{}}catch(_){d={body:e.data?.text()||''}};e.waitUntil(self.registration.showNotification(d.title||'Langar Bar',{body:d.body||d.message||'',icon:'assets/icon-192.png',badge:'assets/icon-192.png',tag:d.tag||'langar-push',data:d.data||{}}))});
