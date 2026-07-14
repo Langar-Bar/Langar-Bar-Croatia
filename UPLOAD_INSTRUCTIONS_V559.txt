@@ -1,0 +1,9 @@
+Langar Bar V5.5.9 Reservation UI Final Fix
+Upload/replace:
+- index.html
+- admin.html
+- service-worker.js
+- js/reservation-v559.js
+- css/reservation-v559.css
+No SQL is required.
+Test with ?v=559.
