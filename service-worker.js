@@ -1,5 +1,5 @@
-const CACHE_NAME='langar-v602';
-const CORE=['./','./index.html','./admin.html','./styles.css','./manifest.webmanifest','./admin-manifest.webmanifest','./app-version.json','./js/prelaunch-v602.js','./js/admin-prelaunch-v602.js','./css/prelaunch-v602.css','./assets/icon-192.png','./assets/icon-512.png'];
+const CACHE_NAME='langar-v603';
+const CORE=['./','./index.html','./admin.html','./styles.css','./manifest.webmanifest','./admin-manifest.webmanifest','./app-version.json','./js/prelaunch-v602.js','./js/admin-prelaunch-v603.js','./css/prelaunch-v603.css','./assets/icon-192.png','./assets/icon-512.png'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE_NAME).then(c=>Promise.allSettled(CORE.map(x=>c.add(new Request(x,{cache:'reload'}))))).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE_NAME).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('message',e=>{if(e.data?.type==='SKIP_WAITING')self.skipWaiting();if(e.data?.type==='CLEAR_CACHES')e.waitUntil(caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))))});

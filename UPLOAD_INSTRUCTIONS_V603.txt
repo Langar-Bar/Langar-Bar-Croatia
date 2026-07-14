@@ -1,0 +1,14 @@
+Langar Bar V6.0.3 Admin Cloud Opening Hotfix
+
+Upload/replace:
+- admin.html
+- service-worker.js
+- app-version.json
+- js/admin-prelaunch-v603.js
+- css/prelaunch-v603.css
+
+No SQL required.
+
+Test:
+Admin: https://langar-bar.github.io/Langar-Bar-Croatia/admin.html?v=603
+Customer: https://langar-bar.github.io/Langar-Bar-Croatia/?v=603
