@@ -1,0 +1,9 @@
+Replace only:
+js/prelaunch-v605.js
+js/admin-prelaunch-v603.js
+css/prelaunch-v605.css
+css/prelaunch-v603.css
+app-version.json
+
+Run langar_bar_v608_OPENING_FINAL_FIX.sql once.
+No service-worker replacement is required.
