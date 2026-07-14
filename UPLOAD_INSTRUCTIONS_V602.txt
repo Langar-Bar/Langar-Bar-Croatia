@@ -1,0 +1,17 @@
+Langar Bar V6.0.2 Gold Master Reliability Fix
+
+Upload/replace:
+- index.html
+- admin.html
+- service-worker.js
+- app-version.json
+- js/prelaunch-v602.js
+- js/admin-prelaunch-v602.js
+- css/prelaunch-v602.css
+
+Run once in Supabase SQL Editor:
+- langar_bar_v602_OPENING_RELIABILITY.sql
+
+Test:
+Customer: https://langar-bar.github.io/Langar-Bar-Croatia/?v=602
+Admin: https://langar-bar.github.io/Langar-Bar-Croatia/admin.html?v=602
