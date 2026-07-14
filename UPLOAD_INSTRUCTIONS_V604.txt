@@ -1,0 +1,8 @@
+Langar Bar V6.0.4 Update Loop Fix
+Upload/replace only:
+- index.html
+- service-worker.js
+- app-version.json
+- js/prelaunch-v604.js
+- css/prelaunch-v604.css
+No SQL required.
