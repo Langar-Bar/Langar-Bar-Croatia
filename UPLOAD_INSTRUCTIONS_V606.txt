@@ -1,0 +1,7 @@
+Replace only:
+js/prelaunch-v605.js
+css/prelaunch-v605.css
+service-worker.js
+app-version.json
+
+Then run langar_bar_v606_OPENING_PUBLIC_RPC.sql once in Supabase SQL Editor.

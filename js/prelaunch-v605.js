@@ -1,133 +1,328 @@
-(()=>{
-'use strict';
-const VERSION='6.0.5';
-const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-const isClient=x=>!!x&&typeof x.from==='function'&&typeof x.rpc==='function';
-function cloud(){
- const candidates=[
-  window.langarSupabase,window.supabaseClient,window.sb,
-  window.LangarCloud,window.LangarCloud?.client,window.LangarCloud?.supabase,
-  window.LangarAdminCloud,window.LangarAdminCloud?.client,
-  window.cloudClient,window.supabase?.client
- ];
- for(const c of candidates)if(isClient(c))return c;
- try{
-  for(const k of Object.getOwnPropertyNames(window)){
-   let v;try{v=window[k]}catch(_){continue}
-   if(isClient(v))return v;
-   if(v&&typeof v==='object'){
-    for(const n of ['client','supabase','db']){try{if(isClient(v[n]))return v[n]}catch(_){}}
-   }
+(() => {
+  'use strict';
+
+  const VERSION = '6.0.6';
+  const SUPABASE_URL = 'https://fkanccgigogbxodiljqt.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_WbWIWgu9R2AKepJiRrygCw_1oWrdwG7';
+  const OPENING_RPC_URL = `${SUPABASE_URL}/rest/v1/rpc/get_opening_public_v606`;
+
+  let countdownTimer = null;
+  let versionCheckBusy = false;
+
+  const lang = () => {
+    const value = (localStorage.getItem('langar_lang') || document.documentElement.lang || 'hr').toLowerCase();
+    return value.startsWith('en') ? 'en' : 'hr';
+  };
+
+  const escapeHtml = (value) =>
+    String(value ?? '').replace(/[&<>"']/g, (char) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;'
+    }[char]));
+
+  function statusLabel(status) {
+    const labels = {
+      opening_soon: { en: 'Opening Soon', hr: 'Uskoro otvaramo' },
+      soft_opening: { en: 'Soft Opening', hr: 'Probno otvorenje' },
+      grand_opening: { en: 'Grand Opening', hr: 'Svečano otvorenje' },
+      open_now: { en: 'Open Now', hr: 'Otvoreno' }
+    };
+    return (labels[status] || labels.opening_soon)[lang()];
   }
- }catch(_){ }
- return null;
-}
-const getLang=()=>{const v=(localStorage.getItem('langar_lang')||document.documentElement.lang||'hr').toLowerCase();return v.startsWith('en')?'en':'hr'};
-let openingTimer=null,openingChannel=null,openingRetry=0,dedupeLock=false,versionBusy=false,openingFetchBusy=false;
-function cleanPopularDuplicates(){
- if(dedupeLock)return;dedupeLock=true;
- try{
-  const view=document.getElementById('ask-barista');if(!view)return;
-  const blocks=[...view.querySelectorAll('.popular-questions,.knowledge-suggestions,.suggested-questions,[data-popular-questions],section,div')]
-   .filter(el=>/popular questions|popularna pitanja/i.test((el.querySelector('h2,h3,h4')?.textContent||'').trim()));
-  blocks.slice(1).forEach(el=>el.remove());
- }finally{setTimeout(()=>dedupeLock=false,100)}
-}
-function rerenderLanguage(){
- document.querySelectorAll('[data-en][data-hr]').forEach(el=>{const val=el.getAttribute('data-'+getLang());if(val!=null)el.textContent=val});
- try{window.LangarKnowledgeV542?.history?.()}catch(_){ }
- try{window.LangarKnowledgeV542?.suggested?.()}catch(_){ }
- setTimeout(cleanPopularDuplicates,50);setTimeout(cleanPopularDuplicates,300);
- renderOpening(window.__langarOpeningV605||null);
- document.dispatchEvent(new CustomEvent('langar:languagechanged',{detail:{lang:getLang()}}));
-}
-function installLanguageBridge(){
- const btn=document.getElementById('langBtn');
- if(btn&&!btn.dataset.v605){btn.dataset.v605='1';btn.addEventListener('click',()=>setTimeout(rerenderLanguage,60))}
- window.addEventListener('storage',e=>{if(e.key==='langar_lang')rerenderLanguage()});
- document.addEventListener('click',e=>{if(e.target.closest('#langBtn,[data-language],[data-lang]'))setTimeout(rerenderLanguage,80)},true);
- const ask=document.getElementById('ask-barista');if(ask)new MutationObserver(cleanPopularDuplicates).observe(ask,{childList:true,subtree:true});
- setTimeout(cleanPopularDuplicates,350);
-}
-function openingLabel(o){const L=getLang();const map={opening_soon:{hr:'Uskoro otvaramo',en:'Opening Soon'},soft_opening:{hr:'Probno otvorenje',en:'Soft Opening'},grand_opening:{hr:'Svečano otvorenje',en:'Grand Opening'},open_now:{hr:'Otvoreno',en:'Open Now'}};return(map[o?.status]||map.opening_soon)[L]}
-function ensureOpeningHost(){
- let host=document.getElementById('langarOpeningV605');if(host)return host;
- document.querySelectorAll('#langarOpeningV600,#langarOpeningV601,#langarOpeningV602').forEach(x=>x.remove());
- const home=document.getElementById('home');if(!home)return null;
- host=document.createElement('section');host.id='langarOpeningV605';host.className='opening-v602';
- const anchor=home.querySelector('.hero,.section-head,.home-hero')||home.firstElementChild;
- if(anchor)anchor.insertAdjacentElement('afterend',host);else home.prepend(host);
- return host;
-}
-function renderOpening(o){
- if(openingTimer){clearInterval(openingTimer);openingTimer=null}
- const host=ensureOpeningHost();if(!host)return;
- if(!o||o.enabled===false){host.hidden=true;return}
- host.hidden=false;window.__langarOpeningV605=o;
- try{localStorage.setItem('langar_opening_cache_v605',JSON.stringify(o))}catch(_){ }
- const L=getLang(),title=openingLabel(o),headline=L==='hr'?(o.headline_hr||title):(o.headline_en||title),announcement=L==='hr'?(o.announcement_hr||''):(o.announcement_en||'');
- const hero=o.hero_image_url?`<img class="opening-v602-image" src="${esc(o.hero_image_url)}" alt="${esc(headline)}">`:'';
- host.innerHTML=`${hero}<div class="opening-v602-inner"><span class="opening-v602-kicker">${esc(title)}</span><h2>${esc(headline)}</h2>${announcement?`<p>${esc(announcement)}</p>`:''}<div id="openingCountdownV605" class="opening-countdown-v602" ${o.opening_at?'':'hidden'}></div>${!o.opening_at&&o.status!=='open_now'?`<small>${L==='hr'?'Točan datum objavit ćemo uskoro.':'The exact date will be announced soon.'}</small>`:''}</div>`;
- if(o.opening_at){
-  const target=new Date(o.opening_at).getTime();
-  const draw=()=>{const out=document.getElementById('openingCountdownV605');if(!out)return;const d=target-Date.now();if(!Number.isFinite(target)){out.hidden=true;return}out.hidden=false;if(d<=0){out.innerHTML=`<strong>${esc(openingLabel({...o,status:'open_now'}))}</strong>`;return}const days=Math.floor(d/86400000),hours=Math.floor(d%86400000/3600000),mins=Math.floor(d%3600000/60000),secs=Math.floor(d%60000/1000),labels=L==='hr'?['dana','sati','min','sek']:['days','hours','min','sec'];out.innerHTML=[[days,labels[0]],[hours,labels[1]],[mins,labels[2]],[secs,labels[3]]].map(([n,l])=>`<span><b>${n}</b><small>${l}</small></span>`).join('')};
-  draw();openingTimer=setInterval(draw,1000);
- }
-}
-async function fetchOpening(){
- if(openingFetchBusy)return;openingFetchBusy=true;
- try{
-  const c=cloud();
-  if(!c){if(openingRetry++<80)setTimeout(fetchOpening,500);return}
-  let data,error;
-  try{({data,error}=await c.rpc('get_opening_settings_v600'))}catch(e){error=e}
-  if(error||!data){try{({data,error}=await c.from('opening_management').select('*').eq('id',1).maybeSingle())}catch(e){error=e}}
-  const o=Array.isArray(data)?data[0]:data;
-  if(!error&&o){openingRetry=0;renderOpening(o);subscribeOpening(c)}
-  else if(openingRetry++<30)setTimeout(fetchOpening,1200);
- }finally{openingFetchBusy=false}
-}
-function subscribeOpening(c){
- if(openingChannel||!c?.channel)return;
- openingChannel=c.channel('opening-v605').on('postgres_changes',{event:'*',schema:'public',table:'opening_management'},p=>renderOpening(p.new||p.old)).subscribe();
- try{const bc=new BroadcastChannel('langar-opening');bc.onmessage=e=>{if(e.data)renderOpening(e.data)}}catch(_){ }
-}
-function compareVersions(a,b){const A=String(a).split('.').map(Number),B=String(b).split('.').map(Number);for(let i=0;i<Math.max(A.length,B.length);i++){const x=A[i]||0,y=B[i]||0;if(x!==y)return x-y}return 0}
-function updateDialog(remote,force=false){
- if(document.getElementById('langarUpdateV605'))return;
- document.querySelectorAll('[id^="langarUpdateV60"]').forEach(x=>x.remove());
- const L=getLang(),box=document.createElement('div');box.id='langarUpdateV605';box.className='update-v604';
- box.innerHTML=`<div><h3>${L==='hr'?'Dostupna je nova verzija':'A new version is available'}</h3><p>${L==='hr'?'Ažurirajte aplikaciju kako biste dobili najnovija poboljšanja.':'Update the app to receive the latest improvements.'}</p><div class="update-actions-v604"><button id="langarUpdateNowV605" class="update-primary-v604">${L==='hr'?'Ažuriraj sada':'Update now'}</button>${force?'':`<button id="langarUpdateLaterV605" class="update-secondary-v604">${L==='hr'?'Kasnije':'Later'}</button>`}</div></div>`;
- document.body.appendChild(box);
- box.querySelector('#langarUpdateLaterV605')?.addEventListener('click',()=>box.remove());
- box.querySelector('#langarUpdateNowV605').onclick=hardUpdate;
-}
-async function hardUpdate(){
- const btn=document.getElementById('langarUpdateNowV605');if(btn){btn.disabled=true;btn.textContent=getLang()==='hr'?'Ažuriranje…':'Updating…'}
- const targetVersion=window.__langarRemoteVersion||VERSION;
- try{
-  sessionStorage.setItem('langar_update_in_progress',String(Date.now()));localStorage.setItem('langar_applied_version',targetVersion);
-  if('serviceWorker'in navigator){const regs=await navigator.serviceWorker.getRegistrations();for(const r of regs){try{await r.update();if(r.waiting)r.waiting.postMessage({type:'SKIP_WAITING'})}catch(_){}}}
-  if('caches'in window){for(const k of await caches.keys())await caches.delete(k)}
- }catch(_){ }
- document.getElementById('langarUpdateV605')?.remove();
- const url=new URL(location.href);url.searchParams.set('v','605');url.searchParams.set('_u',Date.now());setTimeout(()=>location.replace(url.toString()),250);
-}
-async function checkVersion(){
- if(versionBusy)return;versionBusy=true;
- try{
-  const r=await fetch('./app-version.json?_='+Date.now(),{cache:'no-store'});if(!r.ok)throw new Error('version file');
-  const j=await r.json(),remote=String(j.version||'');window.__langarRemoteVersion=remote||VERSION;
-  const justUpdated=Number(sessionStorage.getItem('langar_update_in_progress')||0),grace=justUpdated&&Date.now()-justUpdated<120000;
-  if(remote&&compareVersions(remote,VERSION)>0&&!grace)updateDialog(remote,!!j.force_update);
-  else{document.querySelectorAll('[id^="langarUpdateV60"]').forEach(x=>x.remove());localStorage.setItem('langar_applied_version',remote||VERSION);if(!remote||compareVersions(remote,VERSION)<=0)sessionStorage.removeItem('langar_update_in_progress')}
- }catch(_){ }finally{versionBusy=false}
-}
-function init(){
- try{const c=JSON.parse(localStorage.getItem('langar_opening_cache_v605')||'null');if(c)renderOpening(c)}catch(_){ }
- installLanguageBridge();fetchOpening();checkVersion();setInterval(checkVersion,180000);
- document.addEventListener('visibilitychange',()=>{if(!document.hidden){checkVersion();fetchOpening()}});
- window.addEventListener('online',fetchOpening);
-}
-document.addEventListener('DOMContentLoaded',init);setTimeout(init,1000);setTimeout(fetchOpening,3000);
+
+  function ensureOpeningHost() {
+    let host = document.getElementById('langarOpeningV606');
+    if (host) return host;
+
+    document.querySelectorAll(
+      '#langarOpeningV600,#langarOpeningV601,#langarOpeningV602,#langarOpeningV605'
+    ).forEach((node) => node.remove());
+
+    const home = document.getElementById('home');
+    if (!home) return null;
+
+    host = document.createElement('section');
+    host.id = 'langarOpeningV606';
+    host.className = 'opening-v606';
+
+    const hero = home.querySelector('.hero-v3, .hero, .home-hero') || home.firstElementChild;
+    if (hero) hero.insertAdjacentElement('afterend', host);
+    else home.prepend(host);
+
+    return host;
+  }
+
+  function renderOpening(settings) {
+    if (countdownTimer) {
+      clearInterval(countdownTimer);
+      countdownTimer = null;
+    }
+
+    const host = ensureOpeningHost();
+    if (!host) return;
+
+    if (!settings || settings.enabled === false) {
+      host.hidden = true;
+      return;
+    }
+
+    host.hidden = false;
+    window.__langarOpeningV606 = settings;
+
+    try {
+      localStorage.setItem('langar_opening_cache_v606', JSON.stringify(settings));
+    } catch (_) {}
+
+    const currentLang = lang();
+    const label = statusLabel(settings.status);
+    const headline = currentLang === 'hr'
+      ? (settings.headline_hr || label)
+      : (settings.headline_en || label);
+    const announcement = currentLang === 'hr'
+      ? (settings.announcement_hr || '')
+      : (settings.announcement_en || '');
+
+    const heroImage = settings.hero_image_url
+      ? `<img class="opening-v606-image" src="${escapeHtml(settings.hero_image_url)}" alt="${escapeHtml(headline)}">`
+      : '';
+
+    host.innerHTML = `
+      ${heroImage}
+      <div class="opening-v606-content">
+        <span class="opening-v606-status">${escapeHtml(label)}</span>
+        <h2>${escapeHtml(headline)}</h2>
+        ${announcement ? `<p>${escapeHtml(announcement)}</p>` : ''}
+        <div id="openingCountdownV606" class="opening-v606-countdown"></div>
+      </div>
+    `;
+
+    const countdown = document.getElementById('openingCountdownV606');
+
+    if (!settings.opening_at || settings.status === 'open_now') {
+      if (countdown) {
+        countdown.innerHTML = settings.status === 'open_now'
+          ? `<strong>${escapeHtml(statusLabel('open_now'))}</strong>`
+          : `<span>${currentLang === 'hr'
+              ? 'Točan datum objavit ćemo uskoro.'
+              : 'The exact date will be announced soon.'}</span>`;
+      }
+      return;
+    }
+
+    const target = new Date(settings.opening_at).getTime();
+    if (!Number.isFinite(target)) {
+      if (countdown) countdown.textContent = currentLang === 'hr'
+        ? 'Datum otvorenja nije ispravan.'
+        : 'The opening date is invalid.';
+      return;
+    }
+
+    const draw = () => {
+      const output = document.getElementById('openingCountdownV606');
+      if (!output) return;
+
+      const difference = target - Date.now();
+      if (difference <= 0) {
+        output.innerHTML = `<strong>${escapeHtml(statusLabel('open_now'))}</strong>`;
+        clearInterval(countdownTimer);
+        countdownTimer = null;
+        return;
+      }
+
+      const days = Math.floor(difference / 86400000);
+      const hours = Math.floor((difference % 86400000) / 3600000);
+      const minutes = Math.floor((difference % 3600000) / 60000);
+      const seconds = Math.floor((difference % 60000) / 1000);
+      const labels = currentLang === 'hr'
+        ? ['dana', 'sati', 'min', 'sek']
+        : ['days', 'hours', 'min', 'sec'];
+
+      output.innerHTML = [
+        [days, labels[0]],
+        [hours, labels[1]],
+        [minutes, labels[2]],
+        [seconds, labels[3]]
+      ].map(([number, unit]) => `
+        <div class="opening-v606-time">
+          <b>${number}</b>
+          <span>${unit}</span>
+        </div>
+      `).join('');
+    };
+
+    draw();
+    countdownTimer = setInterval(draw, 1000);
+  }
+
+  async function fetchOpening() {
+    try {
+      const response = await fetch(`${OPENING_RPC_URL}?_=${Date.now()}`, {
+        method: 'POST',
+        cache: 'no-store',
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json'
+        },
+        body: '{}'
+      });
+
+      if (!response.ok) {
+        throw new Error(`Opening request failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const settings = Array.isArray(data) ? data[0] : data;
+
+      if (settings && typeof settings === 'object') {
+        renderOpening(settings);
+        return;
+      }
+
+      throw new Error('Opening response was empty.');
+    } catch (error) {
+      console.warn('[Langar Opening] Cloud read failed:', error);
+      try {
+        const cached = JSON.parse(localStorage.getItem('langar_opening_cache_v606') || 'null');
+        if (cached) renderOpening(cached);
+      } catch (_) {}
+    }
+  }
+
+  function compareVersions(left, right) {
+    const a = String(left).split('.').map((item) => Number(item) || 0);
+    const b = String(right).split('.').map((item) => Number(item) || 0);
+    const length = Math.max(a.length, b.length);
+
+    for (let index = 0; index < length; index += 1) {
+      if ((a[index] || 0) > (b[index] || 0)) return 1;
+      if ((a[index] || 0) < (b[index] || 0)) return -1;
+    }
+    return 0;
+  }
+
+  function removeUpdateDialog() {
+    document.querySelectorAll('[id^="langarUpdateV60"]').forEach((node) => node.remove());
+  }
+
+  function showUpdateDialog(remoteVersion) {
+    removeUpdateDialog();
+
+    const currentLang = lang();
+    const overlay = document.createElement('div');
+    overlay.id = 'langarUpdateV606';
+    overlay.className = 'update-v606-overlay';
+    overlay.innerHTML = `
+      <div class="update-v606-card">
+        <h2>${currentLang === 'hr' ? 'Dostupna je nova verzija' : 'A new version is available'}</h2>
+        <p>${currentLang === 'hr'
+          ? 'Ažurirajte aplikaciju kako biste dobili najnovija poboljšanja.'
+          : 'Update the app to receive the latest improvements.'}</p>
+        <button id="langarUpdateNowV606" type="button">
+          ${currentLang === 'hr' ? 'Ažuriraj sada' : 'Update now'}
+        </button>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('#langarUpdateNowV606').addEventListener('click', async () => {
+      const button = overlay.querySelector('#langarUpdateNowV606');
+      button.disabled = true;
+      button.textContent = currentLang === 'hr' ? 'Ažuriranje…' : 'Updating…';
+
+      try {
+        localStorage.setItem('langar_applied_version', remoteVersion);
+        sessionStorage.setItem('langar_update_v606_done', String(Date.now()));
+
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          for (const registration of registrations) {
+            try {
+              await registration.update();
+              registration.waiting?.postMessage({ type: 'SKIP_WAITING' });
+            } catch (_) {}
+          }
+        }
+
+        if ('caches' in window) {
+          const cacheNames = await caches.keys();
+          await Promise.all(cacheNames.map((name) => caches.delete(name)));
+        }
+      } finally {
+        removeUpdateDialog();
+        const url = new URL(window.location.href);
+        url.searchParams.set('v', remoteVersion.replace(/\./g, ''));
+        url.searchParams.set('_refresh', String(Date.now()));
+        window.location.replace(url.toString());
+      }
+    });
+  }
+
+  async function checkVersion() {
+    if (versionCheckBusy) return;
+    versionCheckBusy = true;
+
+    try {
+      const response = await fetch(`./app-version.json?_=${Date.now()}`, { cache: 'no-store' });
+      if (!response.ok) return;
+
+      const manifest = await response.json();
+      const remoteVersion = String(manifest.version || '');
+
+      if (remoteVersion && compareVersions(remoteVersion, VERSION) > 0) {
+        const updatedAt = Number(sessionStorage.getItem('langar_update_v606_done') || 0);
+        if (!updatedAt || Date.now() - updatedAt > 120000) {
+          showUpdateDialog(remoteVersion);
+        }
+      } else {
+        removeUpdateDialog();
+        localStorage.setItem('langar_applied_version', remoteVersion || VERSION);
+      }
+    } catch (error) {
+      console.warn('[Langar Update] Version check failed:', error);
+    } finally {
+      versionCheckBusy = false;
+    }
+  }
+
+  function refreshLanguage() {
+    if (window.__langarOpeningV606) renderOpening(window.__langarOpeningV606);
+  }
+
+  function init() {
+    try {
+      const cached = JSON.parse(localStorage.getItem('langar_opening_cache_v606') || 'null');
+      if (cached) renderOpening(cached);
+    } catch (_) {}
+
+    fetchOpening();
+    checkVersion();
+
+    document.addEventListener('click', (event) => {
+      if (event.target.closest('#langBtn,[data-language],[data-lang]')) {
+        setTimeout(refreshLanguage, 100);
+      }
+    }, true);
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        fetchOpening();
+        checkVersion();
+      }
+    });
+
+    window.addEventListener('online', fetchOpening);
+    setInterval(fetchOpening, 60000);
+    setInterval(checkVersion, 180000);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init, { once: true });
+  } else {
+    init();
+  }
 })();

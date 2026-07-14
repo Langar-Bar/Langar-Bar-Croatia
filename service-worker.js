@@ -1,8 +1,61 @@
-const CACHE_NAME='langar-v605';
-const CORE=['./','./index.html','./admin.html','./styles.css','./manifest.webmanifest','./admin-manifest.webmanifest','./app-version.json','./js/prelaunch-v605.js','./js/admin-prelaunch-v603.js','./css/prelaunch-v605.css','./css/prelaunch-v603.css','./assets/icon-192.png','./assets/icon-512.png'];
-self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE_NAME).then(c=>Promise.allSettled(CORE.map(x=>c.add(new Request(x,{cache:'reload'}))))).then(()=>self.skipWaiting())));
-self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE_NAME).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
-self.addEventListener('message',e=>{if(e.data?.type==='SKIP_WAITING')self.skipWaiting();if(e.data?.type==='CLEAR_CACHES')e.waitUntil(caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))))});
-self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;const u=new URL(e.request.url);if(u.origin!==location.origin)return;const dynamic=e.request.mode==='navigate'||/\.(?:js|css|html|json)$/.test(u.pathname);if(dynamic){e.respondWith(fetch(new Request(e.request,{cache:'no-store'})).then(r=>{const cp=r.clone();caches.open(CACHE_NAME).then(c=>c.put(e.request,cp));return r}).catch(()=>caches.match(e.request).then(x=>x||caches.match('./index.html'))));return}e.respondWith(caches.match(e.request).then(x=>x||fetch(e.request).then(r=>{const cp=r.clone();caches.open(CACHE_NAME).then(c=>c.put(e.request,cp));return r})))});
-self.addEventListener('notificationclick',e=>{e.notification.close();const target=e.notification.data?.url||'./';e.waitUntil(clients.matchAll({type:'window',includeUncontrolled:true}).then(list=>{for(const c of list){if('focus'in c){c.navigate?.(target);return c.focus()}}return clients.openWindow(target)}))});
-self.addEventListener('push',e=>{let d={};try{d=e.data?e.data.json():{}}catch(_){d={body:e.data?.text()||''}};e.waitUntil(self.registration.showNotification(d.title||'Langar Bar',{body:d.body||d.message||'',icon:'assets/icon-192.png',badge:'assets/icon-192.png',tag:d.tag||'langar-push',data:d.data||{}}))});
+const CACHE_NAME = 'langar-bar-v606';
+const STATIC_ASSETS = [
+  './',
+  './index.html',
+  './styles.css',
+  './app-version.json',
+  './js/prelaunch-v605.js',
+  './css/prelaunch-v605.css'
+];
+
+self.addEventListener('install', (event) => {
+  self.skipWaiting();
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS).catch(() => undefined))
+  );
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    Promise.all([
+      caches.keys().then((keys) =>
+        Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))
+      ),
+      self.clients.claim()
+    ])
+  );
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
+});
+
+self.addEventListener('fetch', (event) => {
+  const request = event.request;
+  if (request.method !== 'GET') return;
+
+  const url = new URL(request.url);
+  const isFreshAsset =
+    request.mode === 'navigate' ||
+    url.pathname.endsWith('.js') ||
+    url.pathname.endsWith('.css') ||
+    url.pathname.endsWith('app-version.json') ||
+    url.pathname.endsWith('index.html');
+
+  if (isFreshAsset) {
+    event.respondWith(
+      fetch(request, { cache: 'no-store' })
+        .then((response) => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          return response;
+        })
+        .catch(() => caches.match(request).then((cached) => cached || caches.match('./index.html')))
+    );
+    return;
+  }
+
+  event.respondWith(
+    caches.match(request).then((cached) => cached || fetch(request))
+  );
+});
