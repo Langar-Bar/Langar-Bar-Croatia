@@ -3,20 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Langar Admin V6.1.0 Test</title>
+<title>Langar Admin V6.1.1 Test</title>
 <style>html,body{margin:0;height:100%;background:#07120e}#bar{height:42px;box-sizing:border-box;padding:9px 12px;background:#d8b24a;color:#080808;font:900 14px Arial;text-align:center}iframe{border:0;width:100%;height:calc(100% - 42px);display:block}</style>
 </head>
 <body>
-<div id="bar">LANGAR ADMIN V6.1.0 TEST — live order alert + ETA + contrast fixes</div>
-<iframe id="app" src="admin.html?v=610test" allow="clipboard-read;clipboard-write;notifications;autoplay"></iframe>
+<div id="bar">LANGAR ADMIN V6.1.1 TEST — brand button contrast + cancellation alerts + ETA</div>
+<iframe id="app" src="admin.html?v=611test" allow="clipboard-read;clipboard-write;notifications;autoplay"></iframe>
 <script>
 const f=document.getElementById('app');
 f.addEventListener('load',()=>{
   try{
     const d=f.contentDocument;
-    ['css/admin-v609.css?v=610','css/admin-v610.css?v=610'].forEach(h=>{const x=d.createElement('link');x.rel='stylesheet';x.href=h;d.head.appendChild(x)});
-    ['js/admin-v609.js?v=610','js/admin-v610.js?v=610'].forEach(s=>{const x=d.createElement('script');x.src=s;d.body.appendChild(x)});
-  }catch(e){document.getElementById('bar').textContent='V6.1.0 preview injection failed: '+e.message;}
+    ['css/admin-v609.css?v=611','css/admin-v610.css?v=611'].forEach(h=>{const x=d.createElement('link');x.rel='stylesheet';x.href=h;d.head.appendChild(x)});
+    ['js/admin-v609.js?v=611','js/admin-v610.js?v=611'].forEach(s=>{const x=d.createElement('script');x.src=s;d.body.appendChild(x)});
+  }catch(e){document.getElementById('bar').textContent='V6.1.1 preview injection failed: '+e.message;}
 });
 </script>
 </body>
