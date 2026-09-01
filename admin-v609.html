@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Langar Admin V6.0.9 Test</title>
+<style>html,body{margin:0;height:100%;background:#07120e}#bar{height:42px;box-sizing:border-box;padding:9px 12px;background:#d8b24a;color:#102f24;font:800 14px Arial;text-align:center}iframe{border:0;width:100%;height:calc(100% - 42px);display:block}</style>
+</head>
+<body>
+<div id="bar">LANGAR ADMIN V6.0.9 TEST — isolated preview; production admin.html is unchanged</div>
+<iframe id="app" src="admin.html?v=609test" allow="clipboard-read;clipboard-write"></iframe>
+<script>
+const f=document.getElementById('app');
+f.addEventListener('load',()=>{
+  try{
+    const d=f.contentDocument;
+    const css=d.createElement('link');css.rel='stylesheet';css.href='css/admin-v609.css?v=609';d.head.appendChild(css);
+    const js=d.createElement('script');js.src='js/admin-v609.js?v=609';d.body.appendChild(js);
+  }catch(e){document.getElementById('bar').textContent='V6.0.9 preview injection failed: '+e.message;}
+});
+</script>
+</body>
+</html>
