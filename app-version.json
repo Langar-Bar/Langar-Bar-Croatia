@@ -1,6 +1,7 @@
 {
-  "version": "6.0.8",
-  "channel": "opening-final-direct-table-rpc",
-  "released_at": "2026-07-14T19:30:00Z",
-  "force_update": true
+  "version": "6.2.2",
+  "channel": "unified-final-test",
+  "released_at": "2026-09-02T00:58:00+02:00",
+  "force_update": true,
+  "notes": "Unified customer + secure staff console; sticky order budget; motion polish; Cloud experience, referral, sushi, applications; hardened rewards, feedback, reviews, notifications and operational controls."
 }
