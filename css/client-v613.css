@@ -1,53 +1,24 @@
 /* Langar Bar Customer UX V6.1.3 — motion + sticky order budget summary */
 :root{--v613-green:#123f2e;--v613-gold:#d8b24a;--v613-ink:#090909;--v613-cream:#fff8e6}
-
-/* Tactile, polished controls */
 button,a,.menu-card,.promo-card,.more-card,.quick-grid>*,.club-auth-tabs button,.slot-btn,.date-chip{transition:transform .16s cubic-bezier(.2,.8,.2,1),box-shadow .2s ease,filter .2s ease,opacity .2s ease!important;-webkit-tap-highlight-color:transparent}
 button:active,a:active,.menu-card:active,.promo-card:active,.more-card:active,.quick-grid>*:active{transform:scale(.965)!important;filter:brightness(1.06)}
 button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--v613-gold)!important;outline-offset:2px!important}
-
-/* View/page transitions */
 .view.active{animation:v613ViewIn .32s cubic-bezier(.2,.8,.2,1)}
 @keyframes v613ViewIn{from{opacity:.15;transform:translateY(10px) scale(.992)}to{opacity:1;transform:none}}
-
-/* Modal / drawer transitions. Existing hidden class remains source of truth. */
-.modal:not(.hidden){animation:v613FadeIn .2s ease both}
-.modal:not(.hidden) .modal-card{animation:v613ModalIn .28s cubic-bezier(.18,.9,.25,1.15) both;transform-origin:center bottom}
-.drawer:not(.hidden){animation:v613FadeIn .18s ease both}
-.drawer:not(.hidden)>div{animation:v613DrawerIn .3s cubic-bezier(.2,.8,.2,1) both}
-@keyframes v613FadeIn{from{opacity:0}to{opacity:1}}
-@keyframes v613ModalIn{from{opacity:0;transform:translateY(26px) scale(.94)}to{opacity:1;transform:none}}
-@keyframes v613DrawerIn{from{opacity:.3;transform:translateX(34px)}to{opacity:1;transform:none}}
-
-/* Add-to-cart pulse */
-.v613-cart-pulse{animation:v613CartPulse .42s cubic-bezier(.2,.8,.2,1)}
-@keyframes v613CartPulse{0%{transform:scale(1)}45%{transform:scale(1.035);box-shadow:0 0 0 5px rgba(216,178,74,.22)}100%{transform:scale(1)}}
-
-/* Sticky order summary — stays above category/menu content */
-#v613OrderSummary{position:sticky;top:0;z-index:38;margin:0 0 12px;padding:10px 12px;border-radius:16px;background:linear-gradient(135deg,rgba(18,63,46,.98),rgba(9,34,25,.98));border:1px solid rgba(216,178,74,.55);box-shadow:0 10px 28px rgba(0,0,0,.27);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:#fff}
+.modal:not(.hidden){animation:v613FadeIn .2s ease both}.modal:not(.hidden) .modal-card{animation:v613ModalIn .28s cubic-bezier(.18,.9,.25,1.15) both;transform-origin:center bottom}.drawer:not(.hidden){animation:v613FadeIn .18s ease both}.drawer:not(.hidden)>div{animation:v613DrawerIn .3s cubic-bezier(.2,.8,.2,1) both}
+@keyframes v613FadeIn{from{opacity:0}to{opacity:1}}@keyframes v613ModalIn{from{opacity:0;transform:translateY(26px) scale(.94)}to{opacity:1;transform:none}}@keyframes v613DrawerIn{from{opacity:.3;transform:translateX(34px)}to{opacity:1;transform:none}}
+.v613-cart-pulse{animation:v613CartPulse .42s cubic-bezier(.2,.8,.2,1)}@keyframes v613CartPulse{0%{transform:scale(1)}45%{transform:scale(1.025);box-shadow:0 0 0 5px rgba(216,178,74,.22)}100%{transform:scale(1)}}
+#v613OrderSummary{position:sticky;top:0;z-index:38;margin:0 0 12px;padding:10px 12px;border-radius:16px;background:linear-gradient(135deg,rgba(18,63,46,.985),rgba(9,34,25,.985));border:1px solid rgba(216,178,74,.55);box-shadow:0 10px 28px rgba(0,0,0,.27);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:#fff;transition:border-radius .2s ease,box-shadow .2s ease}
+#v613OrderSummary.v613-expanded{box-shadow:0 16px 38px rgba(0,0,0,.36)}
 #v613OrderSummary .v613-order-row{display:flex;align-items:center;gap:10px}
-#v613OrderSummary .v613-order-title{min-width:0;flex:1}
-#v613OrderSummary .v613-order-title b{display:block;font-size:.92rem;color:#fff}
-#v613OrderSummary .v613-order-title small{display:block;margin-top:2px;color:rgba(255,255,255,.76);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#v613OrderSummary .v613-order-count{display:grid;place-items:center;min-width:36px;height:36px;border-radius:50%;background:var(--v613-gold);color:var(--v613-ink);font-weight:900;font-size:.92rem}
-#v613OrderSummary .v613-order-total{text-align:right;color:var(--v613-gold);font-weight:950;font-size:1.22rem;line-height:1}
-#v613OrderSummary .v613-order-total small{display:block;color:rgba(255,255,255,.68);font-size:.64rem;font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em}
-#v613OrderSummary .v613-order-open{border:0;border-radius:12px;background:var(--v613-gold)!important;color:var(--v613-ink)!important;font-weight:900;padding:9px 11px;white-space:nowrap}
+#v613OrderSummary .v613-order-title{min-width:0;flex:1;cursor:pointer}#v613OrderSummary .v613-order-title b{display:block;font-size:.92rem;color:#fff}#v613OrderSummary .v613-order-title small{display:block;margin-top:2px;color:rgba(255,255,255,.76);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#v613OrderSummary .v613-order-count{display:grid;place-items:center;min-width:36px;height:36px;border-radius:50%;background:var(--v613-gold);color:var(--v613-ink);font-weight:900;font-size:.92rem;cursor:pointer}
+#v613OrderSummary .v613-order-total{text-align:right;color:var(--v613-gold);font-weight:950;font-size:1.22rem;line-height:1;cursor:pointer}#v613OrderSummary .v613-order-total small{display:block;color:rgba(255,255,255,.68);font-size:.64rem;font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em}
+#v613OrderSummary .v613-order-open,#v613OrderSummary .v613-go-checkout{border:0;border-radius:12px;background:var(--v613-gold)!important;color:var(--v613-ink)!important;font-weight:900;padding:9px 11px;white-space:nowrap}
 #v613OrderSummary.v613-empty{opacity:.84}
-
-/* When scrolled, leave breathing room from host header */
-#order .section-head.compact-head{margin-bottom:8px}
-
-/* Smooth cart-side reveal when summary button is used */
-.cart.v613-cart-focus{animation:v613CartFocus .55s ease}
-@keyframes v613CartFocus{0%,100%{box-shadow:inherit}45%{box-shadow:0 0 0 4px rgba(216,178,74,.34),0 18px 36px rgba(0,0,0,.25)}}
-
-@media(max-width:720px){
-  #v613OrderSummary{top:0;margin-left:-2px;margin-right:-2px;padding:9px 10px;border-radius:14px}
-  #v613OrderSummary .v613-order-title b{font-size:.84rem}
-  #v613OrderSummary .v613-order-title small{max-width:31vw}
-  #v613OrderSummary .v613-order-total{font-size:1.08rem}
-  #v613OrderSummary .v613-order-open{padding:8px 9px;font-size:.78rem}
-}
-
+.v613-order-details{margin-top:10px;padding-top:8px;border-top:1px solid rgba(216,178,74,.34);animation:v613DetailsIn .22s ease both;max-height:min(46vh,370px);overflow:auto;overscroll-behavior:contain}
+@keyframes v613DetailsIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.v613-detail-line{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:7px 2px;border-bottom:1px solid rgba(255,255,255,.09);font-size:.84rem;line-height:1.35}.v613-detail-line span{min-width:0;flex:1;color:#fff}.v613-detail-line span b{color:var(--v613-gold)}.v613-detail-line strong{color:#fff;white-space:nowrap}.v613-detail-fallback,.v613-detail-empty{padding:8px 2px;color:rgba(255,255,255,.78);font-size:.82rem}.v613-detail-footer{position:sticky;bottom:-1px;display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:10px;margin:7px -2px -1px;padding:9px 2px 2px;background:linear-gradient(0deg,rgba(9,34,25,.99) 72%,rgba(9,34,25,0));font-size:.8rem}.v613-detail-footer>b{color:var(--v613-gold);font-size:1.05rem}
+#order .section-head.compact-head{margin-bottom:8px}.cart.v613-cart-focus{animation:v613CartFocus .55s ease}@keyframes v613CartFocus{0%,100%{box-shadow:inherit}45%{box-shadow:0 0 0 4px rgba(216,178,74,.34),0 18px 36px rgba(0,0,0,.25)}}
+@media(max-width:720px){#v613OrderSummary{top:0;margin-left:-2px;margin-right:-2px;padding:9px 10px;border-radius:14px}#v613OrderSummary .v613-order-title b{font-size:.82rem}#v613OrderSummary .v613-order-title small{max-width:31vw}#v613OrderSummary .v613-order-total{font-size:1.06rem}#v613OrderSummary .v613-order-open{padding:8px 8px;font-size:.75rem}.v613-detail-footer{grid-template-columns:1fr auto}.v613-detail-footer .v613-go-checkout{grid-column:1/-1;width:100%}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
