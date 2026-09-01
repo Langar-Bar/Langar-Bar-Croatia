@@ -1,7 +1,11 @@
-/* Langar Admin V6.1.0 */
-.v609-enhanced button:not(.danger),.v609-enhanced button:not(.danger) *,.v609-enhanced a.secondary,.v609-enhanced a.secondary *,.v609-enhanced a.primary,.v609-enhanced a.primary *{color:#080808!important;text-shadow:none!important;font-weight:800!important}
-.v609-enhanced button.active:not(.danger),.v609-enhanced button.active:not(.danger) *,.v609-enhanced button[aria-pressed="true"]:not(.danger),.v609-enhanced button[aria-pressed="true"]:not(.danger) *{color:#080808!important}
+/* Langar Admin V6.1.1 — contrast + cancellation alert */
+.v609-enhanced [data-v610-tone="green"],.v609-enhanced [data-v610-tone="green"] *{color:#f2d36b!important;text-shadow:none!important;font-weight:800!important}
+.v609-enhanced [data-v610-tone="light"],.v609-enhanced [data-v610-tone="light"] *{color:#080808!important;text-shadow:none!important;font-weight:800!important}
+.v609-enhanced [data-v610-tone="dark"],.v609-enhanced [data-v610-tone="dark"] *{color:#f7f7f2!important;text-shadow:none!important;font-weight:800!important}
 .v609-enhanced .danger,.v609-enhanced .danger *{color:#fff!important}
 .v610-new-order-focus{outline:5px solid #e0b72f!important;box-shadow:0 0 0 7px rgba(224,183,47,.28),0 12px 34px rgba(0,0,0,.24)!important;animation:v610Pulse 1s ease-in-out 5}
+.v610-cancel-focus{outline:6px solid #ff9c2b!important;box-shadow:0 0 0 8px rgba(255,156,43,.30),0 12px 36px rgba(0,0,0,.28)!important;animation:v610CancelPulse .7s ease-in-out 8}
 @keyframes v610Pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.012)}}
+@keyframes v610CancelPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.018)}}
 #v610OrderToast{position:fixed;z-index:99999;left:50%;top:14px;transform:translateX(-50%);background:#ffe066;color:#080808;border:3px solid #111;border-radius:16px;padding:12px 16px;font:900 16px Arial;box-shadow:0 10px 30px rgba(0,0,0,.3);max-width:min(92vw,620px);text-align:center}
+#v610OrderToast[data-kind="cancel"]{background:#ffb347;color:#080808;border-color:#5a2500}
