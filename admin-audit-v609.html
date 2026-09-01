@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="hr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b3f31">
+  <title>Langar Admin V6.0.9 Audit Test</title>
+  <style>
+    html,body{margin:0;min-height:100%;background:#07120e;color:#fff;font-family:Arial,sans-serif}
+    .v609-loader{min-height:100vh;display:grid;place-items:center;padding:24px;text-align:center}
+    .v609-loader div{max-width:560px;padding:28px;border:1px solid #d9b64c;border-radius:24px;background:#0c241b}
+    .v609-loader b{display:block;color:#e2b93f;font-size:1.3rem;margin-bottom:10px}
+    .v609-loader small{display:block;opacity:.82;margin-top:10px}
+  </style>
+</head>
+<body>
+  <div class="v609-loader" id="v609Loader"><div><b>Langar Admin V6.0.9 Audit</b>Loading the isolated test panel…<small>The current production admin remains unchanged.</small></div></div>
+  <script>
+  (async function(){
+    try{
+      const response=await fetch('./admin.html?v=609-audit-'+Date.now(),{cache:'no-store'});
+      if(!response.ok) throw new Error('admin.html '+response.status);
+      let html=await response.text();
+      html=html.replace(/<title>[^<]*<\/title>/i,'<title>Langar Admin V6.0.9 Audit Test</title>');
+      html=html.replace(/<script[^>]+src=["'][^"']*order-print-v530\.js[^"']*["'][^>]*><\/script>/gi,'');
+      html=html.replace(/<script[^>]+src=["'][^"']*order-print-v550\.js[^"']*["'][^>]*><\/script>/gi,'');
+      html=html.replace(/(<div><b>Langar Admin<\/b><span>)[^<]*(<\/span>)/i,'$1V6.0.9 AUDIT TEST$2');
+      const styleTag='<link rel="stylesheet" href="css/admin-audit-v609.css?v=609">';
+      const scriptTags='<scr'+'ipt src="js/order-print-v609.js?v=609"></scr'+'ipt><scr'+'ipt src="js/admin-audit-v609.js?v=609"></scr'+'ipt>';
+      html=html.replace('</head>',styleTag+'</head>');
+      html=html.replace('</body>',scriptTags+'</body>');
+      document.open();
+      document.write(html);
+      document.close();
+    }catch(error){
+      document.getElementById('v609Loader').innerHTML='<div><b>Test panel could not load</b>'+String(error.message||error)+'<small>Refresh once. If it remains, report this exact message.</small></div>';
+    }
+  })();
+  </script>
+</body>
+</html>
