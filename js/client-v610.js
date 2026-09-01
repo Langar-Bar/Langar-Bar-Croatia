@@ -1,0 +1,12 @@
+(()=>{
+'use strict';
+let lastState='';
+async function refreshCloudMenu(){try{if(window.LangarCloudV42?.refreshCloudData)await window.LangarCloudV42.refreshCloudData()}catch(e){console.warn('[V610] menu refresh',e?.message||e)}}
+function installSubmitRetry(){const mod=window.LangarOrderCloud;if(!mod||mod.__v610||typeof mod.submitOrder!=='function')return false;const original=mod.submitOrder.bind(mod);mod.submitOrder=async order=>{await refreshCloudMenu();try{return await original(order)}catch(e){const m=String(e?.message||e);if(/price|total mismatch|unavailable|orderable|menu/i.test(m)){await refreshCloudMenu();return await original(order)}throw e}};mod.__v610=true;return true}
+async function sync(){try{if(window.LangarOrderCloud?.syncAccountOrders){const r=await window.LangarOrderCloud.syncAccountOrders(120);if(r?.changed&&typeof window.renderCustomerOrderStatus==='function')window.renderCustomerOrderStatus()}else if(typeof window.syncCustomerOrderStatuses==='function')await window.syncCustomerOrderStatuses();notifyChange()}catch(e){console.warn('[V610] order sync',e?.message||e)}}
+function orders(){try{const uid=localStorage.langar_current_user_id;const keys=uid?[`langar_orders_user_${uid}`]:['langar_orders_guest','langar_orders_v3'];for(const k of keys){const a=JSON.parse(localStorage.getItem(k)||'[]');if(Array.isArray(a)&&a.length)return a}return []}catch{return []}}
+function notifyChange(){const a=orders();const active=a.find(o=>!['completed','cancelled','rejected'].includes(String(o.status||'').toLowerCase()));if(!active)return;const sig=[active.cloudId||active.id,active.status,active.estimatedReadyAt||active.estimated_ready_at,active.estimatedMinutes||active.estimated_minutes].join('|');if(!lastState){lastState=sig;return}if(sig===lastState)return;lastState=sig;const mins=active.estimatedMinutes??active.estimated_minutes;const title='Langar Bar — Order update';const body=mins?`Order ${active.cloudOrderNumber||''}: about ${mins} minutes. Status: ${active.status}.`:`Order ${active.cloudOrderNumber||''} status: ${active.status}.`;try{window.LangarCloud?.showCloudBrowserNotification?.(title,body,'langar-order-update')}catch{}}
+function boot(){let n=0;const t=setInterval(()=>{n++;if(installSubmitRetry()||n>30)clearInterval(t)},300);setInterval(()=>{if(!document.hidden)sync()},4000);setTimeout(sync,1500)}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+window.LangarClientV610={sync,refreshCloudMenu,version:'6.1.0'};
+})();
