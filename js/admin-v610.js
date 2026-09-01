@@ -22,11 +22,13 @@ async function poll(){const c=client();if(!c||document.body.classList.contains('
   if(fresh.length){const first=fresh[0],sig='order:'+String(first.id);if(sig!==lastAlert){lastAlert=sig;escalating('order');toast(`NEW ORDER ${first.order_number||String(first.id).slice(0,8)} — opening Orders now`,'order');openOrders(first.order_number||String(first.id).slice(0,8),'order');browserNote('Langar Bar — NEW ORDER',`${first.order_number||String(first.id).slice(0,8)} received. Orders panel opened automatically.`,'langar-admin-new-order')}}
 }catch(e){console.warn('[V610] order/cancel watch',e?.message||e)}}
 function rgb(s){const m=String(s||'').match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);return m?[+m[1],+m[2],+m[3]]:null}
-function isDarkGreen(c){return !!c&&c[1]>c[0]*1.12&&c[1]>c[2]*1.03&&c[1]>=38&&c[1]<145&&((c[0]+c[1]+c[2])/3)<115}
+function isDarkGreen(c){return !!c&&c[1]>c[0]*1.12&&c[1]>c[2]*1.03&&c[1]>=35&&c[1]<155&&((c[0]+c[1]+c[2])/3)<120}
 function isLight(c){return !!c&&((c[0]*.2126+c[1]*.7152+c[2]*.0722)/255)>.66}
-function setText(el,color){el.style.setProperty('color',color,'important');el.style.setProperty('text-shadow','none','important');el.querySelectorAll('*').forEach(x=>{x.style.setProperty('color',color,'important');x.style.setProperty('text-shadow','none','important')})}
-function fixButtonText(){$$('button,a.secondary,a.primary').forEach(b=>{if(b.classList.contains('danger')||b.closest('.danger')){setText(b,'#fff');return}const cs=getComputedStyle(b),bg=rgb(cs.backgroundColor);if(isDarkGreen(bg)){setText(b,'#f2d36b');b.dataset.v610Tone='green'}else if(isLight(bg)||b.classList.contains('active')||b.getAttribute('aria-pressed')==='true'){setText(b,'#080808');b.dataset.v610Tone='light'}else{setText(b,'#f7f7f2');b.dataset.v610Tone='dark'}})}
+function hasGreenGradient(s){s=String(s||'').toLowerCase();return /rgb\((1[0-9]|2[0-9]|3[0-9]),\s*(4[0-9]|5[0-9]|6[0-9]|7[0-9]|8[0-9]|9[0-9]|1[01][0-9]),\s*(1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9])\)/.test(s)||s.includes('#123f2e')||s.includes('#1e4435')||s.includes('#0f211a')||s.includes('#173429')}
+function hasGoldGradient(s){s=String(s||'').toLowerCase();return s.includes('217, 180, 95')||s.includes('245, 215, 139')||s.includes('216, 178, 74')||s.includes('#d8b24a')||s.includes('#d9b45f')||s.includes('#f5d78b')||s.includes('#ffe066')}
+function setText(el,color,toneName){el.style.setProperty('color',color,'important');el.style.setProperty('text-shadow','none','important');if(toneName)el.dataset.v610Tone=toneName;el.querySelectorAll('*').forEach(x=>{x.style.setProperty('color',color,'important');x.style.setProperty('text-shadow','none','important')})}
+function fixButtonText(){$$('button,a.secondary,a.primary,.button-link').forEach(b=>{if(b.classList.contains('danger')||b.closest('.danger')){setText(b,'#fff','danger');return}const cs=getComputedStyle(b),bg=rgb(cs.backgroundColor),img=cs.backgroundImage||'';const green=isDarkGreen(bg)||hasGreenGradient(img);const gold=hasGoldGradient(img)||hasGoldGradient(cs.backgroundColor);const light=isLight(bg);if(green){setText(b,'#f2d36b','green')}else if(gold||light){setText(b,'#080808','light')}else{setText(b,'#f7f7f2','dark')}})}
 new MutationObserver(fixButtonText).observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['class','style','aria-pressed']});
-setInterval(fixButtonText,1200);setInterval(poll,2200);setTimeout(()=>{fixButtonText();poll()},700);
-window.LangarAdminV610={poll,unlockAudio,fixButtonText,version:'6.1.1'};
+setInterval(fixButtonText,900);setInterval(poll,2200);setTimeout(()=>{fixButtonText();poll()},500);
+window.LangarAdminV610={poll,unlockAudio,fixButtonText,version:'6.2.3'};
 })();
