@@ -1,4 +1,4 @@
-import { cp, mkdir, readdir, rm, stat } from 'node:fs/promises';
+import { cp, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const root = process.cwd();
@@ -23,4 +23,24 @@ for (const name of await readdir(root)) {
   else await cp(src, dst);
 }
 
+async function patchHtml(fileName) {
+  const file = path.join(out, fileName);
+  let html = await readFile(file, 'utf8');
+
+  if (fileName === 'index.html') {
+    html = html
+      .replace(/<script src="https:\/\/cdn\.onesignal\.com\/sdks\/web\/v16\/OneSignalSDK\.page\.js" defer><\/script>/g, '')
+      .replace(/<script>window\.OneSignalDeferred = window\.OneSignalDeferred \|\| \[\];<\/script>/g, '');
+  }
+
+  if (!html.includes('js/native-shell-v100.js')) {
+    html = html.replace('</body>', '<script src="js/native-shell-v100.js?v=100"></script></body>');
+  }
+  await writeFile(file, html, 'utf8');
+}
+
+await patchHtml('index.html');
+await patchHtml('admin.html');
+
 console.log('Prepared Capacitor web bundle at', out);
+console.log('Native bundle uses OneSignal native SDK and includes secure Staff/Admin route.');
