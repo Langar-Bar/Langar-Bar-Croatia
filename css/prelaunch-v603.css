@@ -18,3 +18,31 @@
   border:2px solid #8c6800!important;
   font-weight:900!important
 }
+
+/* V6.2.6 admin contrast — dark green buttons must always be readable */
+.admin .secondary,
+.admin .side button,
+.admin .admin-hub-card,
+.admin button[class*="green"],
+.admin button[class*="success"]{
+  color:#fff!important;
+}
+.admin .secondary span,.admin .secondary b,.admin .secondary strong,.admin .secondary small,
+.admin .side button span,.admin .side button b,.admin .side button strong,.admin .side button small,
+.admin .admin-hub-card span,.admin .admin-hub-card b,.admin .admin-hub-card strong,.admin .admin-hub-card small{
+  color:#fff!important;
+}
+/* Light/white and gold controls use black text */
+#ordersAdmin [data-print-order],
+#ordersAdmin [data-print-delivery],
+.admin button[style*="background:#fff"],
+.admin button[style*="background: #fff"],
+.admin button[style*="background:white"],
+.admin button[style*="background: white"],
+.admin button[style*="background:#f"],
+.admin button[style*="background: #f"]{
+  color:#101712!important;
+}
+#ordersAdmin [data-print-order] *,#ordersAdmin [data-print-delivery] *{
+  color:#101712!important;
+}
