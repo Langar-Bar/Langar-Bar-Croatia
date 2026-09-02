@@ -2,7 +2,7 @@
 'use strict';
 const $=s=>document.querySelector(s);
 const $$=s=>[...document.querySelectorAll(s)];
-const esc=s=>String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+const esc=s=>String(s??'').replace(/[&<>'\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[c]));
 const sb=()=>window.langarCloud?.client||window.LangarAdminCloud?.client||window.supabaseClient||window._supabase||null;
 let audioCtx=null;
 function getCtx(){const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;if(!audioCtx||audioCtx.state==='closed')audioCtx=new C();if(audioCtx.state==='suspended')audioCtx.resume();return audioCtx}
@@ -22,15 +22,29 @@ function normalizeMenu(cats,items){return (cats||[]).map(c=>({...c,items:(items|
 function localMenu(){try{if(typeof LANGAR_DEFAULT_MENU!=='undefined'&&Array.isArray(LANGAR_DEFAULT_MENU))return LANGAR_DEFAULT_MENU.map(c=>({id:c.id,slug:c.id,title_en:c.title?.en||c.id,title_hr:c.title?.hr||'',active:c.active!==false,items:(c.items||[]).filter(i=>i.available!==false).map(i=>({id:i.cloudId||i.id,sku:i.id,name_en:i.name?.en||i.id,name_hr:i.name?.hr||'',active:true,available_in_menu:true}))}))}catch(_){}
  try{const raw=JSON.parse(localStorage.getItem('langar_cloud_menu_cache')||'null');if(Array.isArray(raw))return raw.map(c=>({id:c.cloudId||c.id,slug:c.id,title_en:c.title?.en||c.id,title_hr:c.title?.hr||'',active:c.active!==false,items:(c.items||[]).map(i=>({id:i.cloudId||i.id,sku:i.id,name_en:i.name?.en||i.id,name_hr:i.name?.hr||''}))}))}catch(_){}return []}
 async function getMenu(){const c=sb();if(c){try{const [a,b]=await Promise.all([c.from('menu_categories').select('id,slug,title_en,title_hr,sort_order,active').eq('active',true).order('sort_order'),c.from('menu_items').select('id,category_id,sku,name_en,name_hr,sort_order,active,available_in_menu').eq('active',true).order('sort_order')]);if(!a.error&&a.data?.length)return normalizeMenu(a.data,b.data||[])}catch(e){console.warn('Gallery menu cloud load failed',e)}}return localMenu()}
-function menuOptions(menu){return menu.map(c=>`<option value="menu:${esc(c.id)}">${esc(c.title_en||c.slug)} / ${esc(c.title_hr||'')}</option>`).join('')}
-function itemOptions(c){return `<option value="">Whole category / Cijela kategorija</option>${(c?.items||[]).map(i=>`<option value="${esc(i.id)}">${esc(i.name_en||i.sku)} / ${esc(i.name_hr||'')}</option>`).join('')}`}
+function menuOptions(menu){return menu.map(c=>`<option value=\"menu:${esc(c.id)}\">${esc(c.title_en||c.slug)} / ${esc(c.title_hr||'')}</option>`).join('')}
+function itemOptions(c){return `<option value=\"\">Whole category / Cijela kategorija</option>${(c?.items||[]).map(i=>`<option value=\"${esc(i.id)}\">${esc(i.name_en||i.sku)} / ${esc(i.name_hr||'')}</option>`).join('')}`}
 async function repairGallery(){const cat=$('#gallery552cat'),item=$('#gallery552item');if(!cat||!item||cat.dataset.v553)return;cat.dataset.v553='1';const menu=await getMenu();if(!menu.length){const st=$('#gallery552status');if(st){st.textContent='Menu categories could not be loaded. Open Menu Manager and publish the cloud menu once.';st.className='gallery551-status error'}return}
  let group=[...cat.querySelectorAll('optgroup')].find(g=>/Menu categories/i.test(g.label));if(!group){group=document.createElement('optgroup');group.label='Menu categories';cat.append(group)}group.innerHTML=menuOptions(menu);
- const update=()=>{const v=cat.value;if(v.startsWith('menu:')){const c=menu.find(x=>String(x.id)===v.slice(5));item.innerHTML=itemOptions(c)}else item.innerHTML='<option value="">Not linked to one item</option>'};
+ const update=()=>{const v=cat.value;if(v.startsWith('menu:')){const c=menu.find(x=>String(x.id)===v.slice(5));item.innerHTML=itemOptions(c)}else item.innerHTML='<option value=\"\">Not linked to one item</option>'};
  cat.addEventListener('change',update);update();
  const form=$('#gallery552');if(form&&!form.querySelector('.v553-gallery-help')){const h=document.createElement('div');h.className='v553-gallery-help';h.innerHTML=`<b>${menu.length} menu categories loaded</b><span>Select a menu category, then choose the exact food or drink below. New categories published in Menu Manager will appear after Refresh gallery.</span>`;form.prepend(h)}
  const ref=$('#gallery552refresh');if(ref)ref.addEventListener('click',async()=>{const newer=await getMenu();if(newer.length){menu.splice(0,menu.length,...newer);group.innerHTML=menuOptions(menu);update()}})
 }
 function loop(){enhanceSettings();repairGallery()}
 restoreTheme();window.addEventListener('load',()=>{setTimeout(loop,1200);setInterval(loop,1500)});
+})();
+
+(()=>{
+'use strict';
+function parseRgb(v){const m=String(v||'').match(/rgba?\((\d+)[, ]+\s*(\d+)[, ]+\s*(\d+)/i);return m?[+m[1],+m[2],+m[3]]:null}
+function luminance(rgb){return rgb?(.2126*rgb[0]+.7152*rgb[1]+.0722*rgb[2])/255:0}
+function looksGreen(cs){const s=((cs.backgroundColor||'')+' '+(cs.backgroundImage||'')).toLowerCase();return s.includes('#123f2e')||s.includes('#1e4435')||s.includes('#0f211a')||s.includes('#173429')||s.includes('18, 63, 46')||s.includes('30, 68, 53')||s.includes('15, 33, 26')}
+function looksGold(cs){const s=((cs.backgroundColor||'')+' '+(cs.backgroundImage||'')).toLowerCase();return s.includes('#d9b45f')||s.includes('#d8b24a')||s.includes('#f5d78b')||s.includes('217, 180, 95')||s.includes('245, 215, 139')||s.includes('216, 178, 74')}
+function setColor(el,color){el.style.setProperty('color',color,'important');el.style.setProperty('text-shadow','none','important');el.querySelectorAll('*').forEach(n=>{n.style.setProperty('color',color,'important');n.style.setProperty('text-shadow','none','important')})}
+function fixAdminContrast(){document.querySelectorAll('.admin button,.admin a.secondary,.admin a.primary,.admin .button-link').forEach(el=>{const cs=getComputedStyle(el);const rgb=parseRgb(cs.backgroundColor);const lum=luminance(rgb);if(el.classList.contains('danger')){setColor(el,'#fff');return}if(looksGreen(cs)){setColor(el,'#fff');return}if(looksGold(cs)||lum>.66){setColor(el,'#111');return}setColor(el,'#fff')})}
+new MutationObserver(()=>requestAnimationFrame(fixAdminContrast)).observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['class','style','disabled','aria-pressed']});
+window.addEventListener('load',()=>{setTimeout(fixAdminContrast,350);setTimeout(fixAdminContrast,1200)});
+setInterval(fixAdminContrast,1800);
+window.LangarAdminContrastV626={fix:fixAdminContrast,version:'6.2.6'};
 })();
