@@ -10,7 +10,8 @@
     "cap:sync:android": "npm run prepare:native && npx cap sync android",
     "cap:sync:ios": "npm run prepare:native && npx cap sync ios",
     "cap:open:android": "npx cap open android",
-    "cap:open:ios": "npx cap open ios"
+    "cap:open:ios": "npx cap open ios",
+    "screenshots": "node scripts/capture-store-screenshots.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.0",
@@ -24,7 +25,8 @@
   },
   "devDependencies": {
     "@capacitor/assets": "3.0.5",
-    "@capacitor/cli": "^8.0.0"
+    "@capacitor/cli": "^8.0.0",
+    "playwright": "^1.55.0"
   },
   "description": "Langar Bar customer ordering, Langar Club rewards, reservations and secure staff/admin operations app"
 }
