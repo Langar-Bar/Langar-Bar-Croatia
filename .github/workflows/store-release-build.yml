@@ -1,0 +1,163 @@
+name: Langar Bar Store Release Build
+
+on:
+  push:
+    branches:
+      - release/store-v1
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    name: Android API 36 AAB
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install dependencies
+        run: npm install
+      - name: Prepare web bundle
+        run: npm run prepare:native
+      - name: Create Android project
+        run: npx cap add android
+      - name: Sync Android plugins and web assets
+        run: npx cap sync android
+      - name: Generate branded Android assets
+        shell: bash
+        run: |
+          cp assets/icon-512.png assets/logo.png
+          npx capacitor-assets generate --android --iconBackgroundColor '#07120e' --splashBackgroundColor '#07120e' || true
+          rm -f assets/logo.png
+      - name: Enforce Android 16 target and version
+        shell: bash
+        run: |
+          if [ -f android/variables.gradle ]; then
+            sed -i -E 's/compileSdkVersion = [0-9]+/compileSdkVersion = 36/' android/variables.gradle || true
+            sed -i -E 's/targetSdkVersion = [0-9]+/targetSdkVersion = 36/' android/variables.gradle || true
+          fi
+          sed -i -E 's/versionCode [0-9]+/versionCode 1/' android/app/build.gradle || true
+          sed -i -E 's/versionName "[^"]+"/versionName "1.0.0"/' android/app/build.gradle || true
+          echo '--- Android SDK configuration ---'
+          grep -R "compileSdk\|targetSdk\|versionCode\|versionName" android/variables.gradle android/app/build.gradle || true
+      - name: Build release bundle
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew bundleRelease --stacktrace
+      - name: Collect Android artifacts
+        shell: bash
+        run: |
+          mkdir -p release-output
+          AAB=$(find android/app/build/outputs/bundle/release -name '*.aab' | head -1)
+          test -n "$AAB"
+          cp "$AAB" release-output/Langar-Bar-1.0.0-unsigned.aab
+          tar -czf release-output/Langar-Bar-Android-Studio-1.0.0.tar.gz android
+          cp release/STORE_METADATA.md release-output/
+          cp release/DATA_SAFETY_AND_APP_PRIVACY.md release-output/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: langar-bar-android-1.0.0
+          path: release-output/*
+          if-no-files-found: error
+          retention-days: 30
+
+  ios:
+    name: iOS / iPadOS Xcode 26 project
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Xcode version
+        run: xcodebuild -version
+      - name: Install dependencies
+        run: npm install
+      - name: Prepare web bundle
+        run: npm run prepare:native
+      - name: Create iOS project
+        run: npx cap add ios
+      - name: Sync iOS plugins and web assets
+        run: npx cap sync ios
+      - name: Generate branded iOS assets
+        shell: bash
+        run: |
+          cp assets/icon-512.png assets/logo.png
+          npx capacitor-assets generate --ios --iconBackgroundColor '#07120e' --splashBackgroundColor '#07120e' || true
+          rm -f assets/logo.png
+      - name: Set iOS version and export-compliance metadata
+        shell: bash
+        run: |
+          PBX=ios/App/App.xcodeproj/project.pbxproj
+          sed -i '' -E 's/MARKETING_VERSION = [^;]+;/MARKETING_VERSION = 1.0.0;/g' "$PBX" || true
+          sed -i '' -E 's/CURRENT_PROJECT_VERSION = [^;]+;/CURRENT_PROJECT_VERSION = 1;/g' "$PBX" || true
+          PLIST=ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c 'Delete :ITSAppUsesNonExemptEncryption' "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c 'Add :ITSAppUsesNonExemptEncryption bool false' "$PLIST"
+      - name: Build unsigned archive for validation
+        shell: bash
+        run: |
+          mkdir -p build
+          if [ -d ios/App/App.xcworkspace ]; then
+            xcodebuild -workspace ios/App/App.xcworkspace -scheme App -configuration Release -sdk iphoneos -archivePath "$PWD/build/LangarBar.xcarchive" CODE_SIGNING_ALLOWED=NO archive
+          else
+            xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release -sdk iphoneos -archivePath "$PWD/build/LangarBar.xcarchive" CODE_SIGNING_ALLOWED=NO archive
+          fi
+      - name: Collect iOS artifacts
+        shell: bash
+        run: |
+          mkdir -p release-output
+          ditto -c -k --sequesterRsrc --keepParent ios release-output/Langar-Bar-Xcode-1.0.0.zip
+          if [ -d build/LangarBar.xcarchive ]; then ditto -c -k --sequesterRsrc --keepParent build/LangarBar.xcarchive release-output/Langar-Bar-1.0.0-unsigned.xcarchive.zip; fi
+          xcodebuild -version > release-output/XCODE_VERSION.txt
+          cp release/STORE_METADATA.md release-output/
+          cp release/DATA_SAFETY_AND_APP_PRIVACY.md release-output/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: langar-bar-ios-1.0.0
+          path: release-output/*
+          if-no-files-found: error
+          retention-days: 30
+
+  screenshots:
+    name: Store screenshots
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm install
+      - name: Prepare store web bundle
+        run: npm run prepare:native
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Start local app
+        run: |
+          python3 -m http.server 4173 --directory www >/tmp/langar-http.log 2>&1 &
+          sleep 3
+      - name: Capture screenshots
+        env:
+          STORE_SCREENSHOT_URL: http://127.0.0.1:4173/index.html
+        run: npm run screenshots
+      - uses: actions/upload-artifact@v4
+        with:
+          name: langar-bar-store-screenshots-1.0.0
+          path: store-screenshots/*.png
+          if-no-files-found: error
+          retention-days: 30
