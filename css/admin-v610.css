@@ -1,13 +1,13 @@
-/* Langar Admin V6.2.3 — final contrast + cancellation alert */
-.v609-enhanced [data-v610-tone="green"],.v609-enhanced [data-v610-tone="green"] *{color:#f2d36b!important;text-shadow:none!important;font-weight:800!important}
+/* Langar Admin V6.2.4 — final contrast + cancellation alert */
+.v609-enhanced [data-v610-tone="green"],.v609-enhanced [data-v610-tone="green"] *{color:#ffffff!important;text-shadow:none!important;font-weight:800!important}
 .v609-enhanced [data-v610-tone="light"],.v609-enhanced [data-v610-tone="light"] *{color:#080808!important;text-shadow:none!important;font-weight:800!important}
 .v609-enhanced [data-v610-tone="dark"],.v609-enhanced [data-v610-tone="dark"] *{color:#f7f7f2!important;text-shadow:none!important;font-weight:800!important}
 .v609-enhanced [data-v610-tone="danger"],.v609-enhanced [data-v610-tone="danger"] *,.v609-enhanced .danger,.v609-enhanced .danger *{color:#fff!important}
 /* Strong fallback: dark Langar-green controls must never show black text. */
 .v609-enhanced button[style*="123f2e"],.v609-enhanced button[style*="1e4435"],.v609-enhanced button[style*="0f211a"],
-.v609-enhanced a[style*="123f2e"],.v609-enhanced a[style*="1e4435"],.v609-enhanced a[style*="0f211a"]{color:#f2d36b!important}
+.v609-enhanced a[style*="123f2e"],.v609-enhanced a[style*="1e4435"],.v609-enhanced a[style*="0f211a"]{color:#fff!important}
 .v609-enhanced button[style*="123f2e"] *,.v609-enhanced button[style*="1e4435"] *,.v609-enhanced button[style*="0f211a"] *,
-.v609-enhanced a[style*="123f2e"] *,.v609-enhanced a[style*="1e4435"] *,.v609-enhanced a[style*="0f211a"] *{color:#f2d36b!important}
+.v609-enhanced a[style*="123f2e"] *,.v609-enhanced a[style*="1e4435"] *,.v609-enhanced a[style*="0f211a"] *{color:#fff!important}
 .v610-new-order-focus{outline:5px solid #e0b72f!important;box-shadow:0 0 0 7px rgba(224,183,47,.28),0 12px 34px rgba(0,0,0,.24)!important;animation:v610Pulse 1s ease-in-out 5}
 .v610-cancel-focus{outline:6px solid #ff9c2b!important;box-shadow:0 0 0 8px rgba(255,156,43,.30),0 12px 36px rgba(0,0,0,.28)!important;animation:v610CancelPulse .7s ease-in-out 8}
 @keyframes v610Pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.012)}}
