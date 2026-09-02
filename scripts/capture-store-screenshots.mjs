@@ -11,11 +11,11 @@ const targets = [
 ];
 
 const shots = [
-  { name: '01-home', selector: '[data-go="home"]' },
-  { name: '02-menu', selector: '[data-go="menu"]' },
-  { name: '03-order', selector: '[data-go="order"]' },
-  { name: '04-club', selector: '[data-go="club"]' },
-  { name: '05-more', selector: '[data-go="more"]' }
+  { name: '01-home', view: 'home' },
+  { name: '02-menu', view: 'menu' },
+  { name: '03-order', view: 'order' },
+  { name: '04-club', view: 'club' },
+  { name: '05-more', view: 'more' }
 ];
 
 const browser = await chromium.launch({ headless: true });
@@ -30,14 +30,27 @@ for (const target of targets) {
   const page = await context.newPage();
   await page.goto(base, { waitUntil: 'domcontentloaded', timeout: 60000 });
   await page.waitForTimeout(2500);
-  for (const shot of shots) {
-    if (shot.name !== '01-home') {
-      const nav = page.locator(shot.selector).last();
-      if (await nav.count()) {
-        await nav.click({ force: true }).catch(() => {});
-        await page.waitForTimeout(900);
+
+  const closeWelcome = async () => {
+    for (const selector of ['#popupLater', '#closePopup']) {
+      const el = page.locator(selector);
+      if (await el.count() && await el.isVisible().catch(() => false)) {
+        await el.click({ force: true }).catch(() => {});
+        await page.waitForTimeout(350);
+        break;
       }
     }
+  };
+  await closeWelcome();
+
+  for (const shot of shots) {
+    await closeWelcome();
+    await page.evaluate((view) => {
+      const button = [...document.querySelectorAll(`[data-go="${view}"]`)].pop();
+      if (button instanceof HTMLElement) button.click();
+    }, shot.view);
+    await page.waitForTimeout(1000);
+    await closeWelcome();
     await page.screenshot({
       path: `${out}/${target.name}-${shot.name}.png`,
       fullPage: false
