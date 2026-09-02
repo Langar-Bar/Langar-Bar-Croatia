@@ -39,6 +39,12 @@ async function patchHtml(fileName) {
   if (fileName === 'index.html' && !html.includes('js/store-ux-v101.js')) {
     html = html.replace('</body>', '<script src="js/store-ux-v101.js?v=101"></script></body>');
   }
+  if (fileName === 'index.html' && !html.includes('js/referral-store-v102.js')) {
+    html = html.replace('</body>', '<script src="js/referral-store-v102.js?v=102"></script></body>');
+  }
+  if (fileName === 'admin.html' && !html.includes('js/admin-contrast-v102.js')) {
+    html = html.replace('</body>', '<script src="js/admin-contrast-v102.js?v=102"></script></body>');
+  }
   await writeFile(file, html, 'utf8');
 }
 
@@ -46,4 +52,4 @@ await patchHtml('index.html');
 await patchHtml('admin.html');
 
 console.log('Prepared Capacitor web bundle at', out);
-console.log('Native bundle uses OneSignal native SDK, secure Staff/Admin route, mobile order budget summary and in-app account deletion.');
+console.log('Native bundle includes OneSignal native SDK, secure Staff/Admin route, sticky mobile order budget, account deletion, referral QR and enforced admin button contrast.');
