@@ -23,6 +23,7 @@
     "onesignal-cordova-plugin": "^5.2.9"
   },
   "devDependencies": {
+    "@capacitor/assets": "3.0.5",
     "@capacitor/cli": "^8.0.0"
   },
   "description": "Langar Bar customer ordering, Langar Club rewards, reservations and secure staff/admin operations app"
