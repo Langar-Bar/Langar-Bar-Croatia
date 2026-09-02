@@ -13,16 +13,17 @@
     "cap:open:ios": "npx cap open ios"
   },
   "dependencies": {
-    "@capacitor/android": "^7.4.0",
-    "@capacitor/app": "^7.0.0",
-    "@capacitor/core": "^7.4.0",
-    "@capacitor/haptics": "^7.0.0",
-    "@capacitor/ios": "^7.4.0",
-    "@capacitor/splash-screen": "^7.0.0",
-    "@capacitor/status-bar": "^7.0.0"
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/haptics": "^8.0.0",
+    "@capacitor/ios": "^8.0.0",
+    "@capacitor/splash-screen": "^8.0.0",
+    "@capacitor/status-bar": "^8.0.0",
+    "onesignal-cordova-plugin": "^5.2.9"
   },
   "devDependencies": {
-    "@capacitor/cli": "^7.4.0"
+    "@capacitor/cli": "^8.0.0"
   },
   "description": "Langar Bar customer ordering, Langar Club rewards, reservations and secure staff/admin operations app"
 }
