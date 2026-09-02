@@ -1,21 +1,28 @@
 {
   "name": "langar-bar-app",
-  "version": "5.1.0",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
+    "prepare:native": "node scripts/prepare-native-web.mjs",
     "cap:add:android": "npx cap add android",
     "cap:add:ios": "npx cap add ios",
-    "cap:sync": "npx cap sync",
+    "cap:sync": "npm run prepare:native && npx cap sync",
+    "cap:sync:android": "npm run prepare:native && npx cap sync android",
+    "cap:sync:ios": "npm run prepare:native && npx cap sync ios",
     "cap:open:android": "npx cap open android",
     "cap:open:ios": "npx cap open ios"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.0",
+    "@capacitor/app": "^7.0.0",
     "@capacitor/core": "^7.4.0",
-    "@capacitor/ios": "^7.4.0"
+    "@capacitor/haptics": "^7.0.0",
+    "@capacitor/ios": "^7.4.0",
+    "@capacitor/splash-screen": "^7.0.0",
+    "@capacitor/status-bar": "^7.0.0"
   },
   "devDependencies": {
     "@capacitor/cli": "^7.4.0"
   },
-  "description": "Independent Langar Bar customer ordering and admin operations app"
+  "description": "Langar Bar customer ordering, Langar Club rewards, reservations and secure staff/admin operations app"
 }
