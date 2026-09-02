@@ -1,0 +1,9 @@
+Langar Bar V4.5.1 — SQL return-type reset fix
+
+This update fixes the Supabase SQL error:
+ERROR 42P13: cannot change return type of existing function
+HINT: Use DROP FUNCTION get_customer_order_by_token(text) first.
+
+Run: langar_bar_v451_order_rpc_return_type_fix.sql
+
+The SQL drops and recreates the order RPC functions whose RETURNS TABLE definitions changed across versions, then reinstalls guest order submission, customer token tracking, admin order list/update RPCs, and realtime publication support.

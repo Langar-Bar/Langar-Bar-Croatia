@@ -1,0 +1,159 @@
+// Langar Admin V4.4.0 — stable loud order alarm + customer status + daily archive
+(function(){
+  'use strict';
+  const LS=window.LS||{get:(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}},set:(k,v)=>localStorage.setItem(k,JSON.stringify(v))};
+  const $=(s,r=document)=>r.querySelector(s); const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+  const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const client=()=>window.LangarCloud?.client||null;
+  let soundEnabled=LS.get('langar_order_sound_enabled_v440',LS.get('langar_order_sound_enabled_v439',LS.get('langar_order_sound_enabled_v438',false)));
+  let initialSeen=false;
+  let alarmTimer=null;
+  let alarmLevel=0;
+  let alarmActiveIds=[];
+  let audioCtx=null;
+  const finalStatuses=['completed','delivered','cancelled','rejected','cancelled_by_customer'];
+
+  function toast(msg){ if(window.adminNotify) return window.adminNotify(msg); let el=document.createElement('div'); el.className='admin-toast'; el.textContent=msg; document.body.appendChild(el); setTimeout(()=>el.remove(),2800); }
+  function parseMeta(note){ const s=String(note||''); const pick=k=>{const m=s.match(new RegExp('\\['+k+':([^\\]]+)\\]')); return m?m[1].trim():'';}; return {paymentMethod:pick('PAYMENT_METHOD')||'cash',etaMinutes:Number(pick('ETA_MINUTES')||0),etaOfferedAt:pick('ETA_OFFERED_AT')||'',etaAcceptedAt:pick('ETA_ACCEPTED_AT')||pick('ETA_SENT_AT')||'',decision:pick('CUSTOMER_DECISION')||'',remarisEntered:pick('REMARIS_ENTERED')==='true',feedbackSubmitted:pick('FEEDBACK_SUBMITTED')==='true',tableNumber:pick('TABLE')||'',cleanNote:s.replace(/\n?\[(PAYMENT_METHOD|ETA_MINUTES|ETA_OFFERED_AT|ETA_ACCEPTED_AT|ETA_SENT_AT|CUSTOMER_DECISION|REMARIS_ENTERED|TABLE|FEEDBACK_SUBMITTED):[^\]]+\]/g,'').replace(/^Customer note:\s*/,'').trim()}; }
+  function appendMarker(note,key,value){ let s=String(note||'').replace(new RegExp('\\n?\\['+key+':[^\\]]+\\]','g'),'').trim(); return (s?s+'\n':'')+`[${key}:${value}]`; }
+  function removeMarker(note,key){ return String(note||'').replace(new RegExp('\\n?\\['+key+':[^\\]]+\\]','g'),'').trim(); }
+  function paymentLabel(v){return v==='card_on_delivery'?'Card':'Cash';}
+  function orderTypeLabel(t){return t==='delivery'?'Delivery':(t==='dine_in'?'Dine-in':'Pick-up');}
+  function statusOptions(s){ const opts=['submitted','time_offered','accepted','preparing','ready','out_for_delivery','delivered','completed','cancelled','cancelled_by_customer','rejected']; return opts.map(o=>`<option value="${o}" ${o===(s||'submitted')?'selected':''}>${o}</option>`).join(''); }
+  function countdown(m,status){ if(!m.etaMinutes) return ''; if(m.decision!=='accepted'||!m.etaAcceptedAt) return 'Waiting for customer confirmation'; if(finalStatuses.includes(status||'')) return ''; const end=new Date(m.etaAcceptedAt).getTime()+m.etaMinutes*60000; const left=Math.max(0,end-Date.now()); if(!left) return 'Time reached'; const mm=Math.floor(left/60000), ss=Math.floor((left%60000)/1000); return `${mm}:${String(ss).padStart(2,'0')}`; }
+  function dayKey(o){ const d=new Date(o.createdAt||o.created_at||Date.now()); return d.toISOString().slice(0,10); }
+  function dailyArchiveHtml(orders){
+    const groups={};
+    orders.forEach(o=>{ const k=dayKey(o); (groups[k]=groups[k]||[]).push(o); });
+    const keys=Object.keys(groups).sort((a,b)=>b.localeCompare(a));
+    if(!keys.length) return '';
+    return `<div class="legal-block order-daily-archive"><h3>Daily order archive</h3><p>Daily folders for checking yesterday, previous days and any customer/order issue.</p>${keys.map((k,idx)=>{ const rows=groups[k]; const total=rows.reduce((s,o)=>s+Number(o.total||0),0); return `<details ${idx===0?'open':''}><summary><b>${esc(k)}</b> · ${rows.length} orders · €${total.toFixed(2)}</summary><div class="table-wrap"><table class="table"><thead><tr><th>Order</th><th>Customer</th><th>Type</th><th>Status</th><th>Total</th></tr></thead><tbody>${rows.map(o=>`<tr><td>${esc(o.id)}</td><td>${esc(o.name||'-')}<br><small>${esc(o.phone||'')}</small></td><td>${esc(orderTypeLabel(o.type||'pickup'))}</td><td>${esc(o.status||'submitted')}</td><td>€${Number(o.total||0).toFixed(2)}</td></tr>`).join('')}</tbody></table></div></details>`; }).join('')}</div>`;
+  }
+  function timeout(p,ms=6000){ return Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),ms))]); }
+
+  async function fetchCloudOrders(){
+    const c=client(); if(!c) return [];
+    try{ const {data,error}=await timeout(c.from('orders').select('*').order('created_at',{ascending:false}).limit(120)); if(error) throw error;
+      const orders=(data||[]).map(o=>({id:o.order_number||o.id,cloudId:o.id,cloud:true,status:o.status||'submitted',type:o.order_type||'pickup',name:o.customer_name,phone:o.customer_phone,address:o.delivery_address,note:o.customer_note,customer_note:o.customer_note,total:Number(o.total||0),paymentStatus:o.payment_status,createdAt:o.created_at,paid:o.payment_status==='paid',user_id:o.user_id,items:[]}));
+      const ids=orders.map(o=>o.cloudId).filter(Boolean);
+      if(ids.length){ const {data:items}=await timeout(c.from('order_items').select('*').in('order_id',ids),5000).catch(()=>({data:[]})); (items||[]).forEach(it=>{const o=orders.find(x=>x.cloudId===it.order_id); if(o) o.items.push({qty:it.quantity,nameSnapshot:it.item_name_en,nameSnapshotHr:it.item_name_hr,unit_price:it.unit_price,total_price:it.total_price});}); }
+      return orders;
+    }catch(err){ console.warn('admin cloud orders error',err.message); return []; }
+  }
+  function localOrders(){ return (LS.get('langar_orders_v3',[])||[]).map(o=>({...o,cloud:false,status:o.status||'submitted'})); }
+  function merge(cloud,local){ const map=new Map(); [...cloud,...local].forEach(o=>map.set(o.cloudId||o.id,o)); return Array.from(map.values()).sort((a,b)=>new Date(b.createdAt||b.created_at||0)-new Date(a.createdAt||a.created_at||0)); }
+  function initAudio(){
+    if(!audioCtx){ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }
+    if(audioCtx.state==='suspended') audioCtx.resume().catch(()=>{});
+    return audioCtx;
+  }
+  function enableSound(){
+    soundEnabled=true;
+    LS.set('langar_order_sound_enabled_v440',true);
+    LS.set('langar_order_sound_enabled_v439',true);
+    LS.set('langar_order_sound_enabled_v438',true);
+    try{ initAudio(); }catch{}
+    beep(0.85,true);
+    toast('Loud order alarm enabled. Keep this admin page open.');
+    renderOrders(true);
+  }
+  function beep(level=0.55,test=false){
+    if(!soundEnabled) return;
+    try{
+      const ctx=initAudio();
+      const start=ctx.currentTime;
+      const volume=Math.min(0.95, Math.max(0.25, level));
+      const pattern=[0,0.18,0.36,0.72,0.90,1.08];
+      const freqs=[740,980,1240,740,980,1240];
+      pattern.forEach((d,i)=>{
+        const osc=ctx.createOscillator();
+        const gain=ctx.createGain();
+        osc.type='square';
+        osc.frequency.setValueAtTime(freqs[i], start+d);
+        gain.gain.setValueAtTime(0.0001,start+d);
+        gain.gain.exponentialRampToValueAtTime(volume,start+d+0.025);
+        gain.gain.exponentialRampToValueAtTime(0.0001,start+d+0.14);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(start+d); osc.stop(start+d+0.16);
+      });
+      if(test && navigator.vibrate) navigator.vibrate([150,80,150]);
+    }catch(err){ console.warn('alarm sound error',err); }
+  }
+  function stopAlarm(markIds=[]){
+    if(alarmTimer){ clearInterval(alarmTimer); alarmTimer=null; }
+    alarmLevel=0;
+    const seen=LS.get('langar_admin_seen_order_ids_v440',LS.get('langar_admin_seen_order_ids_v439',[]));
+    const ids=markIds.length?markIds:alarmActiveIds;
+    if(ids.length) LS.set('langar_admin_seen_order_ids_v440',Array.from(new Set([...seen,...ids])));
+    alarmActiveIds=[];
+    document.title='Langar Admin';
+  }
+  function startAlarm(ids){
+    if(!ids.length) return;
+    alarmActiveIds=Array.from(new Set([...alarmActiveIds,...ids]));
+    document.title='🔔 New order - Langar Admin';
+    toast(`New order received (${ids.length})`);
+    if(!soundEnabled){ return; }
+    if(!alarmTimer){
+      alarmLevel=0.38;
+      beep(alarmLevel);
+      alarmTimer=setInterval(()=>{
+        alarmLevel=Math.min(0.95, alarmLevel+0.10);
+        beep(alarmLevel);
+        if(navigator.vibrate) navigator.vibrate([120,70,120]);
+      },3200);
+    }
+  }
+  function markSeen(id){
+    const seen=LS.get('langar_admin_seen_order_ids_v440',LS.get('langar_admin_seen_order_ids_v439',[]));
+    LS.set('langar_admin_seen_order_ids_v440',Array.from(new Set([...seen,id])));
+  }
+  function checkAlarm(orders){
+    const actionable=orders.filter(o=>!finalStatuses.includes(o.status));
+    const ids=actionable.map(o=>o.cloudId||o.id).filter(Boolean);
+    const seen=LS.get('langar_admin_seen_order_ids_v440',LS.get('langar_admin_seen_order_ids_v439',LS.get('langar_admin_seen_order_ids_v438',[])));
+    if(!initialSeen){LS.set('langar_admin_seen_order_ids_v440',Array.from(new Set([...seen,...ids]))); initialSeen=true; return;}
+    const fresh=ids.filter(id=>!seen.includes(id) && !alarmActiveIds.includes(id));
+    if(fresh.length) startAlarm(fresh);
+  }
+  function monitorHtml(){ return `<div class="order-live-monitor legal-block"><b>Live Order Monitor</b><p>Keep this page open. New orders refresh automatically. The alarm repeats and becomes louder until staff acknowledge it.</p><div class="toolbar"><button class="secondary" id="refreshOrdersAdmin">Refresh orders</button><button class="secondary" id="enableOrderSound">${soundEnabled?'Loud alarm enabled':'Enable loud alarm'}</button><button class="secondary" id="testOrderSound">Test alarm</button><button class="secondary" id="markOrdersSeen">Acknowledge / stop alarm</button></div><small>${soundEnabled?'Sound permission saved on this device.':'Tap Enable loud alarm once on this device/browser.'}</small></div>`; }
+  function orderCard(o){
+    const id=o.cloudId||o.id; const meta=parseMeta(o.customer_note||o.note||''); const payment=meta.paymentMethod||o.paymentMethod||'cash'; const count=countdown(meta,o.status);
+    const decisionText=meta.decision==='accepted'?'Accepted by customer':(meta.decision==='cancelled'?'Cancelled by customer':(meta.etaMinutes?'Waiting for customer decision':''));
+    return `<article class="admin-order-card ${esc(o.status)}"><header><div><b>${esc(o.id)}</b><small>${new Date(o.createdAt||o.created_at||Date.now()).toLocaleString()} · ${esc(orderTypeLabel(o.type||'pickup'))} · ${o.cloud?'<b>Cloud</b>':'local'}</small></div><span class="tag">${esc(o.status||'submitted')}</span></header>
+      <div class="order-admin-grid"><div><h4>Customer</h4><p>${esc(o.name||'-')}<br>${esc(o.phone||'')}${o.type==='delivery'&&o.address?`<br><b>Address:</b> ${esc(o.address)}`:''}${o.type==='dine_in'&&(meta.tableNumber||o.tableNumber)?`<br><b>Table:</b> ${esc(meta.tableNumber||o.tableNumber)}`:''}</p><p><b>Payment:</b> ${paymentLabel(payment)}<br><b>Total:</b> €${Number(o.total||0).toFixed(2)}</p></div><div><h4>Items</h4><p>${(o.items||[]).map(i=>`${i.qty||i.quantity||1}× ${esc(i.nameSnapshot||i.item_name_en||i.name||'Item')}`).join('<br>')||'<span class="muted">No item rows loaded.</span>'}</p><small>${esc(meta.cleanNote||'')}</small></div></div>
+      <div class="eta-box"><b>Offer prep / delivery time</b><p class="muted">The countdown starts only after the customer accepts this time.</p><div class="eta-buttons"><button data-eta="15" data-order="${esc(id)}">15</button><button data-eta="20" data-order="${esc(id)}">20</button><button data-eta="30" data-order="${esc(id)}">30</button><button data-eta="45" data-order="${esc(id)}">45</button><button data-eta="60" data-order="${esc(id)}">60</button></div><label>Custom minutes<input type="number" min="1" max="240" step="1" value="${esc(meta.etaMinutes||30)}" data-custom-eta="${esc(id)}" placeholder="22, 35, 65..."></label><button class="primary full" data-send-eta="${esc(id)}">Send time offer</button>${meta.etaMinutes?`<p><b>Offered:</b> ${meta.etaMinutes} min<br><b>Decision:</b> ${esc(decisionText||'-')}<br><b>Timer:</b> <span data-admin-countdown="${esc(id)}">${esc(count)}</span></p>`:''}</div>
+      <div class="edit-grid order-flags"><label>Status<select data-order-status="${esc(id)}">${statusOptions(o.status)}</select></label><label><input type="checkbox" data-order-paid="${esc(id)}" ${o.paid||o.paymentStatus==='paid'?'checked':''}> Paid</label><label><input type="checkbox" data-order-remaris="${esc(id)}" ${meta.remarisEntered||o.remarisEntered?'checked':''}> Entered in Remaris</label></div>
+      <div class="toolbar"><button class="secondary" data-save-order="${esc(id)}">Save status / payment</button><button class="secondary" data-ready-order="${esc(id)}">Ready message</button><button class="danger" data-reject-order="${esc(id)}">Reject / cancel + notify</button></div></article>`;
+  }
+  function bindButtons(orders){ $('#refreshOrdersAdmin')?.addEventListener('click',()=>renderOrders(true)); $('#enableOrderSound')?.addEventListener('click',enableSound); $('#testOrderSound')?.addEventListener('click',()=>{soundEnabled=true; LS.set('langar_order_sound_enabled_v440',true); beep(0.9,true); toast('Alarm test played.');}); $('#markOrdersSeen')?.addEventListener('click',()=>{stopAlarm(orders.map(o=>o.cloudId||o.id)); toast('Alarm stopped and current orders acknowledged.');}); $$('[data-eta]').forEach(b=>b.onclick=()=>{const inp=$(`[data-custom-eta="${CSS.escape(b.dataset.order)}"]`); if(inp) inp.value=b.dataset.eta;}); $$('[data-send-eta]').forEach(b=>b.onclick=()=>sendEta(b.dataset.sendEta)); $$('[data-save-order]').forEach(b=>b.onclick=()=>saveOrder(b.dataset.saveOrder)); $$('[data-ready-order]').forEach(b=>b.onclick=()=>readyOrder(b.dataset.readyOrder)); $$('[data-reject-order]').forEach(b=>b.onclick=()=>rejectOrder(b.dataset.rejectOrder)); }
+  function paint(orders){ const box=$('#ordersAdmin'); if(!box) return; checkAlarm(orders); if(!orders.length){box.innerHTML=monitorHtml()+`<div class="legal-block"><b>No orders yet.</b><p>When a customer submits an online order, it will appear here. For another device, run the V4.3.9 SQL policies once in Supabase.</p></div>`; bindButtons(orders); return;} box.innerHTML=monitorHtml()+`<div class="legal-block"><b>Payment / Remaris</b><p><b>Payment</b> shows Cash or Card for staff. <b>Paid</b> means money was received. <b>Entered in Remaris</b> means staff manually entered the order into Remaris/POS for fiscal receipt.</p></div><div class="order-admin-list">${orders.map(orderCard).join('')}</div>${dailyArchiveHtml(orders)}`; bindButtons(orders); }
+  async function renderOrders(){ const box=$('#ordersAdmin'); if(!box) return; box.innerHTML=monitorHtml()+'<p class="muted">Loading orders...</p>'; bindButtons([]); const orders=merge(await fetchCloudOrders(),localOrders()); paint(orders); }
+  window.renderOrders=renderOrders;
+  async function getCloudOrder(id){ const c=client(); if(!c||!id||String(id).startsWith('ORD-')) return null; try{const {data}=await c.from('orders').select('*').eq('id',id).maybeSingle(); return data||null;}catch{return null;} }
+  async function updateCloud(id,patch){ const c=client(); if(!c||!id||String(id).startsWith('ORD-')) return false; try{const {error}=await c.from('orders').update(patch).eq('id',id); if(error) throw error; return true;}catch(err){toast('Cloud update failed: '+err.message); return false;} }
+  async function inbox(userId,title,body,data={}){ const c=client(); if(!c||!userId) return; try{await c.from('inbox_messages').insert({user_id:userId,type:'order_update',title_en:title,body_en:body,title_hr:title,body_hr:body,data});}catch{} }
+  async function sendEta(id){ const inp=$(`[data-custom-eta="${CSS.escape(id)}"]`); const mins=Math.max(1,parseInt(inp?.value||'30',10)); const now=new Date().toISOString(); const local=LS.get('langar_orders_v3',[])||[]; local.forEach(o=>{ if(o.id===id||o.cloudId===id){ o.status='time_offered'; let note=o.note||o.customer_note||''; note=removeMarker(note,'ETA_ACCEPTED_AT'); note=appendMarker(note,'ETA_MINUTES',mins); note=appendMarker(note,'ETA_OFFERED_AT',now); note=appendMarker(note,'CUSTOMER_DECISION','pending'); o.note=note; o.customer_note=note; }}); LS.set('langar_orders_v3',local); const co=await getCloudOrder(id); if(co){ let note=removeMarker(co.customer_note||'','ETA_ACCEPTED_AT'); note=appendMarker(note,'ETA_MINUTES',mins); note=appendMarker(note,'ETA_OFFERED_AT',now); note=appendMarker(note,'CUSTOMER_DECISION','pending'); await updateCloud(id,{status:'time_offered',customer_note:note,updated_at:now}); await inbox(co.user_id,'Order time estimate',`Langar Bar can prepare your order in about ${mins} minutes. Please accept or cancel inside the app.`,{order_id:id,eta_minutes:mins}); } markSeen(id); stopAlarm([id]); toast(`Time offer sent: ${mins} minutes.`); renderOrders(); }
+  async function saveOrder(id){ const st=$(`[data-order-status="${CSS.escape(id)}"]`)?.value||'submitted'; const paid=!!$(`[data-order-paid="${CSS.escape(id)}"]`)?.checked; const remaris=!!$(`[data-order-remaris="${CSS.escape(id)}"]`)?.checked; const local=LS.get('langar_orders_v3',[])||[]; local.forEach(o=>{if(o.id===id||o.cloudId===id){o.status=st;o.paid=paid;o.remarisEntered=remaris;o.note=appendMarker(o.note||o.customer_note||'','REMARIS_ENTERED',remaris?'true':'false');}}); LS.set('langar_orders_v3',local); const co=await getCloudOrder(id); if(co){const note=appendMarker(co.customer_note||'','REMARIS_ENTERED',remaris?'true':'false'); await updateCloud(id,{status:st,payment_status:paid?'paid':'unpaid',customer_note:note,updated_at:new Date().toISOString()}); await inbox(co.user_id,'Order status updated',`Your order status is now: ${st}.`,{order_id:id,status:st});} markSeen(id); stopAlarm([id]); toast('Order updated and customer status can be tracked.'); renderOrders(); }
+  async function readyOrder(id){ const co=await getCloudOrder(id); const st=(co?.order_type==='delivery')?'out_for_delivery':'ready'; await updateCloud(id,{status:st,updated_at:new Date().toISOString()}); if(co) await inbox(co.user_id,'Your order is ready',co.order_type==='delivery'?'Your order is ready and going out for delivery.':(co.order_type==='dine_in'?'Your order is ready at your table / counter.':'Your order is ready for pick-up.'),{order_id:id,status:st}); const local=LS.get('langar_orders_v3',[])||[]; local.forEach(o=>{if(o.id===id||o.cloudId===id)o.status=st;}); LS.set('langar_orders_v3',local); markSeen(id); stopAlarm([id]); toast('Ready message sent.'); renderOrders(); }
+  async function rejectOrder(id){ if(!confirm('Reject/cancel this order and notify customer?')) return; const co=await getCloudOrder(id); await updateCloud(id,{status:'rejected',updated_at:new Date().toISOString()}); if(co) await inbox(co.user_id,'Order cancelled','Sorry, Langar Bar cannot confirm this order right now. Please try another time or contact us.',{order_id:id,status:'rejected'}); const local=LS.get('langar_orders_v3',[])||[]; local.forEach(o=>{if(o.id===id||o.cloudId===id)o.status='rejected';}); LS.set('langar_orders_v3',local); markSeen(id); stopAlarm([id]); toast('Order rejected/cancelled.'); renderOrders(); }
+
+  async function renderFeedbackModeration(){
+    const box=$('#feedbackAdmin'); if(!box) return; const c=client(); let rows=[];
+    if(c){ try{ const {data,error}=await c.from('feedback').select('id,rating,message,customer_name,is_public,status,admin_reply,created_at,order_id').order('created_at',{ascending:false}).limit(100); if(error) throw error; rows=data||[]; }catch(err){ box.innerHTML=`<p style="color:#ffb1a8">Cloud feedback error: ${esc(err.message)}</p>`; rows=[]; } }
+    if(!rows.length){ rows=(LS.get('langar_feedback',[])||[]).map(f=>({id:f.id,rating:+f.rating,message:f.message,customer_name:f.name,is_public:!!f.isPublic,status:f.status,created_at:f.createdAt,order_id:f.orderId,local:true})); }
+    if(!rows.length){ box.innerHTML='<p class="muted">No order feedback yet.</p>'; return; }
+    const row=f=>`<article class="legal-block feedback-admin-card"><header><b>${'★'.repeat(+f.rating||0)} ${esc(f.customer_name||'Guest')}</b><span class="tag">${f.is_public?'public':'admin review'}</span></header><p>${esc(f.message||'-')}</p><small>${new Date(f.created_at||Date.now()).toLocaleString()}${f.order_id?` · Order: ${esc(f.order_id)}`:''}</small><div class="toolbar">${(+f.rating>=4&&!f.is_public&&!f.local)?`<button class="secondary" data-publish-feedback="${esc(f.id)}">Publish positive review</button>`:''}${f.is_public&&!f.local?`<button class="secondary" data-hide-feedback="${esc(f.id)}">Hide public review</button>`:''}<textarea data-reply-feedback="${esc(f.id)}" placeholder="Admin reply...">${esc(f.admin_reply||'')}</textarea><button class="secondary" data-save-feedback-reply="${esc(f.id)}">Save reply</button></div></article>`;
+    const pos=rows.filter(f=>+f.rating>=4), neg=rows.filter(f=>+f.rating<4);
+    box.innerHTML=`<h3>Positive reviews to publish</h3>${pos.length?pos.map(row).join(''):'<p class="muted">No positive order reviews yet.</p>'}<h3>Private complaints / low ratings</h3>${neg.length?neg.map(row).join(''):'<p class="muted">No low-rating complaints yet.</p>'}<div class="legal-block"><b>Review rule</b><p>4–5 star feedback can be published after admin approval. 1–3 star feedback stays private for service recovery.</p></div>`;
+    $$('[data-publish-feedback]').forEach(b=>b.onclick=()=>updateFeedback(b.dataset.publishFeedback,{is_public:true,status:'public'}));
+    $$('[data-hide-feedback]').forEach(b=>b.onclick=()=>updateFeedback(b.dataset.hideFeedback,{is_public:false,status:'public'}));
+    $$('[data-save-feedback-reply]').forEach(b=>b.onclick=()=>{ const id=b.dataset.saveFeedbackReply; const ta=$(`[data-reply-feedback="${CSS.escape(id)}"]`); updateFeedback(id,{admin_reply:ta?.value||''}); });
+  }
+  async function updateFeedback(id,patch){ const c=client(); if(!c){toast('Cloud feedback not available.'); return;} try{ const {error}=await c.from('feedback').update(patch).eq('id',id); if(error) throw error; toast('Feedback updated.'); renderFeedbackModeration(); }catch(err){ toast('Feedback update failed: '+err.message); } }
+  const oldShow=window.showPanel; if(typeof oldShow==='function'){ window.showPanel=function(id){ oldShow.apply(this,arguments); if(id==='ordersPanel') setTimeout(()=>renderOrders(),200); if(id==='feedbackPanel') setTimeout(()=>renderFeedbackModeration(),200); }; }
+  try{ if('BroadcastChannel'in window){ const bc=new BroadcastChannel('langar_orders'); bc.onmessage=e=>{ if(e.data?.type==='new_order') setTimeout(()=>renderOrders(),200); }; } }catch{}
+  window.addEventListener('storage',e=>{ if(['langar_order_signal_v440','langar_order_signal_v439','langar_order_signal_v438','langar_orders_v3'].includes(e.key)) setTimeout(()=>renderOrders(),200); });
+  document.addEventListener('DOMContentLoaded',()=>{ setTimeout(()=>renderOrders(),900); setInterval(()=>{const visible=$('#ordersPanel')&&!$('#ordersPanel').classList.contains('hidden'); if(visible) renderOrders();},6000); });
+  window.renderFeedbackAdmin=renderFeedbackModeration;
+})();

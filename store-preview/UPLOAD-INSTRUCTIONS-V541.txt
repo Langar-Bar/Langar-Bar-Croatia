@@ -1,0 +1,4 @@
+Langar Bar V5.4.1 Knowledge Reliability Patch
+1. Upload/replace: index.html, admin.html, service-worker.js, js/client-knowledge-v541.js, js/admin-knowledge-fixes-v541.js, css/knowledge-fixes-v541.css
+2. Run langar_bar_v541_knowledge_reliability.sql once in Supabase SQL Editor.
+3. Test app with ?v=541 and admin with admin.html?v=541.

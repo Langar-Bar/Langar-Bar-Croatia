@@ -1,0 +1,5 @@
+Langar Bar V5.5.5 Final Reservation & Gallery Fix
+1. Upload/replace: index.html, admin.html, service-worker.js, js/client-reservation-v555.js, js/admin-gallery-reservation-v555.js, css/admin-gallery-reservation-v555.css
+2. Run langar_bar_v555_RESERVATION_GALLERY_FINAL_FIX.sql once in Supabase SQL Editor.
+3. Test customer app with ?v=555 and admin with admin.html?v=555.
+Large photos are automatically resized/compressed before upload.

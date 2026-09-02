@@ -1,0 +1,7 @@
+V4.4.7 — Order Status Tracking + Archive
+- Customer can see recent order statuses in the app.
+- Admin status changes can send Cloud Inbox messages to the customer.
+- Admin Orders panel has Live Queue / Today / Archive / All filters.
+- Completed/cancelled/rejected orders are archived, not deleted.
+- Order records remain in Supabase customer_orders for management review and Remaris/manual receipt reconciliation.
+- Added SQL: langar_bar_v447_order_status_archive.sql

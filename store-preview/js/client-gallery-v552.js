@@ -1,0 +1,21 @@
+(()=>{
+'use strict';
+let client, productMedia=new Map();
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+function sb(){return window.langarCloud?.client||window.supabaseClient||window._supabase||null}
+function menuCats(){try{return typeof getMenu==='function'?getMenu():(Array.isArray(window.LANGAR_DEFAULT_MENU)?window.LANGAR_DEFAULT_MENU:[])}catch{return []}}
+function findItem(id){for(const c of menuCats()){const x=(c.items||[]).find(v=>String(v.cloudId||v.id)===String(id)||String(v.id)===String(id));if(x)return {c,x}}return null}
+function label(i,lang){if(i.menu_item_id){const hit=findItem(i.menu_item_id);if(hit)return hit.x.name?.[lang]||hit.x.name?.en}if(i.menu_category_id){const c=menuCats().find(x=>String(x.cloudId||x.id)===String(i.menu_category_id)||String(x.id)===String(i.menu_category_id));if(c)return c.title?.[lang]||c.title?.en}return String(i.category||'Gallery').replace('gallery:','').replace('general-','')}
+async function loadGallery(){const g=$('#galleryView');if(!g||!client)return;g.innerHTML='<p>Loading gallery…</p>';const {data,error}=await client.from('gallery_items').select('*').eq('active',true).in('photo_role',['gallery','both']).order('sort_order').order('created_at',{ascending:false});if(error){g.innerHTML='<p>Gallery is temporarily unavailable.</p>';return}const lang=window.state?.lang==='hr'?'hr':'en';g.innerHTML=(data||[]).map(i=>`<article class="v551-public-photo" data-item="${esc(i.menu_item_id||'')}"><img loading="lazy" style="object-fit:${esc(i.image_fit||'cover')}" src="${esc(i.image_url)}?v=${Date.parse(i.updated_at||i.created_at||Date.now())}" alt="${esc((lang==='hr'?i.title_hr:i.title_en)||i.title_en||i.title_hr||'Langar Bar')}"><div><b>${esc((lang==='hr'?i.title_hr:i.title_en)||i.title_en||i.title_hr||'')}</b><small>${esc(label(i,lang))}</small>${(lang==='hr'?i.caption_hr:i.caption_en)||i.caption_en||i.caption_hr?`<p>${esc((lang==='hr'?i.caption_hr:i.caption_en)||i.caption_en||i.caption_hr)}</p>`:''}</div></article>`).join('')||'<p>No gallery photos yet.</p>'}
+async function loadProductMedia(){const {data,error}=await client.from('menu_item_media').select('*').eq('active',true);if(error)return;productMedia=new Map((data||[]).map(x=>[String(x.menu_item_id),x]));applyProductImages()}
+function mediaFor(item){return productMedia.get(String(item?.cloudId||item?.id))||productMedia.get(String(item?.id))}
+function patchRenderers(){
+ if(typeof window.itemNode==='function'&&!window.itemNode.__img552){const orig=window.itemNode;window.itemNode=function(item,orderMode){const node=orig(item,orderMode),m=mediaFor(item);if(m){node.classList.add('has-product-photo');node.dataset.itemId=item.cloudId||item.id;const img=document.createElement('img');img.className='menu-product-thumb';img.src=m.image_url;img.alt=item.name?.en||item.id;img.style.objectFit=m.image_fit||'cover';node.prepend(img)}return node};window.itemNode.__img552=true}
+ if(typeof window.openDetails==='function'&&!window.openDetails.__img552){const orig=window.openDetails;window.openDetails=function(item,orderMode){orig(item,orderMode);const m=mediaFor(item),body=$('#modalBody');if(m&&body&&!body.querySelector('.menu-product-hero')){const img=document.createElement('img');img.className='menu-product-hero';img.src=m.image_url;img.alt=item.name?.en||item.id;img.style.objectFit=m.image_fit||'cover';body.prepend(img)}};window.openDetails.__img552=true}
+ if(typeof window.renderMenu==='function')window.renderMenu();if(typeof window.renderOrderMenu==='function')window.renderOrderMenu();
+}
+function applyProductImages(){patchRenderers()}
+function init(){client=sb();if(!client){setTimeout(init,600);return}Promise.all([loadGallery(),loadProductMedia()]);client.channel('gallery-v552').on('postgres_changes',{event:'*',schema:'public',table:'gallery_items'},loadGallery).on('postgres_changes',{event:'*',schema:'public',table:'menu_item_media'},loadProductMedia).subscribe();document.addEventListener('click',e=>{if(e.target.closest('[data-go="gallery"]'))setTimeout(loadGallery,200)});setTimeout(patchRenderers,1200)}
+window.addEventListener('load',()=>setTimeout(init,700));
+})();

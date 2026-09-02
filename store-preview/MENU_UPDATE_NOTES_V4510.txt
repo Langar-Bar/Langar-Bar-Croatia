@@ -1,0 +1,18 @@
+Langar Bar V4.5.10 — Mobile Order Tabs + Admin Reviews Login Hotfix
+
+Built on V4.5.9.
+
+Fixes:
+1. Customer Order mobile layout
+   - Dine-in / Pick-up / Delivery segmented control now forces full-width responsive grid on mobile.
+   - Order mode note now matches full screen width.
+   - Order category cards are protected from horizontal overflow on mobile.
+
+2. Admin Reviews & Insights
+   - Reviews panel now uses the same Supabase client/session as Cloud Admin Login.
+   - Fixes false “Please login as Cloud Admin first” when admin badge already shows owner/admin.
+   - Reviews reload after admin login/unlock event.
+
+SQL:
+- No new database schema is required if V4.5.9 SQL has already been executed.
+- If Reviews tables/RPCs do not exist yet, run langar_v459_sql_only.sql first.

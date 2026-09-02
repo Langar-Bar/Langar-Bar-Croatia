@@ -1,0 +1,14 @@
+Langar Bar V4.4.8 — Order Alarm + Customer Status Notifications
+
+Changes:
+- Admin Orders tablet now shows a large new-order alarm banner.
+- Admin alarm sound can be enabled by tapping Enable alarm sound.
+- Alarm repeats until staff taps I checked / stop alarm or accepts/changes the new order status.
+- Browser notification is requested for the admin tablet when alarm is enabled.
+- Dine-in mobile ordering does not require Langar Club registration; only table number is required.
+- Pick-up and delivery require name and phone for practical contact.
+- Pick-up/delivery customer devices can show order status and receive in-app/browser notifications when status changes, as long as the app/site remains available on the device.
+- No new SQL required if V4.4.7 SQL was already executed.
+
+Operational note:
+For full push notifications when the app is closed, connect OneSignal/FCM later. This version uses in-app polling + browser notifications while the PWA/browser is active or available.

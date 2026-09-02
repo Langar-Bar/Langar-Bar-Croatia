@@ -1,0 +1,7 @@
+Replace only these files:
+js/prelaunch-v605.js
+css/prelaunch-v605.css
+service-worker.js
+app-version.json
+
+No SQL is required.

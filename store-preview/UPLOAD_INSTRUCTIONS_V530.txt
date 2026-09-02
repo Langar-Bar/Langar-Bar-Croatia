@@ -1,0 +1,17 @@
+LANGAR BAR V5.3.0 PRODUCTION POLISH
+
+Upload/replace only:
+- admin.html
+- index.html
+- service-worker.js
+- js/order-print-v530.js
+- js/admin-polish-v530.js
+- js/client-polish-v530.js
+- css/production-polish-v530.css
+
+Run once in Supabase SQL Editor:
+- langar_bar_v530_review_view.sql
+
+Test links:
+Customer: https://langar-bar.github.io/Langar-Bar-Croatia/?v=530
+Admin: https://langar-bar.github.io/Langar-Bar-Croatia/admin.html?v=530

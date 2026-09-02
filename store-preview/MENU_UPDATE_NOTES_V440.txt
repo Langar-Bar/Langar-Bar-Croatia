@@ -1,0 +1,20 @@
+Langar Bar V4.4.0 Breakfast Menu Update
+
+What changed:
+1. Added Breakfast category with egg/omelette items and breakfast combos.
+2. Added Breakfast Add-ons & Upgrades.
+3. Every breakfast item/combo includes one drink choice: orange juice 200ml, espresso, Americano or classic tea.
+4. Added cappuccino and latte breakfast upgrades.
+5. Updated taco prices to €7.90/€8.00.
+6. Updated tapas to Duo/Trio/Quartet model.
+7. Updated focaccia pizza prices.
+8. Updated dessert and soft serve pricing.
+9. Added Extra Sauces category.
+10. Bumped localStorage menu key to langar_menu_v7 and service worker cache to V4.4.0.
+
+Supabase/cloud menu:
+- Option 1: Run langar_bar_menu_seed_v44_breakfast_update.sql in Supabase SQL Editor.
+- Option 2: Login in Admin and upload/sync the local menu. The admin-cloud seed now attempts to deactivate old menu items/categories first.
+
+Note:
+Sandwich prices are still kept from the existing app because final sandwich selling prices were not confirmed in the normatives. Descriptions now state that those prices are temporary until approved.

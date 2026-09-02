@@ -1,0 +1,11 @@
+Langar Bar V6.0.1 Prelaunch Reliability Hotfix
+Upload/replace only:
+- index.html
+- admin.html
+- service-worker.js
+- app-version.json
+- js/prelaunch-v601.js
+- js/admin-prelaunch-v601.js
+- css/prelaunch-v601.css
+No SQL is required.
+Open customer app once with ?v=601. Older V6.0.0 devices should then see a forced Update now prompt because app-version.json is 6.0.1.

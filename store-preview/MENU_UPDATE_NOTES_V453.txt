@@ -1,0 +1,13 @@
+Langar Bar V4.5.3 — Order Countdown + Admin Cloud Health + Test Cleanup
+
+What changed:
+- Admin Orders now includes Cloud Health Check for profiles, rewards, inbox, orders and active admins.
+- Admin can send preset or custom ready-time minutes to the customer.
+- Customer app shows estimated ready time and a live countdown timer.
+- Admin Orders filters improved: Live Queue, Today, Yesterday, Archive, By date, Test and All 500.
+- Test orders can be marked and deleted safely from Admin. Real orders are not deleted by this cleanup button.
+- Customer My Recent Orders cards are visually improved.
+- Admin order cards and item names are bolder and easier to read on tablet.
+
+SQL to run:
+langar_bar_v453_admin_cloud_health_order_refinements.sql

@@ -1,0 +1,1 @@
+V4.4.3 fixes blank Langar Club view by restoring renderClubState fallback, wiring Club login/register tabs safely, and bumping service worker cache. Run SQL from V4.4.2 if not already done.

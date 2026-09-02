@@ -1,0 +1,5 @@
+Langar Bar V5.4.2 Final Knowledge Fix
+1. Upload/replace: index.html, service-worker.js, js/client-knowledge-v542.js, css/knowledge-fixes-v542.css
+2. Run langar_bar_v542_knowledge_answer_delete.sql once in Supabase SQL Editor.
+3. Test customer app with ?v=542.
+4. Do NOT run any test-data cleanup yet. See PRE_GOOGLE_PLAY_CLEANUP_README.txt.

@@ -1,0 +1,40 @@
+begin;
+create extension if not exists pgcrypto;
+create table if not exists public.reservations(
+ id uuid primary key default gen_random_uuid(), user_id uuid not null references auth.users(id) on delete cascade,
+ customer_name text not null, phone text not null, reservation_date date not null, reservation_time time not null,
+ guests int not null check(guests between 1 and 30), area text default 'inside', occasion text,
+ high_chair boolean default false, note text, status text not null default 'pending', admin_note text,
+ created_at timestamptz not null default now(), updated_at timestamptz not null default now()
+);
+alter table public.reservations add column if not exists area text default 'inside';
+alter table public.reservations add column if not exists occasion text;
+alter table public.reservations add column if not exists high_chair boolean default false;
+alter table public.reservations add column if not exists admin_note text;
+alter table public.reservations add column if not exists updated_at timestamptz default now();
+create unique index if not exists reservations_active_slot_uq on public.reservations(reservation_date,reservation_time) where status in('pending','confirmed');
+alter table public.reservations enable row level security;
+drop policy if exists reservation_own_or_admin_read_v554 on public.reservations;
+create policy reservation_own_or_admin_read_v554 on public.reservations for select to authenticated using(user_id=auth.uid() or exists(select 1 from public.admin_members a where a.user_id=auth.uid() and a.active));
+create or replace function public.customer_create_reservation_v554(p_date date,p_time time,p_name text,p_phone text,p_guests int,p_area text default 'inside',p_occasion text default '',p_high_chair boolean default false,p_note text default '') returns uuid language plpgsql security definer set search_path=public as $$declare rid uuid;begin if auth.uid() is null then raise exception 'Login required';end if;insert into reservations(user_id,customer_name,phone,reservation_date,reservation_time,guests,area,occasion,high_chair,note,status) values(auth.uid(),trim(p_name),trim(p_phone),p_date,p_time,p_guests,coalesce(nullif(trim(p_area),''),'inside'),nullif(trim(p_occasion),''),coalesce(p_high_chair,false),nullif(trim(p_note),''),'pending') returning id into rid;return rid;exception when unique_violation then raise exception 'This time is already reserved';end$$;
+grant execute on function public.customer_create_reservation_v554(date,time,text,text,int,text,text,boolean,text) to authenticated;
+create or replace function public.admin_update_reservation_v554(p_id uuid,p_status text,p_note text default '') returns void language plpgsql security definer set search_path=public as $$declare r reservations;begin if not exists(select 1 from admin_members a where a.user_id=auth.uid() and a.active) then raise exception 'Admin required';end if;if p_status not in('pending','confirmed','rejected','cancelled','completed','no_show') then raise exception 'Invalid status';end if;update reservations set status=p_status,admin_note=nullif(trim(p_note),''),updated_at=now() where id=p_id returning * into r;if r.id is null then raise exception 'Reservation not found';end if;if to_regclass('public.inbox_messages') is not null then insert into inbox_messages(user_id,title,body,priority,created_at,is_deleted) values(r.user_id,'Reservation update',format('Your reservation for %s at %s is now %s. %s',r.reservation_date,to_char(r.reservation_time,'HH24:MI'),p_status,coalesce(p_note,'')),'important',now(),false);end if;end$$;
+grant execute on function public.admin_update_reservation_v554(uuid,text,text) to authenticated;
+create table if not exists public.gallery_items(id uuid primary key default gen_random_uuid(),image_url text not null,storage_path text,title_en text,title_hr text,category text,menu_category_id uuid,menu_item_id uuid,sort_order int default 10,active boolean default true,photo_role text default 'gallery',created_at timestamptz default now(),updated_at timestamptz default now());
+alter table public.gallery_items add column if not exists menu_category_id uuid;
+alter table public.gallery_items add column if not exists menu_item_id uuid;
+alter table public.gallery_items add column if not exists photo_role text default 'gallery';
+alter table public.gallery_items add column if not exists updated_at timestamptz default now();
+create table if not exists public.menu_item_media(id uuid primary key default gen_random_uuid(),menu_item_id uuid not null unique,image_url text not null,storage_path text,updated_at timestamptz default now());
+insert into storage.buckets(id,name,public) values('langar-gallery','langar-gallery',true) on conflict(id) do update set public=true;
+alter table public.gallery_items enable row level security;alter table public.menu_item_media enable row level security;
+drop policy if exists gallery_public_read_v554 on public.gallery_items;create policy gallery_public_read_v554 on public.gallery_items for select using(active=true or exists(select 1 from public.admin_members a where a.user_id=auth.uid() and a.active));
+drop policy if exists menu_media_public_read_v554 on public.menu_item_media;create policy menu_media_public_read_v554 on public.menu_item_media for select using(true);
+drop policy if exists gallery_storage_public_v554 on storage.objects;create policy gallery_storage_public_v554 on storage.objects for select using(bucket_id='langar-gallery');
+drop policy if exists gallery_storage_admin_v554 on storage.objects;create policy gallery_storage_admin_v554 on storage.objects for all to authenticated using(bucket_id='langar-gallery' and exists(select 1 from public.admin_members a where a.user_id=auth.uid() and a.active)) with check(bucket_id='langar-gallery' and exists(select 1 from public.admin_members a where a.user_id=auth.uid() and a.active));
+create or replace function public.admin_create_gallery_item_v554(p_image_url text,p_storage_path text,p_title_en text,p_title_hr text,p_category text,p_menu_category_id uuid default null,p_menu_item_id uuid default null,p_sort_order int default 10,p_photo_role text default 'gallery') returns uuid language plpgsql security definer set search_path=public as $$declare gid uuid;begin if not exists(select 1 from admin_members a where a.user_id=auth.uid() and a.active) then raise exception 'Admin required';end if;if p_photo_role not in('gallery','product','both') then raise exception 'Invalid photo role';end if;insert into gallery_items(image_url,storage_path,title_en,title_hr,category,menu_category_id,menu_item_id,sort_order,active,photo_role,updated_at) values(p_image_url,p_storage_path,p_title_en,p_title_hr,p_category,p_menu_category_id,p_menu_item_id,p_sort_order,true,p_photo_role,now()) returning id into gid;if p_menu_item_id is not null and p_photo_role in('product','both') then insert into menu_item_media(menu_item_id,image_url,storage_path,updated_at) values(p_menu_item_id,p_image_url,p_storage_path,now()) on conflict(menu_item_id) do update set image_url=excluded.image_url,storage_path=excluded.storage_path,updated_at=now();end if;return gid;end$$;
+grant execute on function public.admin_create_gallery_item_v554(text,text,text,text,text,uuid,uuid,int,text) to authenticated;
+create or replace function public.admin_delete_gallery_item_v554(p_id uuid) returns void language plpgsql security definer set search_path=public as $$declare r gallery_items;begin if not exists(select 1 from admin_members a where a.user_id=auth.uid() and a.active) then raise exception 'Admin required';end if;delete from gallery_items where id=p_id returning * into r;if r.menu_item_id is not null and r.photo_role in('product','both') then delete from menu_item_media where menu_item_id=r.menu_item_id and image_url=r.image_url;end if;end$$;
+grant execute on function public.admin_delete_gallery_item_v554(uuid) to authenticated;
+do $$begin begin alter publication supabase_realtime add table public.reservations; exception when duplicate_object then null; end;end$$;
+commit;

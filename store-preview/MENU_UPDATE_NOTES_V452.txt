@@ -1,0 +1,10 @@
+Langar Bar V4.5.2 — Order ETA + Stronger Admin Alarm
+
+- Admin Orders can send estimated ready time to customer: 10, 15, 20, 30, 45, 60, 90 minutes.
+- Optional customer message can be saved with the order.
+- Customer app shows order status plus estimated ready time in My recent orders.
+- Pickup/delivery customers can receive in-app/browser notifications when status or estimated time changes, while the app/PWA is active.
+- Admin tablet alarm now uses a stronger square-wave pattern and progressively increases volume until the order is checked/accepted.
+- New SQL: langar_bar_v452_order_eta_alarm_fix.sql
+
+Important: browser audio still depends on device speaker volume and requires tapping Enable alarm sound once on the admin tablet.

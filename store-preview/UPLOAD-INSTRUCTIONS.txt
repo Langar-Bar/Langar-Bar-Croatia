@@ -1,0 +1,4 @@
+Langar Bar V5.3.2
+Replace: admin.html, index.html, service-worker.js
+Upload: js/admin-fixes-v532.js, js/client-fixes-v532.js, css/production-fixes-v532.css
+Run once in Supabase: langar_bar_v532_alert_barista_fix.sql

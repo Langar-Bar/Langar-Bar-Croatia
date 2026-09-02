@@ -1,0 +1,20 @@
+.opening-admin-v608{
+  margin:0 0 18px;
+  padding:18px;
+  border:1px solid rgba(226,185,72,.38);
+  border-radius:22px;
+  background:rgba(255,255,255,.055)
+}
+.opening-preview-admin-v608{
+  margin-top:14px;
+  padding:18px;
+  border-radius:18px;
+  background:#fff;
+  color:#102d25
+}
+.opening-action-v608{
+  background:#f1d676!important;
+  color:#181105!important;
+  border:2px solid #8c6800!important;
+  font-weight:900!important
+}

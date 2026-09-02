@@ -1,0 +1,1 @@
+V4.5.0 fixes public guest order submission through JSON RPC, customer order tracking by token, and admin tablet auto-refresh/alarm through secure admin RPC + Realtime/polling. Run langar_bar_v450_order_rpc_status_realtime_fix.sql.

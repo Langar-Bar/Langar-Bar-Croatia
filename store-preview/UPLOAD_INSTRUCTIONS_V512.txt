@@ -1,0 +1,30 @@
+LANGAR BAR V5.1.2 COMBINED PATCH
+
+This package already includes every file from V5.1.1 plus the new Reviews and Sushi fixes.
+Upload/replace these paths in GitHub:
+- admin.html
+- index.html
+- service-worker.js
+- styles.css
+- js/admin-cloud.js
+- js/order-print-v510.js
+- js/app.js
+
+Then run this SQL once in Supabase SQL Editor:
+- langar_bar_v512_reviews_sushi_fix.sql
+
+Test links after GitHub Pages deploys:
+Customer: /?v=512
+Admin: /admin.html?v=512
+
+Main fixes:
+- Quick Price/Menu cloud publishing from V5.1.1
+- Correct Dine-in/Pick-up/Delivery print labels
+- Order Archive By Date/Open Date fixes
+- Review public/private/reply workflow
+- Reliable review € credit and Inbox message
+- Dynamic Sushi catalogue manager
+- Standard sushi seed list
+- Customer multi-item sushi pre-order
+- Customer cancellation while Pending/Confirmed
+- Admin status workflow, demand summary and internal print
