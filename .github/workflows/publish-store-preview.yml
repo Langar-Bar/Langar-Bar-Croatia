@@ -1,0 +1,60 @@
+name: Publish Store Preview
+
+on:
+  push:
+    branches:
+      - release/store-v1
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout Store release
+        uses: actions/checkout@v4
+        with:
+          ref: release/store-v1
+          path: release-src
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build exact Store web bundle
+        working-directory: release-src
+        run: |
+          npm install
+          npm run prepare:native
+
+      - name: Checkout stable main separately
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: main-site
+
+      - name: Replace only isolated preview directory
+        shell: bash
+        run: |
+          rm -rf main-site/store-preview
+          mkdir -p main-site/store-preview
+          cp -R release-src/www/. main-site/store-preview/
+          printf '%s\n' 'Store preview generated from release/store-v1. Do not edit manually.' > main-site/store-preview/PREVIEW_BUILD.txt
+
+      - name: Publish preview without changing production app files
+        working-directory: main-site
+        shell: bash
+        run: |
+          git config user.name 'Langar Bar Release Bot'
+          git config user.email 'langaarbar@gmail.com'
+          git add store-preview
+          if git diff --cached --quiet; then
+            echo 'Preview already current.'
+          else
+            git commit -m 'Publish isolated Store preview'
+            git push origin HEAD:main
+          fi
