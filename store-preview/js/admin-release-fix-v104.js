@@ -15,17 +15,15 @@ function looksGreen(rgb){
   const [r,g,b]=[+m[1],+m[2],+m[3]];
   return g>r*1.12 && g>b*1.02 && g>45;
 }
+function setImportant(el,name,value){ if(el?.style?.getPropertyValue(name)!==value || el.style.getPropertyPriority(name)!=='important') el?.style?.setProperty(name,value,'important'); }
 function fixButtons(root=document){
   root.querySelectorAll?.('button,.button,a.secondary,a.primary,[role="button"]').forEach(el=>{
     if(el.closest('#cloudAdminGate')) return;
     const cs=getComputedStyle(el); const bg=cs.backgroundColor; const lum=luminance(bg);
-    if(looksGreen(bg) && lum!=null && lum<0.55){
-      el.style.setProperty('color','#ffffff','important');
-      el.querySelectorAll('*').forEach(n=>n.style.setProperty('color','#ffffff','important'));
-    }else if(lum!=null && lum>0.67){
-      el.style.setProperty('color','#111111','important');
-      el.querySelectorAll('*').forEach(n=>n.style.setProperty('color','#111111','important'));
-    }
+    const color=looksGreen(bg)&&lum!=null&&lum<0.55?'#ffffff':lum!=null&&lum>0.67?'#111111':null;
+    if(!color)return;
+    setImportant(el,'color',color);
+    el.querySelectorAll('*').forEach(n=>setImportant(n,'color',color));
   });
 }
 function client(){
@@ -69,10 +67,10 @@ function wireFallback(){
 function fixLogin(){
   fallbackGate();
   const gate=document.getElementById('cloudAdminGate'); if(!gate)return;
-  gate.style.setProperty('position','relative','important');gate.style.setProperty('z-index','1000','important');gate.style.setProperty('pointer-events','auto','important');gate.style.setProperty('touch-action','manipulation','important');
-  gate.querySelectorAll('input,button,label,.form-card').forEach(el=>{el.style.setProperty('pointer-events','auto','important');el.style.setProperty('touch-action','manipulation','important')});
-  gate.querySelectorAll('input').forEach(input=>{input.disabled=false;input.readOnly=false;input.style.setProperty('user-select','text','important');input.style.setProperty('-webkit-user-select','text','important');input.style.setProperty('opacity','1','important');input.style.setProperty('color','#fff4d6','important');input.style.setProperty('background','#08140f','important');input.style.setProperty('caret-color','#f5d78b','important');input.style.setProperty('font-size','16px','important')});
-  const btn=gate.querySelector('#adminCloudLogin');if(btn){btn.style.setProperty('pointer-events','auto','important');btn.style.setProperty('color','#111','important')}
+  setImportant(gate,'position','relative');setImportant(gate,'z-index','1000');setImportant(gate,'pointer-events','auto');setImportant(gate,'touch-action','manipulation');
+  gate.querySelectorAll('input,button,label,.form-card').forEach(el=>{setImportant(el,'pointer-events','auto');setImportant(el,'touch-action','manipulation')});
+  gate.querySelectorAll('input').forEach(input=>{input.disabled=false;input.readOnly=false;setImportant(input,'user-select','text');setImportant(input,'-webkit-user-select','text');setImportant(input,'opacity','1');setImportant(input,'color','#fff4d6');setImportant(input,'background','#08140f');setImportant(input,'caret-color','#f5d78b');setImportant(input,'font-size','16px')});
+  const btn=gate.querySelector('#adminCloudLogin');if(btn){setImportant(btn,'pointer-events','auto');setImportant(btn,'color','#111111')}
   wireFallback();
 }
 function addCss(){
@@ -83,9 +81,10 @@ function refresh(){addCss();fixLogin();fixButtons(document)}
 function init(){
   refresh();
   let queued=false;
-  new MutationObserver(()=>{if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;refresh()})}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style']});
+  new MutationObserver(muts=>{if(queued||!muts.some(m=>m.addedNodes.length))return;queued=true;requestAnimationFrame(()=>{queued=false;refresh()})}).observe(document.body,{childList:true,subtree:true});
   document.addEventListener('click',()=>setTimeout(()=>fixButtons(document),50),true);
-  setTimeout(refresh,300);setTimeout(refresh,1000);setTimeout(refresh,2500);
+  setInterval(()=>{fixLogin();fixButtons(document)},900);
+  setTimeout(refresh,300);setTimeout(refresh,1200);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
