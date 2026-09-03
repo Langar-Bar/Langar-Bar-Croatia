@@ -8,9 +8,10 @@ const failures=[];
 const check=(ok,msg)=>{if(!ok)failures.push(msg);};
 
 try{
-  await page.goto(`${base}/index.html?storePreview=1`,{waitUntil:'networkidle',timeout:30000});
+  await page.goto(`${base}/index.html?storePreview=1`,{waitUntil:'domcontentloaded',timeout:30000});
   await page.evaluate(()=>localStorage.clear());
-  await page.reload({waitUntil:'networkidle'});
+  await page.reload({waitUntil:'domcontentloaded'});
+  await page.waitForTimeout(900);
   await page.locator('#popupLater,#closePopup').first().click({timeout:1500}).catch(()=>{});
 
   for(const id of ['home','order','menu','club','more']){
@@ -51,8 +52,9 @@ try{
   check(await page.locator('#storeClubDelete').count()>0,'Delete Account module missing from Club');
 
   const admin=await ctx.newPage();
-  await admin.goto(`${base}/admin.html?storePreview=1`,{waitUntil:'networkidle',timeout:30000});
-  await admin.waitForSelector('#adminCloudEmail',{timeout:10000});
+  await admin.goto(`${base}/admin.html?storePreview=1`,{waitUntil:'domcontentloaded',timeout:30000});
+  await admin.waitForSelector('#adminCloudEmail',{state:'attached',timeout:10000});
+  await admin.waitForTimeout(500);
   const email=admin.locator('#adminCloudEmail'),pass=admin.locator('#adminCloudPassword');
   await email.fill('qa@example.com'); await pass.fill('typing-test-123');
   check(await email.inputValue()==='qa@example.com','Admin email field is not typeable');
