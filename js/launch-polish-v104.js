@@ -57,10 +57,12 @@ function sectionHeadBefore(el){
 }
 
 function meaningfulPopular(){
-  return [...document.querySelectorAll('#popularStrip .popular-card')].some(card=>{
-    const t=card.textContent||'';
-    const nums=(t.match(/\d+(?:\.\d+)?/g)||[]).map(Number);
-    return nums.some(n=>n>0);
+  return [...document.querySelectorAll('#popularStrip .popular-card small')].some(s=>{
+    const t=s.textContent||'';
+    const like=Number((t.match(/♥\s*(\d+)/)||[])[1]||0);
+    const comments=Number((t.match(/💬\s*(\d+)/)||[])[1]||0);
+    const orders=Number((t.match(/🧾\s*(\d+)/)||[])[1]||0);
+    return like>0||comments>0||orders>0;
   });
 }
 function meaningfulSellers(){
