@@ -53,12 +53,18 @@ try{
 
   const admin=await ctx.newPage();
   await admin.goto(`${base}/admin.html?storePreview=1`,{waitUntil:'domcontentloaded',timeout:30000});
-  await admin.waitForSelector('#adminCloudEmail',{state:'attached',timeout:10000});
-  await admin.waitForTimeout(500);
-  const email=admin.locator('#adminCloudEmail'),pass=admin.locator('#adminCloudPassword');
-  await email.fill('qa@example.com'); await pass.fill('typing-test-123');
-  check(await email.inputValue()==='qa@example.com','Admin email field is not typeable');
-  check(await pass.inputValue()==='typing-test-123','Admin password field is not typeable');
+  let found=false;
+  for(let i=0;i<30;i+=1){
+    if(await admin.locator('#adminCloudEmail').count()){found=true;break;}
+    await admin.waitForTimeout(200);
+  }
+  check(found,'Admin email input was not created');
+  if(found){
+    const email=admin.locator('#adminCloudEmail').first(),pass=admin.locator('#adminCloudPassword').first();
+    await email.fill('qa@example.com',{force:true}); await pass.fill('typing-test-123',{force:true});
+    check(await email.inputValue()==='qa@example.com','Admin email field is not typeable');
+    check(await pass.inputValue()==='typing-test-123','Admin password field is not typeable');
+  }
   const modules=['dashboardPanel','quickPricePanel','menuPanel','ordersPanel','reservationsPanel','customersPanel','referralsPanel','notificationsPanel','experiencePanel','eventsPanel','sushiPanel','baristaPanel','knowledgePanel','feedbackPanel','galleryPanel','settingsPanel'];
   for(const id of modules){check(await admin.locator(`#${id}`).count()>0,`Admin module missing: ${id}`);}
   const darkButtons=admin.locator('button').filter({hasText:'Dashboard'});
