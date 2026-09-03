@@ -10,8 +10,33 @@ permissions:
   contents: read
 
 jobs:
+  release_smoke:
+    name: Customer + Admin release smoke QA
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install
+      - name: Prepare exact Store web bundle
+        run: npm run prepare:native
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Start local Store bundle
+        run: |
+          python3 -m http.server 4173 --directory www >/tmp/langar-smoke-http.log 2>&1 &
+          sleep 3
+      - name: Run release smoke QA
+        env:
+          RELEASE_SMOKE_URL: http://127.0.0.1:4173
+        run: node scripts/release-smoke.mjs
+
   android:
     name: Android API 36 AAB
+    needs: release_smoke
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
@@ -72,6 +97,7 @@ jobs:
 
   ios:
     name: iOS / iPadOS Xcode 26 project
+    needs: release_smoke
     runs-on: macos-latest
     timeout-minutes: 45
     steps:
@@ -131,6 +157,7 @@ jobs:
 
   screenshots:
     name: Store screenshots
+    needs: release_smoke
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
